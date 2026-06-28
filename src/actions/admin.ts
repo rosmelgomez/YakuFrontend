@@ -258,12 +258,12 @@ export async function asignarComponenteADispositivo(payload: {
   id_dispositivo: number;
   id_componente: number;
   pin_gpio: number;
-  id_tipo_metrica: number | number[];
+  id_tipo_metrica?: number | number[] | null;
   id_fuente_agua?: number;
 }) {
   const { id_tipo_metrica, ...rest } = payload;
   
-  if (Array.isArray(id_tipo_metrica)) {
+  if (Array.isArray(id_tipo_metrica) && id_tipo_metrica.length > 0) {
     let lastRes: any = null;
     for (const metricaId of id_tipo_metrica) {
       const res = await fetchFromFastAPI("/dispositivos/admin/asignar-componente", {
@@ -284,10 +284,13 @@ export async function asignarComponenteADispositivo(payload: {
     revalidatePath('/dashboard/agricultor');
     return lastRes;
   } else {
+    const requestPayload = id_tipo_metrica == null
+      ? rest
+      : { ...rest, id_tipo_metrica };
     const res = await fetchFromFastAPI("/dispositivos/admin/asignar-componente", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(requestPayload)
     });
     if (!res.ok) {
       throw new Error(await res.text() || "Error al asignar componente al dispositivo");
@@ -328,6 +331,38 @@ export async function liberarComponenteAStock(componenteId: number) {
   return res.json();
 }
 
+export async function actualizarAsignacionComponente(asignacionId: number, payload: {
+  pin_gpio: number;
+  id_tipo_metrica?: number | null;
+  id_fuente_agua?: number;
+}) {
+  const res = await fetchFromFastAPI(`/dispositivos/admin/asignacion-componente/${asignacionId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    throw new Error(await res.text() || "Error al actualizar asignación de componente");
+  }
+  revalidatePath('/dashboard/administrador/dispositivos');
+  revalidatePath('/dashboard/agricultor/control');
+  revalidatePath('/dashboard/agricultor');
+  return res.json();
+}
+
+export async function desvincularComponenteDeDispositivo(dispositivoId: number, componenteId: number) {
+  const res = await fetchFromFastAPI(`/dispositivos/admin/desvincular-componente/${dispositivoId}/${componenteId}`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    throw new Error(await res.text() || "Error al desvincular componente del dispositivo");
+  }
+  revalidatePath('/dashboard/administrador/dispositivos');
+  revalidatePath('/dashboard/agricultor/control');
+  revalidatePath('/dashboard/agricultor');
+  return res.json();
+}
+
 export async function cambiarEstadoDispositivoStock(dispositivoId: number, nuevoEstado: string) {
   const res = await fetchFromFastAPI(`/dispositivos/admin/dispositivo/${dispositivoId}/estado/${nuevoEstado}`, {
     method: "POST"
@@ -349,7 +384,4 @@ export async function cambiarEstadoComponenteStock(componenteId: number, nuevoEs
   revalidatePath('/dashboard/administrador');
   return res.json();
 }
-
-
-
 

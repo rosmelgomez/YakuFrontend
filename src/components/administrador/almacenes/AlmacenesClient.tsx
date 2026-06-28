@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
-import { Badge, Box, Button, Card, Flex, Grid, ScrollArea, Select, Table, Text, TextField } from "@radix-ui/themes";
+import { Badge, Box, Button, Card, Flex, Grid, ScrollArea, Table, Text, TextField } from "@radix-ui/themes";
 import { Plus, Warehouse } from "lucide-react";
 import { eliminarAlmacen, registrarAlmacen } from "@/actions/almacenes";
+import SearchableSelect from "@/components/ui/SearchableSelect";
 
 export default function AlmacenesClient({ initialAlmacenes = [], initialDevices = [], regiones = [], provincias = [], distritos = [] }: any) {
   const [almacenesList] = useState(initialAlmacenes);
@@ -73,18 +74,29 @@ export default function AlmacenesClient({ initialAlmacenes = [], initialDevices 
           <form onSubmit={handleRegisterAlmacenSubmit}>
             <Flex direction="column" gap="3">
               <TextField.Root placeholder="Nombre del almacen" value={newAlmacenNombre} onChange={(e) => setNewAlmacenNombre(e.target.value)} required />
-              <Select.Root value={newAlmacenRegionId} onValueChange={(val) => { setNewAlmacenRegionId(val); setNewAlmacenProvinciaId(""); setNewAlmacenDistritoId(""); }}>
-                <Select.Trigger placeholder="Region" />
-                <Select.Content>{regiones.map((reg: any) => <Select.Item key={reg.id} value={reg.id.toString()}>{reg.nombre}</Select.Item>)}</Select.Content>
-              </Select.Root>
-              <Select.Root value={newAlmacenProvinciaId} onValueChange={(val) => { setNewAlmacenProvinciaId(val); setNewAlmacenDistritoId(""); }} disabled={!newAlmacenRegionId}>
-                <Select.Trigger placeholder="Provincia" />
-                <Select.Content>{filteredProvincias.map((prov: any) => <Select.Item key={prov.id} value={prov.id.toString()}>{prov.nombre}</Select.Item>)}</Select.Content>
-              </Select.Root>
-              <Select.Root value={newAlmacenDistritoId} onValueChange={setNewAlmacenDistritoId} disabled={!newAlmacenProvinciaId}>
-                <Select.Trigger placeholder="Distrito" />
-                <Select.Content>{filteredDistritos.map((dist: any) => <Select.Item key={dist.id} value={dist.id.toString()}>{dist.nombre}</Select.Item>)}</Select.Content>
-              </Select.Root>
+              <SearchableSelect
+                value={newAlmacenRegionId}
+                onValueChange={(val) => { setNewAlmacenRegionId(val); setNewAlmacenProvinciaId(""); setNewAlmacenDistritoId(""); }}
+                placeholder="Region"
+                searchPlaceholder="Buscar region..."
+                options={regiones.map((reg: any) => ({ value: reg.id.toString(), label: reg.nombre }))}
+              />
+              <SearchableSelect
+                value={newAlmacenProvinciaId}
+                onValueChange={(val) => { setNewAlmacenProvinciaId(val); setNewAlmacenDistritoId(""); }}
+                disabled={!newAlmacenRegionId}
+                placeholder="Provincia"
+                searchPlaceholder="Buscar provincia..."
+                options={filteredProvincias.map((prov: any) => ({ value: prov.id.toString(), label: prov.nombre }))}
+              />
+              <SearchableSelect
+                value={newAlmacenDistritoId}
+                onValueChange={setNewAlmacenDistritoId}
+                disabled={!newAlmacenProvinciaId}
+                placeholder="Distrito"
+                searchPlaceholder="Buscar distrito..."
+                options={filteredDistritos.map((dist: any) => ({ value: dist.id.toString(), label: dist.nombre }))}
+              />
               <TextField.Root placeholder="Direccion fisica" value={newAlmacenDireccion} onChange={(e) => setNewAlmacenDireccion(e.target.value)} />
               <Button type="submit" color="indigo" mt="3" disabled={!newAlmacenNombre || !newAlmacenDistritoId}>Crear Almacen</Button>
             </Flex>

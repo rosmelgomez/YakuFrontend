@@ -5,7 +5,7 @@ import nextDynamic from 'next/dynamic';
 import { authOptions } from '@/lib/auth';
 import { Box } from '@radix-ui/themes';
 import DashboardSkeleton from '@/components/layout/DashboardSkeleton';
-import { getAlertasData, getNotifConfig } from '@/services/alertas';
+import { getAlertasData, getNotifConfig, getPushSubscriptionStatus } from '@/services/alertas';
 import { getCultivosBase } from '@/services/cultivos-base';
 
 import NoCropsEmptyState from '@/components/layout/NoCropsEmptyState';
@@ -36,8 +36,11 @@ export default async function AlertasPage({ searchParams }: { searchParams: Prom
   const resolvedParams = await searchParams;
   const selectedCultivoId = resolvedParams.cultivo ? parseInt(resolvedParams.cultivo, 10) : cultivosBase[0].id;
 
-  const alertasData = await getAlertasData(userId, selectedCultivoId);
-  const notifConfig = await getNotifConfig();
+  const [alertasData, notifConfig, pushStatus] = await Promise.all([
+    getAlertasData(userId, selectedCultivoId),
+    getNotifConfig(),
+    getPushSubscriptionStatus()
+  ]);
 
   return (
     <Box className="page-content" style={{ padding: '2rem 0' }}>
@@ -48,6 +51,7 @@ export default async function AlertasPage({ searchParams }: { searchParams: Prom
            initialData={alertasData} 
            initialCultivo={selectedCultivoId} 
            initialNotifConfig={notifConfig.configs} 
+           initialPushRegistered={pushStatus.registered}
          />
       </Box>
     </Box>

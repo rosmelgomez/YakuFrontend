@@ -16,6 +16,11 @@
 .label { color: #8da2af; font-size: 12px; font-weight: 600; }
 .input, .select { width: 100%; min-width: 0; height: 38px; color: #dceaf1; background: #0c1115; border: 1px solid rgba(255,255,255,.13); border-radius: 5px; padding: 0 10px; }
 .input:focus, .select:focus { outline: 2px solid rgba(56,189,248,.35); border-color: #38bdf8; }
+.secretField { position: relative; display: block; min-width: 0; }
+.secretInput { padding-right: 42px; }
+.secretToggle { position: absolute; top: 50%; right: 5px; transform: translateY(-50%); width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; color: #8da2af; background: transparent; border: 0; border-radius: 4px; cursor: pointer; }
+.secretToggle:hover { color: #e6f2f8; background: rgba(255,255,255,.08); }
+.secretToggle:focus-visible { outline: 2px solid rgba(56,189,248,.35); }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 .button { min-height: 38px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid rgba(255,255,255,.13); border-radius: 5px; padding: 0 13px; color: #dceaf1; background: #1a252c; cursor: pointer; font-weight: 650; }
 .button:hover:not(:disabled) { background: #24343e; }

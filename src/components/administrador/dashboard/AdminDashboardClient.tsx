@@ -13,7 +13,6 @@ import {
   Tabs, 
   TextField, 
   ScrollArea,
-  Select,
   Button
 } from '@radix-ui/themes';
 import { 
@@ -28,6 +27,7 @@ import {
   Database,
   Filter
 } from 'lucide-react';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 import { 
   ResponsiveContainer, 
   BarChart, 
@@ -221,40 +221,34 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
           {/* User select filter */}
           <Flex direction="column" gap="1" style={{ flex: 1 }}>
             <Text size="1" color="gray" mb="1">Filtrar por Agricultor</Text>
-            <Select.Root value={filterUserId} onValueChange={handleUserFilterChange}>
-              <Select.Trigger style={{ background: '#1e293b', color: 'white' }} placeholder="Seleccionar agricultor..." />
-              <Select.Content>
-                <Select.Item value="all">Todos los agricultores</Select.Item>
-                {usuarios_filtro.map(u => (
-                  <Select.Item key={u.id} value={u.id.toString()}>
-                    {u.nombre} {u.apellido || ''} ({u.correo})
-                  </Select.Item>
-                ))}
-              </Select.Content>
-            </Select.Root>
+            <SearchableSelect
+              value={filterUserId}
+              onValueChange={handleUserFilterChange}
+              placeholder="Seleccionar agricultor..."
+              searchPlaceholder="Buscar agricultor..."
+              style={{ background: '#1e293b' }}
+              options={[
+                { value: 'all', label: 'Todos los agricultores' },
+                ...usuarios_filtro.map(u => ({ value: u.id.toString(), label: `${u.nombre} ${u.apellido || ''} (${u.correo})` })),
+              ]}
+            />
           </Flex>
 
           {/* Crop select filter */}
           <Flex direction="column" gap="1" style={{ flex: 1 }}>
             <Text size="1" color="gray" mb="1">Filtrar por Cultivo</Text>
-            <Select.Root 
-              value={filterCropId} 
-              onValueChange={(val) => { setFilterCropId(val); setCurrentPagePreds(1); }} 
+            <SearchableSelect
+              value={filterCropId}
+              onValueChange={(val) => { setFilterCropId(val); setCurrentPagePreds(1); }}
               disabled={filterUserId === 'all'}
-            >
-              <Select.Trigger 
-                style={{ background: '#1e293b', color: 'white' }} 
-                placeholder={filterUserId === 'all' ? "Primero elija agricultor..." : "Seleccionar cultivo..."} 
-              />
-              <Select.Content>
-                <Select.Item value="all">Todos los cultivos</Select.Item>
-                {availableCropsForSelect.map(c => (
-                  <Select.Item key={c.id} value={c.id.toString()}>
-                    {c.nombre_planta}
-                  </Select.Item>
-                ))}
-              </Select.Content>
-            </Select.Root>
+              placeholder={filterUserId === 'all' ? "Primero elija agricultor..." : "Seleccionar cultivo..."}
+              searchPlaceholder="Buscar cultivo..."
+              style={{ background: '#1e293b' }}
+              options={[
+                { value: 'all', label: 'Todos los cultivos' },
+                ...availableCropsForSelect.map(c => ({ value: c.id.toString(), label: c.nombre_planta })),
+              ]}
+            />
           </Flex>
         </Flex>
       </Card>

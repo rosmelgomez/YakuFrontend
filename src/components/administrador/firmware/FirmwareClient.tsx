@@ -4,10 +4,11 @@ import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "re
 import { useRouter } from "next/navigation";
 import {
   Cable, CheckCircle2, Cpu, FileArchive, History, LoaderCircle, Plus,
-  Pause, Play, RefreshCw, Send, TerminalSquare, Trash2, Upload, Usb, Wifi, X,
+  Eye, EyeOff, Pause, Play, RefreshCw, Send, TerminalSquare, Trash2, Upload, Usb, Wifi, X,
 } from "lucide-react";
 import {
   actualizarInstalacionFirmware,
+  descontinuarVersionFirmware,
   iniciarInstalacionFirmware,
   obtenerProvisionamientoFirmware,
 } from "@/actions/firmware";
@@ -23,6 +24,7 @@ type FirmwareVersion = {
   publicado: boolean;
   fecha_registro: string;
   manifiesto: { segmentos: FirmwareSegment[] };
+  archivos_faltantes?: string[];
 };
 
 type Installation = {
@@ -91,6 +93,13 @@ const defaultAddress = (name: string) => {
   return "0x10000";
 };
 
+const firmwareTypeForDevice = (device?: Device) => {
+  const typeName = `${device?.tipo?.nombre ?? ""} ${device?.nombre ?? ""}`.toLowerCase();
+  if (typeName.includes("s3") || typeName.includes("colector") || typeName.includes("sensor")) return "sensores";
+  if (typeName.includes("actuador") || typeName.includes("nivel") || typeName.includes("riego")) return "riego";
+  return "";
+};
+
 export default function FirmwareClient({
   initialVersions,
   initialInstallations,
@@ -109,6 +118,7 @@ export default function FirmwareClient({
   const router = useRouter();
   const flasherRef = useRef<EspFlasher | null>(null);
   const monitorPausedRef = useRef(false);
+  const terminalRef = useRef<HTMLPreElement | null>(null);
   const [tab, setTab] = useState<Tab>("install");
   const [versionId, setVersionId] = useState("");
   const [userId, setUserId] = useState("");
@@ -128,8 +138,10 @@ export default function FirmwareClient({
   const [serialCommand, setSerialCommand] = useState("");
   const [ssid, setSsid] = useState("");
   const [wifiPassword, setWifiPassword] = useState("");
+  const [showWifiPassword, setShowWifiPassword] = useState(false);
   const [mqttUser, setMqttUser] = useState("");
   const [mqttPassword, setMqttPassword] = useState("");
+  const [showMqttPassword, setShowMqttPassword] = useState(false);
   const [uploadSegments, setUploadSegments] = useState<UploadSegment[]>([]);
   const [uploading, setUploading] = useState(false);
 
@@ -152,15 +164,20 @@ export default function FirmwareClient({
     ))),
     [devices, userId, cropId],
   );
-  const publishedVersions = useMemo(
-    () => initialVersions.filter((item) => item.publicado),
-    [initialVersions],
-  );
   const selectedDevice = useMemo(
     () => devices.find((item) => (item.id_dispositivo ?? item.id) === Number(deviceId)),
     [devices, deviceId],
   );
+  const selectedDeviceFirmwareType = firmwareTypeForDevice(selectedDevice);
+  const publishedVersions = useMemo(
+    () => initialVersions.filter((item) => (
+      item.publicado
+      && (!selectedDeviceFirmwareType || item.tipo_dispositivo === selectedDeviceFirmwareType)
+    )),
+    [initialVersions, selectedDeviceFirmwareType],
+  );
   const chipCompatible = !chip || !selectedVersion || chip.toUpperCase().includes(selectedVersion.chip.toUpperCase());
+  const selectedVersionMissingFiles = selectedVersion?.archivos_faltantes ?? [];
 
   const appendTerminal = (line: string) => {
     if (!line || monitorPausedRef.current) return;
@@ -170,6 +187,18 @@ export default function FirmwareClient({
   useEffect(() => () => {
     void flasherRef.current?.stopMonitor();
   }, []);
+
+  useEffect(() => {
+    const terminalElement = terminalRef.current;
+    if (!terminalElement || monitorPausedRef.current) return;
+    terminalElement.scrollTop = terminalElement.scrollHeight;
+  }, [terminal]);
+
+  useEffect(() => {
+    if (versionId && !publishedVersions.some((item) => item.id === Number(versionId))) {
+      setVersionId("");
+    }
+  }, [publishedVersions, versionId]);
 
   async function toggleMonitor() {
     setError("");
@@ -318,7 +347,15 @@ export default function FirmwareClient({
         captura_segundos: provisioning.captura_segundos,
         cooldown_riego_minutos: provisioning.cooldown_riego_minutos,
         wifi: { ssid, password: wifiPassword },
-        mqtt: { ...provisioning.mqtt, username: mqttUser, password: mqttPassword },
+        mqtt: {
+          host: provisioning.mqtt.host,
+          port: provisioning.mqtt.port,
+          username: mqttUser,
+          password: mqttPassword,
+          topic_pub: provisioning.mqtt.topic_pub,
+          topic_sub: provisioning.mqtt.topic_sub,
+          tls: provisioning.mqtt.tls,
+        },
       });
       setStatus("Configuracion enviada al dispositivo.");
       setWifiPassword("");
@@ -367,6 +404,23 @@ export default function FirmwareClient({
       setError(reason instanceof Error ? reason.message : "No se pudo publicar la version");
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function handleDiscontinue(id: number, versionStr: string) {
+    if (!confirm(`¿Está seguro de que desea descontinuar la versión v${versionStr}? Esta acción ocultará la versión y la marcará como descontinuada.`)) {
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      await descontinuarVersionFirmware(id);
+      setStatus(`Versión v${versionStr} descontinuada correctamente.`);
+      router.refresh();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "No se pudo descontinuar la versión");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -446,11 +500,16 @@ export default function FirmwareClient({
                 <button className={styles.button} onClick={connectDevice} disabled={busy}>
                   {busy ? <LoaderCircle size={16} className="animate-spin" /> : <Usb size={16} />} Conectar
                 </button>
-                <button className={`${styles.button} ${styles.primary}`} onClick={installFirmware} disabled={busy || !chip || !selectedVersion || !selectedDevice || !chipCompatible}>
+                <button className={`${styles.button} ${styles.primary}`} onClick={installFirmware} disabled={busy || !chip || !selectedVersion || !selectedDevice || !chipCompatible || selectedVersionMissingFiles.length > 0}>
                   <Upload size={16} /> Instalar firmware
                 </button>
               </div>
               {chip && !chipCompatible && <div className={`${styles.status} ${styles.statusError}`} style={{ marginTop: 14 }}>El chip {chip} no es compatible con {selectedVersion?.chip}.</div>}
+              {selectedVersionMissingFiles.length > 0 && (
+                <div className={`${styles.status} ${styles.statusError}`} style={{ marginTop: 14 }}>
+                  Faltan archivos en el backend: {selectedVersionMissingFiles.join(", ")}
+                </div>
+              )}
               <div className={styles.progressTrack}><div className={styles.progressBar} style={{ width: `${progress}%` }} /></div>
             </div>
 
@@ -458,9 +517,37 @@ export default function FirmwareClient({
             <div className={styles.panelBody}>
               <div className={styles.formGrid}>
                 <label className={styles.field}><span className={styles.label}>WiFi SSID</span><input className={styles.input} value={ssid} onChange={(e) => setSsid(e.target.value)} /></label>
-                <label className={styles.field}><span className={styles.label}>Clave WiFi</span><input type="password" className={styles.input} value={wifiPassword} onChange={(e) => setWifiPassword(e.target.value)} /></label>
+                <label className={styles.field}>
+                  <span className={styles.label}>Clave WiFi</span>
+                  <span className={styles.secretField}>
+                    <input type={showWifiPassword ? "text" : "password"} className={`${styles.input} ${styles.secretInput}`} value={wifiPassword} onChange={(e) => setWifiPassword(e.target.value)} />
+                    <button
+                      type="button"
+                      className={styles.secretToggle}
+                      onClick={() => setShowWifiPassword((current) => !current)}
+                      aria-label={showWifiPassword ? "Ocultar clave WiFi" : "Ver clave WiFi"}
+                      title={showWifiPassword ? "Ocultar clave WiFi" : "Ver clave WiFi"}
+                    >
+                      {showWifiPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </span>
+                </label>
                 <label className={styles.field}><span className={styles.label}>Usuario MQTT</span><input className={styles.input} value={mqttUser} onChange={(e) => setMqttUser(e.target.value)} /></label>
-                <label className={styles.field}><span className={styles.label}>Clave MQTT</span><input type="password" className={styles.input} value={mqttPassword} onChange={(e) => setMqttPassword(e.target.value)} /></label>
+                <label className={styles.field}>
+                  <span className={styles.label}>Clave MQTT</span>
+                  <span className={styles.secretField}>
+                    <input type={showMqttPassword ? "text" : "password"} className={`${styles.input} ${styles.secretInput}`} value={mqttPassword} onChange={(e) => setMqttPassword(e.target.value)} />
+                    <button
+                      type="button"
+                      className={styles.secretToggle}
+                      onClick={() => setShowMqttPassword((current) => !current)}
+                      aria-label={showMqttPassword ? "Ocultar clave MQTT" : "Ver clave MQTT"}
+                      title={showMqttPassword ? "Ocultar clave MQTT" : "Ver clave MQTT"}
+                    >
+                      {showMqttPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </span>
+                </label>
               </div>
               <div className={styles.actions}>
                 <button className={styles.button} onClick={sendProvisioning} disabled={busy || !provisioning || !ssid || !wifiPassword || !mqttUser || !mqttPassword}><Cable size={16} /> Enviar configuracion</button>
@@ -496,7 +583,7 @@ export default function FirmwareClient({
                 <button className={styles.iconButton} onClick={toggleMonitorPause} disabled={!monitorOpen} title={monitorPaused ? "Reanudar salida" : "Pausar salida"} aria-label={monitorPaused ? "Reanudar salida" : "Pausar salida"}>{monitorPaused ? <Play size={16} /> : <Pause size={16} />}</button>
                 <button className={styles.iconButton} onClick={() => setTerminal([])} title="Limpiar monitor" aria-label="Limpiar monitor"><Trash2 size={16} /></button>
               </div>
-              <pre className={styles.terminal}>{terminal.length ? terminal.join("") : "Esperando conexion serie...\n"}</pre>
+              <pre ref={terminalRef} className={styles.terminal}>{terminal.length ? terminal.join("") : "Esperando conexion serie...\n"}</pre>
               <form className={styles.serialCommand} onSubmit={sendSerialCommand}>
                 <input className={styles.input} value={serialCommand} onChange={(event) => setSerialCommand(event.target.value)} placeholder="Enviar comando" disabled={!monitorOpen} aria-label="Comando serie" />
                 <button className={styles.iconButton} type="submit" disabled={!monitorOpen || !serialCommand.trim()} title="Enviar comando" aria-label="Enviar comando"><Send size={16} /></button>
@@ -511,8 +598,31 @@ export default function FirmwareClient({
           <section className={styles.panel}>
             <div className={styles.panelHeader}><h2 className={styles.panelTitle}>Versiones publicadas</h2><span className={styles.badge}>{initialVersions.length}</span></div>
             <div className={styles.tableWrap}>
-              {initialVersions.length ? <table className={styles.table}><thead><tr><th>Version</th><th>Chip</th><th>Funcion</th><th>Segmentos</th><th>Estado</th></tr></thead><tbody>
-                {initialVersions.map((item) => <tr key={item.id}><td>v{item.version}</td><td>{item.chip}</td><td>{item.tipo_dispositivo}</td><td>{item.manifiesto.segmentos.length}</td><td><span className={`${styles.badge} ${!item.publicado ? styles.badgeMuted : ""}`}>{item.publicado ? "Publicada" : "Borrador"}</span></td></tr>)}
+              {initialVersions.length ? <table className={styles.table}><thead><tr><th>Version</th><th>Chip</th><th>Funcion</th><th>Segmentos</th><th>Estado</th><th style={{ textAlign: "right" }}>Acciones</th></tr></thead><tbody>
+                {initialVersions.map((item) => (
+                  <tr key={item.id}>
+                    <td>v{item.version}</td>
+                    <td>{item.chip}</td>
+                    <td>{item.tipo_dispositivo}</td>
+                    <td>{item.archivos_faltantes?.length ? `${item.manifiesto.segmentos.length} (${item.archivos_faltantes.length} faltan)` : item.manifiesto.segmentos.length}</td>
+                    <td>
+                      <span className={`${styles.badge} ${!item.publicado ? styles.badgeMuted : ""}`}>
+                        {item.publicado ? "Publicada" : "Borrador"}
+                      </span>
+                    </td>
+                    <td style={{ textAlign: "right" }}>
+                      <button
+                        className={`${styles.button} ${styles.danger}`}
+                        style={{ padding: "4px 8px", fontSize: "0.8rem", height: "auto", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                        onClick={() => handleDiscontinue(item.id, item.version)}
+                        disabled={busy}
+                        title="Descontinuar versión"
+                      >
+                        <Trash2 size={13} /> Descontinuar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
               </tbody></table> : <div className={styles.empty}>No hay versiones publicadas.</div>}
             </div>
           </section>

@@ -4,6 +4,7 @@ import React, { useState, useTransition } from "react";
 import { Badge, Box, Button, Card, Dialog, Flex, Grid, ScrollArea, Select, Tabs, Text, TextField } from "@radix-ui/themes";
 import { Gauge, MapPin, Plus, Tag } from "lucide-react";
 import { actualizarParametrosPlanta, registrarDistrito, registrarPlanta, registrarProvincia, registrarRegion } from "@/actions/admin";
+import SearchableSelect from "@/components/ui/SearchableSelect";
 
 type RangoParametro = {
   minimo: string;
@@ -411,7 +412,13 @@ export default function CatalogoClient({ catalogPlantas = [], regiones = [], pro
             {newGeoLevel === "provincia" && (
               <form onSubmit={handleRegisterProvinciaSubmit}>
                 <Flex direction="column" gap="3">
-                  <Select.Root value={selectedRegionId} onValueChange={setSelectedRegionId}><Select.Trigger placeholder="Departamento" /><Select.Content>{regiones.map((r) => <Select.Item key={r.id} value={r.id.toString()}>{r.nombre}</Select.Item>)}</Select.Content></Select.Root>
+                  <SearchableSelect
+                    value={selectedRegionId}
+                    onValueChange={setSelectedRegionId}
+                    placeholder="Departamento"
+                    searchPlaceholder="Buscar departamento..."
+                    options={regiones.map((r) => ({ value: r.id.toString(), label: r.nombre }))}
+                  />
                   <TextField.Root placeholder="Nombre de la provincia" value={newProvinciaNombre} onChange={(e) => setNewProvinciaNombre(e.target.value)} disabled={!selectedRegionId} />
                   <Button type="submit" color="green" disabled={!selectedRegionId || !newProvinciaNombre}>Registrar</Button>
                 </Flex>
@@ -420,7 +427,13 @@ export default function CatalogoClient({ catalogPlantas = [], regiones = [], pro
             {newGeoLevel === "distrito" && (
               <form onSubmit={handleRegisterDistritoSubmit}>
                 <Flex direction="column" gap="3">
-                  <Select.Root value={selectedProvinciaId} onValueChange={setSelectedProvinciaId}><Select.Trigger placeholder="Provincia" /><Select.Content>{provincias.map((p) => <Select.Item key={p.id} value={p.id.toString()}>{p.nombre}</Select.Item>)}</Select.Content></Select.Root>
+                  <SearchableSelect
+                    value={selectedProvinciaId}
+                    onValueChange={setSelectedProvinciaId}
+                    placeholder="Provincia"
+                    searchPlaceholder="Buscar provincia..."
+                    options={provincias.map((p) => ({ value: p.id.toString(), label: p.nombre }))}
+                  />
                   <TextField.Root placeholder="Nombre del distrito" value={newDistritoNombre} onChange={(e) => setNewDistritoNombre(e.target.value)} disabled={!selectedProvinciaId} />
                   <Button type="submit" color="green" disabled={!selectedProvinciaId || !newDistritoNombre}>Registrar</Button>
                 </Flex>

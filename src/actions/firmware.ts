@@ -54,3 +54,15 @@ export async function actualizarInstalacionFirmware(
   revalidatePath("/dashboard/administrador/firmware");
   return result;
 }
+
+export async function descontinuarVersionFirmware(versionId: number) {
+  const result = await jsonOrThrow(
+    await fetchFromFastAPI(`/firmware/versions/${versionId}/discontinue`, {
+      method: "PATCH",
+    }),
+    "No se pudo descontinuar el firmware",
+  );
+  revalidatePath("/dashboard/administrador/firmware");
+  return result;
+}
+

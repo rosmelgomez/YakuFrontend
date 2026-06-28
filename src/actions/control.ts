@@ -77,6 +77,19 @@ export async function toggleBombaManual(userId: number, idBomba: number, encende
   revalidatePath('/dashboard/agricultor'); 
 }
 
+export async function toggleValvulaManual(userId: number, idBomba: number, abrir: boolean) {
+  const res = await fetchFromFastAPI("/control/valvula/toggle", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ idBomba, abrir })
+  });
+  if (!res.ok) {
+    throw new Error(await res.text() || "Error al conmutar valvula");
+  }
+  revalidatePath('/dashboard/agricultor/control');
+  revalidatePath('/dashboard/agricultor');
+}
+
 export async function actualizarTiempoMaximoRele(idCultivo: number, duracionMaxMinutos: number) {
   const res = await fetchFromFastAPI("/control/configuracion/rele", {
     method: "PATCH",

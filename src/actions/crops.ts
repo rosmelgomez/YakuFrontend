@@ -28,7 +28,7 @@ export async function registrarCultivo(payload: {
 }
 
 export async function listarPlantas() {
-  const res = await fetchFromFastAPI("/plantas");
+  const res = await fetchFromFastAPI("/plantas", { next: { revalidate: 86400 } });
   if (!res.ok) {
     throw new Error("Error al obtener catálogo de plantas");
   }
@@ -36,7 +36,7 @@ export async function listarPlantas() {
 }
 
 export async function listarRegiones() {
-  const res = await fetchFromFastAPI("/ubicacion/regiones");
+  const res = await fetchFromFastAPI("/ubicacion/regiones", { next: { revalidate: 86400 } });
   if (!res.ok) {
     throw new Error("Error al obtener departamentos");
   }

@@ -3,9 +3,10 @@
 
 import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Box, Text, Flex, Select, Card, Button, Grid, ScrollArea } from '@radix-ui/themes';
+import { Box, Text, Flex, Card, Button, Grid, ScrollArea } from '@radix-ui/themes';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import type { HistoricoResponse } from '@/services/historico';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 
 type CultivoBasico = { id: number; nombre_planta: string; };
 type SensorStat = { sensor: string; min: number | null; prom: number | null; max: number | null; };
@@ -79,14 +80,14 @@ export default function HistoricoMultiChart({
             <Text size="5" weight="bold" color="indigo" as="div" mb="2">
               Los 4 parámetros — {initialRango} días
             </Text>
-            <Select.Root value={initialCultivo} onValueChange={handleCultivoChange}>
-              <Select.Trigger style={{ background: 'var(--surface2-mockup)', color: 'white', border: '1px solid var(--border-mockup)', width: '220px' }} />
-              <Select.Content>
-                {cultivos.map((c) => (
-                  <Select.Item key={c.id} value={c.id.toString()}>{c.nombre_planta}</Select.Item>
-                ))}
-              </Select.Content>
-            </Select.Root>
+            <SearchableSelect
+              value={initialCultivo}
+              onValueChange={handleCultivoChange}
+              placeholder="Seleccionar cultivo"
+              searchPlaceholder="Buscar cultivo..."
+              style={{ background: 'var(--surface2-mockup)', border: '1px solid var(--border-mockup)', width: '220px' }}
+              options={cultivos.map((c) => ({ value: c.id.toString(), label: c.nombre_planta }))}
+            />
           </Box>
 
           <Flex gap="2" style={{ background: 'var(--bg-mockup)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-mockup)' }}>

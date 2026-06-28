@@ -10,8 +10,6 @@ import {
   listarPlantas,
   listarFuentesAgua,
   listarRegiones,
-  listarTodasProvincias,
-  listarTodosDistritos,
 } from '@/actions/crops';
 
 export const dynamic = 'force-dynamic';
@@ -39,16 +37,12 @@ export default async function DashboardPage() {
     cultivosData,
     catalogPlantas,
     fuentesAgua,
-    regiones,
-    provincias,
-    distritos
+    regiones
   ] = await Promise.all([
     getDashboardData(userId),
     listarPlantas().catch(() => []),
     listarFuentesAgua().catch(() => []),
-    listarRegiones().catch(() => []),
-    listarTodasProvincias().catch(() => []),
-    listarTodosDistritos().catch(() => [])
+    listarRegiones().catch(() => [])
   ]);
 
   // Iniciales para el perfil
@@ -78,7 +72,7 @@ export default async function DashboardPage() {
             </Heading>
           </Flex>
           <Text size="3" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-            Aquí tienes el resumen en tiempo real de las condiciones de tus cultivos.
+             Aquí tienes el resumen en tiempo real de las condiciones de tus cultivos.
           </Text>
         </Box>
 
@@ -88,8 +82,6 @@ export default async function DashboardPage() {
              catalogPlantas={catalogPlantas}
              fuentesAgua={fuentesAgua}
              regiones={regiones}
-             provincias={provincias}
-             distritos={distritos}
            />
         </Box>
         

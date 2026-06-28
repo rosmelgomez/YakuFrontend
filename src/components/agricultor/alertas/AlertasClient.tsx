@@ -1,10 +1,11 @@
 // src/components/agricultor/alertas/AlertasClient.tsx
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Box, Text, Flex, Card, Button, Grid, Slider, Select, Badge, Switch, Table } from '@radix-ui/themes';
+import { Box, Text, Flex, Card, Button, Grid, Slider, Badge, Switch, Table } from '@radix-ui/themes';
 import { guardarUmbrales, guardarNotifConfig, getVapidPublicKey, registrarSuscripcionPush } from '@/actions/alertas';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -29,7 +30,7 @@ const categorias = [
   { titulo: "Nivel de tanque", bajoId: 9, altoId: 10 }
 ];
 
-export default function AlertasClient({ userId, cultivos, initialData, initialCultivo, initialNotifConfig }: any) {
+export default function AlertasClient({ userId, cultivos, initialData, initialCultivo, initialNotifConfig, initialPushRegistered = false }: any) {
   const router = useRouter();
   const [umbrales, setUmbrales] = useState(initialData.umbrales);
   const [notifConfigs, setNotifConfigs] = useState(initialNotifConfig || []);
@@ -81,9 +82,19 @@ export default function AlertasClient({ userId, cultivos, initialData, initialCu
   const [pushStatus, setPushStatus] = useState<'checking' | 'not-supported' | 'default' | 'granted' | 'denied'>('checking');
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [isSecure, setIsSecure] = useState(true);
+  const [pushRegistered, setPushRegistered] = useState(Boolean(initialPushRegistered));
+  const autoPushAttempted = useRef(false);
 
   const handleRequestPush = async () => {
-    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    if (
+      typeof window === 'undefined' ||
+      !('Notification' in window) ||
+      !('serviceWorker' in navigator) ||
+      !('PushManager' in window)
+    ) {
+      setPushStatus('not-supported');
+      return;
+    }
     
     setIsSubscribing(true);
     try {
@@ -104,6 +115,7 @@ export default function AlertasClient({ userId, cultivos, initialData, initialCu
           if (!registrationResult.success) {
             throw new Error(registrationResult.error || 'No se pudo registrar la suscripción');
           }
+          setPushRegistered(true);
         }
       }
     } catch {
@@ -125,6 +137,22 @@ export default function AlertasClient({ userId, cultivos, initialData, initialCu
     const currentPermission = Notification.permission;
     setPushStatus(currentPermission as any);
   }, []);
+
+  useEffect(() => {
+    if (
+      pushRegistered ||
+      autoPushAttempted.current ||
+      !isSecure ||
+      pushStatus === 'checking' ||
+      pushStatus === 'not-supported' ||
+      pushStatus === 'denied'
+    ) {
+      return;
+    }
+
+    autoPushAttempted.current = true;
+    handleRequestPush();
+  }, [pushRegistered, isSecure, pushStatus]);
 
   const handleTestNotification = async () => {
     if (typeof window === 'undefined' || !('Notification' in window) || Notification.permission !== 'granted') return;
@@ -255,12 +283,14 @@ export default function AlertasClient({ userId, cultivos, initialData, initialCu
     <Box>
       <Flex justify="between" mb="6">
         <Text size="6" weight="bold" color="indigo">Alertas</Text>
-        <Select.Root value={initialCultivo.toString()} onValueChange={(v) => router.push(`?cultivo=${v}`)}>
-          <Select.Trigger style={{ background: 'var(--surface2-mockup)', borderColor: 'var(--border-mockup)' }} />
-          <Select.Content>
-            {cultivos.map((c: any) => <Select.Item key={c.id} value={c.id.toString()}>{c.nombre_planta}</Select.Item>)}
-          </Select.Content>
-        </Select.Root>
+        <SearchableSelect
+          value={initialCultivo.toString()}
+          onValueChange={(v) => router.push(`?cultivo=${v}`)}
+          placeholder="Seleccionar cultivo"
+          searchPlaceholder="Buscar cultivo..."
+          style={{ background: 'var(--surface2-mockup)', borderColor: 'var(--border-mockup)', width: 240 }}
+          options={cultivos.map((c: any) => ({ value: c.id.toString(), label: c.nombre_planta }))}
+        />
       </Flex>
 
 
@@ -480,7 +510,7 @@ export default function AlertasClient({ userId, cultivos, initialData, initialCu
                               />
                             </Flex>
                             <Flex align="center" gap="2">
-                              <Text size="1" color="gray">Pantalla</Text>
+                              <Text size="1" color="gray">Panel Yaku</Text>
                               <Switch 
                                 checked={bajo.canal_dashboard} 
                                 onCheckedChange={() => handleNotifToggle(cat.bajoId, 'canal_dashboard')}
@@ -529,7 +559,7 @@ export default function AlertasClient({ userId, cultivos, initialData, initialCu
                               />
                             </Flex>
                             <Flex align="center" gap="2">
-                              <Text size="1" color="gray">Pantalla</Text>
+                              <Text size="1" color="gray">Panel Yaku</Text>
                               <Switch 
                                 checked={alto.canal_dashboard} 
                                 onCheckedChange={() => handleNotifToggle(cat.altoId, 'canal_dashboard')}

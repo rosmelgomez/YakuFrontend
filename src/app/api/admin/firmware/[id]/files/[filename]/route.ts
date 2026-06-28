@@ -16,7 +16,9 @@ export async function GET(
     `/firmware/versions/${encodeURIComponent(id)}/files/${encodeURIComponent(filename)}`,
   );
   if (!response.ok) {
-    return NextResponse.json({ detail: "Segmento no disponible" }, { status: response.status });
+    const payload = await response.json().catch(() => null);
+    const detail = payload?.detail || "Segmento no disponible";
+    return NextResponse.json({ detail }, { status: response.status });
   }
   return new NextResponse(response.body, {
     status: 200,

@@ -2,10 +2,11 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useTransition } from 'react';
-import { Box, Text, Flex, Card, Button, Badge, ScrollArea, Select, Grid } from '@radix-ui/themes';
+import { Box, Text, Flex, Card, Button, Badge, ScrollArea, Grid } from '@radix-ui/themes';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine, CartesianGrid, Legend } from 'recharts';
 import { solicitarPrediccionML, reentrenarModeloML, seleccionarModeloML } from '@/actions/ml';
 import { useRouter } from 'next/navigation';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 
 export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }: any) {
   const { modelo, modelos, historial, umbral, predicciones } = data;
@@ -136,12 +137,14 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
           <Flex align="center" gap="4" mb="3">
             <Text size="6" weight="bold" color="indigo" as="div">Machine Learning</Text>
             {cultivos && cultivos.length > 0 && idCultivo && (
-              <Select.Root value={idCultivo.toString()} onValueChange={(v) => startTransition(() => router.push(`?cultivo=${v}`))}>
-                <Select.Trigger style={{ background: '#111827', color: 'white', borderColor: '#1f2937' }} />
-                <Select.Content>
-                  {cultivos.map((c: any) => <Select.Item key={c.id} value={c.id.toString()}>{c.nombre_planta}</Select.Item>)}
-                </Select.Content>
-              </Select.Root>
+              <SearchableSelect
+                value={idCultivo.toString()}
+                onValueChange={(v) => startTransition(() => router.push(`?cultivo=${v}`))}
+                placeholder="Seleccionar cultivo"
+                searchPlaceholder="Buscar cultivo..."
+                style={{ background: '#111827', borderColor: '#1f2937', width: 240 }}
+                options={cultivos.map((c: any) => ({ value: c.id.toString(), label: c.nombre_planta }))}
+              />
             )}
           </Flex>
           <Text size="3" style={{ color: '#9ca3af', fontFamily: 'monospace' }}>
@@ -249,20 +252,18 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
           <Flex gap="3" align="center">
             <Text size="2" color="gray">Modelo Activo:</Text>
             {modelos && modelos.length > 0 ? (
-              <Select.Root
+              <SearchableSelect
                 value={modelos.find((m: any) => m.activo)?.id_modelo?.toString() || ""}
                 onValueChange={handleSelectModel}
                 disabled={loading}
-              >
-                <Select.Trigger style={{ background: '#1f2937', color: 'white', borderColor: '#374151' }} />
-                <Select.Content>
-                  {modelos.map((m: any) => (
-                    <Select.Item key={m.id_modelo} value={m.id_modelo.toString()}>
-                      {m.nombre_modelo} (v{m.version} - Acc: {m.precision_modelo?.toFixed(1)}%)
-                    </Select.Item>
-                  ))}
-                </Select.Content>
-              </Select.Root>
+                placeholder="Seleccionar modelo"
+                searchPlaceholder="Buscar modelo..."
+                style={{ background: '#1f2937', borderColor: '#374151', minWidth: 260 }}
+                options={modelos.map((m: any) => ({
+                  value: m.id_modelo.toString(),
+                  label: `${m.nombre_modelo} (v${m.version} - Acc: ${m.precision_modelo?.toFixed(1)}%)`,
+                }))}
+              />
             ) : (
               <Badge color="indigo" variant="outline" size="2">
                 Modelo: {modelo.nombre || 'Sin nombre'} v{modelo.version}

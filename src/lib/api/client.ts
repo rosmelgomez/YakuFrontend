@@ -1,3 +1,7 @@
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import { createBffToken } from "@/lib/bff-token";
+
 function getFastAPIUrl() {
   const configuredUrl = process.env.FASTAPI_API_URL?.trim().replace(/\/$/, "");
   if (configuredUrl) return configuredUrl;
@@ -19,33 +23,36 @@ export async function fetchPublicFastAPI(endpoint: string, options: RequestInit 
   const headers = new Headers(options.headers);
   const path = resolveEndpoint(endpoint);
 
-  return fetch(`${getFastAPIUrl()}${path}`, {
-    cache: "no-store",
+  const fetchOptions: RequestInit = {
     ...options,
     headers,
     signal: requestSignal(options.signal),
-  });
+  };
+  if (!options.cache && !options.next) {
+    fetchOptions.cache = "no-store";
+  }
+
+  return fetch(`${getFastAPIUrl()}${path}`, fetchOptions);
 }
 
 export async function fetchFromFastAPI(endpoint: string, options: RequestInit = {}) {
-  const [{ getServerSession }, { authOptions }] = await Promise.all([
-    import("next-auth/next"),
-    import("@/lib/auth"),
-  ]);
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     throw new Error("No autorizado: Sesion de usuario invalida");
   }
 
-  const { createBffToken } = await import("@/lib/bff-token");
   const headers = new Headers(options.headers);
   headers.set("X-BFF-Token", createBffToken(session.user.id));
   const path = resolveEndpoint(endpoint);
 
-  return fetch(`${getFastAPIUrl()}${path}`, {
-    cache: "no-store",
+  const fetchOptions: RequestInit = {
     ...options,
     headers,
     signal: requestSignal(options.signal),
-  });
+  };
+  if (!options.cache && !options.next) {
+    fetchOptions.cache = "no-store";
+  }
+
+  return fetch(`${getFastAPIUrl()}${path}`, fetchOptions);
 }

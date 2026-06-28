@@ -3,9 +3,10 @@
 
 import React, { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Box, Text, Flex, Card, Button, Grid, Select, Badge, Switch, Dialog, TextField, Checkbox, ScrollArea, Tabs } from '@radix-ui/themes';
-import { setModoOperacion, toggleBombaManual, toggleHorario, eliminarHorario, agregarHorario, toggleCapturaDatos, calibrarSensor, actualizarTiempoMaximoRele } from '@/actions/control';
+import { Box, Text, Flex, Card, Button, Grid, Badge, Switch, Dialog, TextField, Checkbox, ScrollArea, Tabs } from '@radix-ui/themes';
+import { setModoOperacion, toggleBombaManual, toggleValvulaManual, toggleHorario, eliminarHorario, agregarHorario, toggleCapturaDatos, calibrarSensor, actualizarTiempoMaximoRele } from '@/actions/control';
 import { seleccionarModeloML } from '@/actions/ml';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 
 export default function ControlClient({ userId, cultivos, data, idCultivo, modelosML }: any) {
     const router = useRouter();
@@ -16,6 +17,8 @@ export default function ControlClient({ userId, cultivos, data, idCultivo, model
     const [nuevoNombre, setNuevoNombre] = useState('Riego Programado');
     const [diasSel, setDiasSel] = useState([true, true, true, true, true, false, false]);
     const [maxRelayMinutes, setMaxRelayMinutes] = useState<number>(data.bomba.timeoutMin || 10);
+    const initialModo = data.modo.predictivoActivo ? 'predictivo' : (data.modo.programadoActivo ? 'programado' : 'manual');
+    const [selectedModo, setSelectedModo] = useState<'manual' | 'predictivo' | 'programado'>(initialModo);
 
     // Estados para Calibración de Sensores (HU-10, HU-12)
     const [calibDevId, setCalibDevId] = useState<number | null>(null);
@@ -26,6 +29,8 @@ export default function ControlClient({ userId, cultivos, data, idCultivo, model
     useEffect(() => {
         setOptimisticData(data);
         setMaxRelayMinutes(data.bomba.timeoutMin || 10);
+        const currentModo = data.modo.predictivoActivo ? 'predictivo' : (data.modo.programadoActivo ? 'programado' : 'manual');
+        setSelectedModo(currentModo);
     }, [data, idCultivo]);
 
     const handleCalibrateSensorSubmit = async () => {
@@ -46,7 +51,7 @@ export default function ControlClient({ userId, cultivos, data, idCultivo, model
         });
     };
 
-    const { bomba, seguridad, modo, logs, horarios, dispositivos } = optimisticData;
+    const { bomba, valvula = { id: bomba?.id, pin: 25, abierta: false, modoAuto: true }, seguridad, modo, logs, horarios, dispositivos } = optimisticData;
 
     // Clasificación de dispositivos: Sensores de captura vs Actuadores
     const dispositivosSensores = (dispositivos || []).filter((dev: any) => 
@@ -81,10 +86,28 @@ export default function ControlClient({ userId, cultivos, data, idCultivo, model
         badgeDotColor = "#f97316";
     }
 
+    const handleModoClick = (m: 'manual' | 'predictivo' | 'programado') => {
+        if (bomba.encendida || valvula.abierta) {
+            alert("Bloqueado: primero apague el riego (bomba o válvula) para cambiar de modo.");
+            return;
+        }
+        if (m === 'programado' && (horarios || []).length === 0) {
+            alert("⚠️ No tienes horarios programados. Por favor, agrega al menos un horario de riego a continuación para poder activar este modo.");
+            setSelectedModo('programado');
+            return;
+        }
+        if (m === 'predictivo' && !modo.tieneModelo) {
+            alert("No hay un modelo inteligente entrenado para este cultivo.");
+            return;
+        }
+        setSelectedModo(m);
+        handleModo(m);
+    };
+
     const handleModo = async (m: 'manual' | 'predictivo' | 'programado') => {
         if (!bomba.id) return;
-        if (isActuadorFuncionando) {
-            alert("Bloqueado: primero apague el funcionamiento del dispositivo actuador.");
+        if (bomba.encendida || valvula.abierta) {
+            alert("Bloqueado: primero apague el riego (bomba o válvula) para cambiar de modo.");
             return;
         }
         const previousData = optimisticData;
@@ -130,11 +153,38 @@ export default function ControlClient({ userId, cultivos, data, idCultivo, model
         });
     };
 
+    const handleToggleValvula = async () => {
+        if (!valvula.id && !bomba.id) return;
+        if (!isActuadorFuncionando && !valvula.abierta) {
+            alert("No se puede abrir la valvula: el dispositivo actuador esta apagado.");
+            return;
+        }
+        const previousData = optimisticData;
+        const nextState = !valvula.abierta;
+        setOptimisticData((current: any) => ({
+            ...current,
+            valvula: { ...(current.valvula || { id: current.bomba?.id, pin: 25 }), abierta: nextState },
+        }));
+        startTransition(async () => {
+            try {
+                await toggleValvulaManual(userId, valvula.id || bomba.id, nextState);
+            } catch (err: any) {
+                setOptimisticData(previousData);
+                alert(`Error al conmutar la valvula: ${err.message}`);
+            }
+        });
+    };
+
     const handleGuardarHorario = async () => {
         if (!bomba.id) return;
         startTransition(async () => {
             try {
                 await agregarHorario(userId, bomba.id, nuevaHora, nuevaDuracion, diasSel, nuevoNombre);
+                // Si agregamos el horario estando en pestaña programado pero el backend aún no está activo, lo activamos
+                const modoActual = modo.actual?.toLowerCase();
+                if (modoActual !== 'programado' && modoActual !== 'programado (ml)') {
+                    await setModoOperacion(userId, idCultivo, bomba.id, 'programado');
+                }
             } catch (err: any) {
                 alert(`Error al agregar horario: ${err.message}`);
             }
@@ -237,12 +287,14 @@ export default function ControlClient({ userId, cultivos, data, idCultivo, model
                 <Box>
                     <Flex align="center" gap="4" mb="3">
                         <Text size="6" weight="bold" color="indigo" as="div">Control y configuración</Text>
-                        <Select.Root value={idCultivo.toString()} onValueChange={(v) => startTransition(() => router.push(`?cultivo=${v}`))}>
-                            <Select.Trigger style={{ background: 'var(--surface2-mockup)', color: 'white', borderColor: 'var(--border-mockup)' }} />
-                            <Select.Content>
-                                {cultivos.map((c: any) => <Select.Item key={c.id} value={c.id.toString()}>{c.nombre_planta}</Select.Item>)}
-                            </Select.Content>
-                        </Select.Root>
+                        <SearchableSelect
+                            value={idCultivo.toString()}
+                            onValueChange={(v) => startTransition(() => router.push(`?cultivo=${v}`))}
+                            placeholder="Seleccionar cultivo"
+                            searchPlaceholder="Buscar cultivo..."
+                            style={{ background: 'var(--surface2-mockup)', borderColor: 'var(--border-mockup)', width: 240 }}
+                            options={cultivos.map((c: any) => ({ value: c.id.toString(), label: c.nombre_planta }))}
+                        />
                     </Flex>
                     <Text size="3" style={{ color: '#9ca3af', fontFamily: 'monospace' }}>
                         Modo activo: <span style={{ color: '#818cf8', fontWeight: 'bold' }}>{modo.actual}</span> · GPIO {bomba.pin || 'N/A'} → Relé → Bomba
@@ -400,73 +452,73 @@ export default function ControlClient({ userId, cultivos, data, idCultivo, model
                             <Card size="3" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '16px' }}>
                                 <Flex justify="between" align="center" mb="3" wrap="wrap" gap="2">
                                     <Text size="3" weight="bold" color="indigo">Modo de Operación del Actuador</Text>
-                                    {isActuadorFuncionando && (
+                                    {(bomba.encendida || valvula.abierta) && (
                                         <Badge color="yellow" variant="soft" style={{ borderRadius: '6px' }}>
-                                            🔒 Bloqueado: apague el funcionamiento del dispositivo para cambiar de modo
+                                            🔒 Bloqueado: apague el riego (bomba/válvula) para cambiar de modo
                                         </Badge>
                                     )}
                                 </Flex>
                                 <Grid columns={{ initial: '1', md: '3' }} gap="3">
                                     {/* Tarjeta Manual */}
                                     <Card
-                                        onClick={() => isActuadorFuncionando ? undefined : handleModo('manual')}
+                                        onClick={() => (bomba.encendida || valvula.abierta) ? undefined : handleModoClick('manual')}
                                         style={{
-                                            background: modo.manualActivo ? 'rgba(59, 130, 246, 0.06)' : 'var(--surface2-mockup)',
-                                            borderColor: modo.manualActivo ? '#3b82f6' : 'var(--border-mockup)',
+                                            background: selectedModo === 'manual' ? 'rgba(59, 130, 246, 0.06)' : 'var(--surface2-mockup)',
+                                            borderColor: selectedModo === 'manual' ? '#3b82f6' : 'var(--border-mockup)',
                                             borderWidth: '2px',
-                                            cursor: isActuadorFuncionando ? 'not-allowed' : 'pointer',
-                                            opacity: isActuadorFuncionando ? 0.6 : 1,
+                                            cursor: (bomba.encendida || valvula.abierta) ? 'not-allowed' : 'pointer',
+                                            opacity: (bomba.encendida || valvula.abierta) ? 0.6 : 1,
                                             transition: 'all 0.2s',
                                             textAlign: 'center'
                                         }}
                                     >
                                         <Flex direction="column" gap="1" align="center" justify="center" p="2">
-                                            <Text size="7">🎮</Text>
-                                            <Text size="2" weight="bold" style={{ color: modo.manualActivo ? '#60a5fa' : 'white' }}>Manual</Text>
+                                            <Text size="7">🔧</Text>
+                                            <Text size="2" weight="bold" style={{ color: selectedModo === 'manual' ? '#60a5fa' : 'white' }}>Manual</Text>
                                             <Text size="1" color="gray" style={{ lineHeight: '1.2' }}>Comando directo instantáneo.</Text>
-                                            {modo.manualActivo && <Badge color="blue" style={{ marginTop: '4px' }}>Activo</Badge>}
+                                            {selectedModo === 'manual' && <Badge color="blue" style={{ marginTop: '4px' }}>Activo</Badge>}
                                         </Flex>
                                     </Card>
 
                                     {/* Tarjeta Programada */}
                                     <Card
-                                        onClick={() => isActuadorFuncionando ? undefined : handleModo('programado')}
+                                        onClick={() => (bomba.encendida || valvula.abierta) ? undefined : handleModoClick('programado')}
                                         style={{
-                                            background: modo.programadoActivo ? 'rgba(34, 197, 94, 0.06)' : 'var(--surface2-mockup)',
-                                            borderColor: modo.programadoActivo ? '#22c55e' : 'var(--border-mockup)',
+                                            background: selectedModo === 'programado' ? 'rgba(34, 197, 94, 0.06)' : 'var(--surface2-mockup)',
+                                            borderColor: selectedModo === 'programado' ? '#22c55e' : 'var(--border-mockup)',
                                             borderWidth: '2px',
-                                            cursor: isActuadorFuncionando ? 'not-allowed' : 'pointer',
-                                            opacity: isActuadorFuncionando ? 0.6 : 1,
+                                            cursor: (bomba.encendida || valvula.abierta) ? 'not-allowed' : 'pointer',
+                                            opacity: (bomba.encendida || valvula.abierta) ? 0.6 : 1,
                                             transition: 'all 0.2s',
                                             textAlign: 'center'
                                         }}
                                     >
                                         <Flex direction="column" gap="1" align="center" justify="center" p="2">
                                             <Text size="7">📅</Text>
-                                            <Text size="2" weight="bold" style={{ color: modo.programadoActivo ? '#4ade80' : 'white' }}>Programado</Text>
+                                            <Text size="2" weight="bold" style={{ color: selectedModo === 'programado' ? '#4ade80' : 'white' }}>Programado</Text>
                                             <Text size="1" color="gray" style={{ lineHeight: '1.2' }}>Por calendarios fijos.</Text>
-                                            {modo.programadoActivo && <Badge color="green" style={{ marginTop: '4px' }}>Activo</Badge>}
+                                            {selectedModo === 'programado' && <Badge color="green" style={{ marginTop: '4px' }}>Activo</Badge>}
                                         </Flex>
                                     </Card>
 
                                     {/* Tarjeta Predictiva (ML) */}
                                     <Card
-                                        onClick={() => (isActuadorFuncionando || !modo.tieneModelo) ? undefined : handleModo('predictivo')}
+                                        onClick={() => (bomba.encendida || valvula.abierta || !modo.tieneModelo) ? undefined : handleModoClick('predictivo')}
                                         style={{
-                                            background: modo.predictivoActivo ? 'rgba(168, 85, 247, 0.06)' : 'var(--surface2-mockup)',
-                                            borderColor: modo.predictivoActivo ? '#a855f7' : 'var(--border-mockup)',
+                                            background: selectedModo === 'predictivo' ? 'rgba(168, 85, 247, 0.06)' : 'var(--surface2-mockup)',
+                                            borderColor: selectedModo === 'predictivo' ? '#a855f7' : 'var(--border-mockup)',
                                             borderWidth: '2px',
-                                            cursor: (isActuadorFuncionando || !modo.tieneModelo) ? 'not-allowed' : 'pointer',
-                                            opacity: (isActuadorFuncionando || !modo.tieneModelo) ? 0.6 : 1,
+                                            cursor: (bomba.encendida || valvula.abierta || !modo.tieneModelo) ? 'not-allowed' : 'pointer',
+                                            opacity: (bomba.encendida || valvula.abierta || !modo.tieneModelo) ? 0.6 : 1,
                                             transition: 'all 0.2s',
                                             textAlign: 'center'
                                         }}
                                     >
                                         <Flex direction="column" gap="1" align="center" justify="center" p="2">
                                             <Text size="7">🧠</Text>
-                                            <Text size="2" weight="bold" style={{ color: modo.predictivoActivo ? '#c084fc' : 'white' }}>Predictivo (ML)</Text>
+                                            <Text size="2" weight="bold" style={{ color: selectedModo === 'predictivo' ? '#c084fc' : 'white' }}>Predictivo (ML)</Text>
                                             <Text size="1" color="gray" style={{ lineHeight: '1.2' }}>Inteligente por sensores.</Text>
-                                            {modo.predictivoActivo ? (
+                                            {selectedModo === 'predictivo' ? (
                                                 <Badge color="purple" style={{ marginTop: '4px' }}>Activo</Badge>
                                             ) : !modo.tieneModelo ? (
                                                 <Badge color="gray" style={{ marginTop: '4px' }}>Sin modelo</Badge>
@@ -479,55 +531,94 @@ export default function ControlClient({ userId, cultivos, data, idCultivo, model
                             {/* DYNAMIC CARD CONTENT BASED ON MODE */}
                             
                             {/* PANEL MODO MANUAL */}
-                            {modo.manualActivo && (
+                            {selectedModo === 'manual' && (
                                 <Card size="3" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '16px' }}>
                                     <Flex direction="column" gap="4">
-                                        <Box>
-                                            <Text size="4" weight="bold" color="indigo" mb="1" as="div">🎮 Riego Manual Directo</Text>
-                                            <Text size="2" color="gray">Enciende o apaga la electroválvula/bomba en tiempo real.</Text>
+                                        <Box mb="2">
+                                            <Text size="4" weight="bold" color="indigo" mb="1" as="div">🔧 Riego Manual Directo</Text>
+                                            <Text size="2" color="gray">Control directo y en tiempo real del motor de la bomba y la electroválvula de llenado.</Text>
                                         </Box>
  
-                                        <Flex direction="column" align="center" justify="center" my="4">
-                                            <Box style={{
-                                                width: '110px', height: '110px', borderRadius: '50%',
-                                                border: bomba.encendida ? '3px solid #3b82f6' : '3px solid var(--border-mockup)',
-                                                background: bomba.encendida ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
-                                                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                                                boxShadow: bomba.encendida ? '0 0 20px rgba(59, 130, 246, 0.25)' : 'none',
-                                                transition: 'all 0.3s'
-                                            } as any}>
-                                                <Text size="7" style={{ filter: bomba.encendida ? 'drop-shadow(0 0 8px #60a5fa)' : 'none' }}>💧</Text>
-                                                <Text size="1" weight="bold" style={{ color: bomba.encendida ? '#60a5fa' : '#6b7280', marginTop: '4px', letterSpacing: '1px' }}>
-                                                    {bomba.encendida ? 'ENCENDIDA' : 'APAGADA'}
-                                                </Text>
-                                            </Box>
-                                        </Flex>
- 
-                                        <Flex justify="center">
-                                            <Button
-                                                color={bomba.encendida ? "red" : "green"}
-                                                variant="solid"
-                                                disabled={!bomba.id}
-                                                onClick={handleToggleBomba}
-                                                style={{ cursor: 'pointer', width: '100%', maxWidth: '250px' }}
-                                            >
-                                                {bomba.encendida ? '⏹ Apagar Bomba' : '▶ Encender Bomba'}
-                                            </Button>
-                                        </Flex>
+                                        <Grid columns={{ initial: '1', sm: '2' }} gap="4" my="2">
+                                            {/* Columna Motor / Bomba */}
+                                            <Card style={{ background: 'var(--surface2-mockup)', borderColor: 'var(--border-mockup)', padding: '20px', borderRadius: '12px' }}>
+                                                <Flex direction="column" align="center" justify="center" gap="4">
+                                                    <Text size="3" weight="bold" color="indigo">Motor de Riego</Text>
+                                                    <Box style={{
+                                                        width: '100px', height: '100px', borderRadius: '50%',
+                                                        border: bomba.encendida ? '3px solid #3b82f6' : '3px solid var(--border-mockup)',
+                                                        background: bomba.encendida ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                                                        display: 'flex', flexDirection: 'column', alignItems: 'center', justify: 'center',
+                                                        boxShadow: bomba.encendida ? '0 0 20px rgba(59, 130, 246, 0.25)' : 'none',
+                                                        transition: 'all 0.3s'
+                                                    } as any}>
+                                                        <Text size="6" style={{ filter: bomba.encendida ? 'drop-shadow(0 0 8px #60a5fa)' : 'none' }}>💧</Text>
+                                                        <Text size="1" weight="bold" style={{ color: bomba.encendida ? '#60a5fa' : '#6b7280', marginTop: '4px', letterSpacing: '1px' }}>
+                                                            {bomba.encendida ? 'ENCENDIDO' : 'APAGADO'}
+                                                        </Text>
+                                                    </Box>
+                                                    <Button
+                                                        color={bomba.encendida ? "red" : "green"}
+                                                        variant="solid"
+                                                        disabled={!bomba.id}
+                                                        onClick={handleToggleBomba}
+                                                        style={{ cursor: 'pointer', width: '100%', maxWidth: '220px' }}
+                                                    >
+                                                        {bomba.encendida ? '⏹ Apagar Bomba' : '▶ Encender Bomba'}
+                                                    </Button>
+                                                    <Text size="1" color="gray" align="center" style={{ minHeight: '32px', display: 'flex', alignItems: 'center' }}>
+                                                        Activa el flujo principal de agua hacia los cultivos.
+                                                    </Text>
+                                                </Flex>
+                                            </Card>
+
+                                            {/* Columna Electroválvula */}
+                                            <Card style={{ background: 'var(--surface2-mockup)', borderColor: 'var(--border-mockup)', padding: '20px', borderRadius: '12px' }}>
+                                                <Flex direction="column" align="center" justify="center" gap="4">
+                                                    <Text size="3" weight="bold" color="indigo">Electroválvula</Text>
+                                                    <Box style={{
+                                                        width: '100px', height: '100px', borderRadius: '50%',
+                                                        border: valvula.abierta ? '3px solid #22c55e' : '3px solid var(--border-mockup)',
+                                                        background: valvula.abierta ? 'rgba(34, 197, 94, 0.1)' : 'transparent',
+                                                        display: 'flex', flexDirection: 'column', alignItems: 'center', justify: 'center',
+                                                        boxShadow: valvula.abierta ? '0 0 20px rgba(34, 197, 94, 0.25)' : 'none',
+                                                        transition: 'all 0.3s'
+                                                    } as any}>
+                                                        <Text size="6" style={{ filter: valvula.abierta ? 'drop-shadow(0 0 8px #4ade80)' : 'none' }}>🚰</Text>
+                                                        <Text size="1" weight="bold" style={{ color: valvula.abierta ? '#4ade80' : '#6b7280', marginTop: '4px', letterSpacing: '1px' }}>
+                                                            {valvula.abierta ? 'ABIERTA' : 'CERRADA'}
+                                                        </Text>
+                                                    </Box>
+                                                    <Button
+                                                        color={valvula.abierta ? "red" : "green"}
+                                                        variant="solid"
+                                                        disabled={!valvula.id && !bomba.id}
+                                                        onClick={handleToggleValvula}
+                                                        style={{ cursor: 'pointer', width: '100%', maxWidth: '220px' }}
+                                                    >
+                                                        {valvula.abierta ? '⏹ Cerrar Válvula' : '▶ Abrir Válvula'}
+                                                    </Button>
+                                                    <Text size="1" color="gray" align="center" style={{ minHeight: '32px', display: 'flex', alignItems: 'center' }}>
+                                                        Apertura automática ante ausencia de agua en el tanque.
+                                                    </Text>
+                                                </Flex>
+                                            </Card>
+                                        </Grid>
+
                                         {!isActuadorFuncionando && (
                                             <Text size="1" color="red" align="center" style={{ marginTop: '8px' }} as="div">
                                                 ⚠️ Dispositivo actuador apagado. Actívelo arriba en esta pestaña para poder encender la bomba.
                                             </Text>
                                         )}
-                                        <Text size="1" color="gray" align="center" style={{ fontFamily: 'monospace' }} as="div">
-                                            Tiempo maximo del rele por evento: {bomba.timeoutMin} minutos
+                                        <Text size="1" color="gray" align="center" style={{ fontFamily: 'monospace', marginTop: '4px' }} as="div">
+                                            Tiempo máximo del relé por evento: {bomba.timeoutMin} minutos
                                         </Text>
                                     </Flex>
                                 </Card>
                             )}
 
                             {/* PANEL MODO PROGRAMADO */}
-                            {modo.programadoActivo && (
+                            {selectedModo === 'programado' && (
                                 <Card size="3" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '16px' }}>
                                     <Flex justify="between" align="center" mb="4">
                                         <Box>
@@ -602,7 +693,7 @@ export default function ControlClient({ userId, cultivos, data, idCultivo, model
                             )}
 
                             {/* PANEL MODO PREDICTIVO */}
-                            {modo.predictivoActivo && (
+                            {selectedModo === 'predictivo' && (
                                 <Card size="3" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '16px' }}>
                                     <Flex direction="column" gap="4">
                                         <Box>

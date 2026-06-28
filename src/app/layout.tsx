@@ -3,6 +3,7 @@ import { Theme } from '@radix-ui/themes'
 import '@radix-ui/themes/styles.css'
 import "./globals.css";
 import SessionProvider from '@/components/providers/SessionProvider'
+import FormToastProvider from '@/components/ui/FormToastProvider'
 
 const removeInjectedFormAttributes = `
   (() => {
@@ -58,6 +59,7 @@ export default function RootLayout({
         <SessionProvider>
           <Theme appearance="dark">
             {children}
+            <FormToastProvider />
           </Theme>
         </SessionProvider>
       </body>

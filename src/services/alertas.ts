@@ -16,3 +16,11 @@ export async function getNotifConfig() {
   }
   return res.json();
 }
+
+export async function getPushSubscriptionStatus() {
+  const res = await fetchFromFastAPI("/webpush/status");
+  if (!res.ok) {
+    return { registered: false, subscriptionCount: 0 };
+  }
+  return res.json();
+}
