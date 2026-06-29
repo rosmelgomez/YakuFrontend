@@ -39,15 +39,11 @@ export default async function DashboardPage() {
     fuentesAgua,
     regiones
   ] = await Promise.all([
-    getDashboardData(userId),
+    getDashboardData(),
     listarPlantas().catch(() => []),
     listarFuentesAgua().catch(() => []),
     listarRegiones().catch(() => [])
   ]);
-
-  // Iniciales para el perfil
-  const name = session?.user?.name || "JR";
-  const initials = name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase();
 
   return (
     <Box className="page-content" style={{ padding: '2rem 0' }}>

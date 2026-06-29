@@ -39,7 +39,7 @@ export default function LoginForm() {
       } else if (result?.ok) {
         router.push('/dashboard/agricultor')
       }
-    } catch (err) {
+    } catch {
       setError('Error al iniciar sesión. Intenta de nuevo.')
     }
   }

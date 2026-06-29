@@ -46,7 +46,7 @@ export const authOptions: NextAuthOptions = {
                 res.status !== 404) {
               parsedError = detail;
             }
-          } catch (e) {}
+          } catch {}
           throw new Error(parsedError);
         }
 

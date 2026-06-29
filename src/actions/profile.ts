@@ -30,7 +30,7 @@ export async function actualizarPerfil(payload: {
     try {
       const errorJson = JSON.parse(errorText);
       detail = errorJson.detail || detail;
-    } catch (e) {}
+    } catch {}
     throw new Error(detail);
   }
   

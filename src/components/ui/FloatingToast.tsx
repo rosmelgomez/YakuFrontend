@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { AlertTriangle, X, Droplet, Thermometer } from 'lucide-react';
+import { AlertTriangle, X, Droplet } from 'lucide-react';
 
 interface FloatingToastProps {
   alerta: {

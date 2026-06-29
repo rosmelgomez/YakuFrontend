@@ -1253,14 +1253,7 @@ const TanqueCard = ({ tanque }: { tanque: TanqueData }) => {
     );
   }
 
-  const handleToggleBomba = async (checked: boolean) => {
-    setBombaActiva(checked);
-    if (!tanque.idTelemetria) { setBombaActiva(!checked); return; }
-    try {
-      const res = await fetch('/api/iot/bomba', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idTelemetria: tanque.idTelemetria, estado: checked }) });
-      if (!res.ok) throw new Error();
-    } catch (e) { setBombaActiva(!checked); alert("Error en conexión."); }
-  };
+
   return (
     <Card size="3" style={{ background: '#111827', borderColor: '#1f2937', borderRadius: '16px' }}>
       <Flex direction="column" gap="2">

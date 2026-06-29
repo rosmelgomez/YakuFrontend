@@ -63,19 +63,6 @@ export async function actualizarHorario(idHorario: number, hora: string, min: nu
   revalidatePath('/dashboard/agricultor/control');
 }
 
-export async function triggerBombaManual(userId: number, idBomba: number, duracionSeg: number) {
-  // Enviar comando para encender la bomba
-  const res = await fetchFromFastAPI("/control/bomba/toggle", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ idBomba, encender: true })
-  });
-  if (!res.ok) {
-    throw new Error(await res.text() || "Error al forzar bomba");
-  }
-  revalidatePath('/dashboard/agricultor/control');
-}
-
 export async function toggleBombaManual(userId: number, idBomba: number, encender: boolean) {
   const res = await fetchFromFastAPI("/control/bomba/toggle", {
     method: "POST",

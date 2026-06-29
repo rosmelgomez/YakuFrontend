@@ -12,7 +12,6 @@ import {
   Settings,
   Brain,
   LogOut,
-  Shield,
   Users,
   Cpu,
   MapPin,

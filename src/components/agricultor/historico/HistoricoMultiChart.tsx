@@ -1,8 +1,8 @@
 // src/components/agricultor/historico/HistoricoMultiChart.tsx
 "use client";
 
-import { useState, useTransition, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+
 import { Box, Text, Flex, Card, Button, Grid, ScrollArea, Select, TextField } from '@radix-ui/themes';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import type { HistoricoResponse } from '@/services/historico';
@@ -53,8 +53,6 @@ export default function HistoricoMultiChart({
   initialCultivo: string, 
   initialRango: number 
 }) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
 
   const [idCultivo, setIdCultivo] = useState(initialCultivo);
   const [rango, setRango] = useState(initialRango);
@@ -146,7 +144,7 @@ const [filterMode, setFilterMode] = useState<FilterMode>('relative');
       } else {
         alert(res.error || "Error al cargar los datos históricos.");
       }
-    } catch (err) {
+    } catch {
       alert("Error de conexión al cargar datos.");
     } finally {
       setIsLoadingData(false);
@@ -219,7 +217,7 @@ const [filterMode, setFilterMode] = useState<FilterMode>('relative');
   );
 
   return (
-    <Flex direction="column" gap="5" style={{ opacity: (isPending || isLoadingData) ? 0.5 : 1, transition: 'opacity 0.2s' }}>
+    <Flex direction="column" gap="5" style={{ opacity: isLoadingData ? 0.5 : 1, transition: 'opacity 0.2s' }}>
       
       {/* HEADER GLOBAL */}
       <Flex justify="between" align="end" mb="1" wrap="wrap" gap="4">

@@ -50,7 +50,7 @@ export default function RegisterForm() {
           router.push('/auth/login')
         }, 2000)
       }
-    } catch (err) {
+    } catch {
       setError('Error al registrarse. Intenta de nuevo.')
     }
   }

@@ -28,7 +28,7 @@ export async function POST(req: Request) {
       try {
         const jsonErr = JSON.parse(errMsg);
         parsedError = jsonErr.detail || parsedError;
-      } catch (e) {}
+      } catch {}
       return NextResponse.json(
         { message: parsedError },
         { status: res.status }
