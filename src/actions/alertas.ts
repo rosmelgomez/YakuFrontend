@@ -66,3 +66,16 @@ export async function registrarSuscripcionPush(subscription: any) {
     return { success: false, error: error.message || "Error al registrar suscripción." };
   }
 }
+
+export async function obtenerDatosAlertaPorCultivo(idCultivo: number) {
+  try {
+    const res = await fetchFromFastAPI(`/dashboard/alertas?idCultivo=${idCultivo}`);
+    if (!res.ok) {
+      throw new Error(await res.text() || "Error al obtener datos de alertas");
+    }
+    const data = await res.json();
+    return { success: true, data };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Error al obtener datos." };
+  }
+}

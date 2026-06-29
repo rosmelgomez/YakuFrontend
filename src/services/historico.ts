@@ -2,10 +2,11 @@
 import { fetchFromFastAPI } from "@/lib/bff";
 
 export type HistoricoResponse = {
-  chartData: any[];
+  chartData: (any & { fecha?: string })[];
   stats: any;
   riegoLog: {
     id: string;
+    fecha?: string;
     fechaStr: string;
     origen: string;
     colorOrigen: string;

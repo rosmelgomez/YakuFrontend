@@ -51,6 +51,18 @@ export async function agregarHorario(userId: number, idBomba: number, hora: stri
   revalidatePath('/dashboard/agricultor/control');
 }
 
+export async function actualizarHorario(idHorario: number, hora: string, min: number, dias: boolean[], nombre: string) {
+  const res = await fetchFromFastAPI(`/control/horario/${idHorario}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ hora, duracionMin: min, dias, nombre })
+  });
+  if (!res.ok) {
+    throw new Error(await res.text() || "Error al actualizar horario");
+  }
+  revalidatePath('/dashboard/agricultor/control');
+}
+
 export async function triggerBombaManual(userId: number, idBomba: number, duracionSeg: number) {
   // Enviar comando para encender la bomba
   const res = await fetchFromFastAPI("/control/bomba/toggle", {
@@ -136,5 +148,53 @@ export async function calibrarSensor(dispositivoId: number, pinGpio: number, off
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message || "Error al calibrar" };
+  }
+}
+
+export async function obtenerDatosControlPorCultivo(userId: number, idCultivo: number) {
+  try {
+    const { getControlData } = await import("@/services/control");
+    const { getAlertasData } = await import("@/services/alertas");
+    
+    const [cData, aData, resModels] = await Promise.all([
+      getControlData(userId, idCultivo),
+      getAlertasData(userId, idCultivo).catch(() => ({ umbrales: [] })),
+      fetchFromFastAPI(`/ml/models?id_cultivo=${idCultivo}`)
+    ]);
+
+    let modelosML = [];
+    if (resModels.ok) {
+      modelosML = await resModels.json();
+    }
+
+    return {
+      success: true,
+      data: {
+        controlData: cData,
+        umbrales: aData.umbrales,
+        modelosML
+      }
+    };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Error al cargar datos" };
+  }
+}
+
+export async function ejecutarPrediccionEnVivo(userId: number, idCultivo: number) {
+  try {
+    const res = await fetchFromFastAPI(`/ml/predict-live/${idCultivo}`, {
+      method: 'POST'
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(errorText || 'Error en comunicación con backend FastAPI');
+    }
+
+    revalidatePath('/dashboard/agricultor/control');
+    revalidatePath('/dashboard/agricultor');
+    return { success: true, data: await res.json() };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Error de red o comunicación' };
   }
 }

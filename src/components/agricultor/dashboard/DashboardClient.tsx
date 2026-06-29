@@ -3,7 +3,7 @@
 import { useState, useTransition, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, Text, Flex, Grid, Select, Card, Badge, Progress, Switch, Separator, Button, Dialog, TextField, ScrollArea } from '@radix-ui/themes';
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Cell, CartesianGrid } from 'recharts';
+import { LineChart, Line, PieChart, Pie, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Cell, CartesianGrid } from 'recharts';
 import { registrarCultivo, registrarFuenteAgua, listarProvincias, listarDistritos } from '@/actions/crops';
 import NoCropsEmptyState from '@/components/layout/NoCropsEmptyState';
 import SearchableSelect from '@/components/ui/SearchableSelect';
@@ -12,11 +12,13 @@ const getCreatedCropId = (res: any): number => {
   return res?.id_cultivo ?? res?.idCultivo ?? res?.id ?? 0;
 };
 
+const DASHBOARD_REFRESH_SECONDS = 60;
+const DEFAULT_DASHBOARD_TIME_ZONE = 'America/Lima';
 
 type TanqueData = { idTelemetria: string | null; nombre: string; litrosActuales: number; litrosTotales: number; porcentaje: number; sensorModelo: string; estadoNivel: string; bombaEncendida: boolean; timeoutMinutos: number; dispositivoActivo?: boolean; } | null;
 type SensorData = { modelo: string; metrica: string; unidad: string; valor: number; porcentaje: number | null; ema: number | null; fecha: Date; umbral: { min: number | null; max: number | null } | null; } | null;
-type DispositivoData = { id: number; nombre: string; estado: string | null; funcionamientoActivo?: boolean; };
-type ConsumoData = { label: string; valor: number; };
+type DispositivoData = { id: number; nombre: string; estado: string | null; funcionamientoActivo?: boolean; tipoId?: number; tipoNombre?: string; };
+type ConsumoData = { fecha?: string; label: string; valor: number; };
 type ResumenDiaData = { riegosHoy: number; litrosHoy: number; ultimoRiego: Date | null; humedadSueloProm: number | null; humedadAmbiental: number | null; };
 
 type HistoricoPunto = { fecha: string; valor: number; };
@@ -27,8 +29,41 @@ type HistorialData = {
   temperaturaAmbiente: HistoricoPunto[];
 };
 
+type HistoryRange = '6h' | '24h' | '7d';
+type CalendarFilter = 'all' | string;
+type CalendarFilters = { weekday: CalendarFilter; month: CalendarFilter; year: CalendarFilter; startDate?: string; endDate?: string };
+type FilterMode = 'relative' | 'calendar';
+
+const WEEKDAY_OPTIONS = [
+  { value: 'all', label: 'Todos los dias' },
+  { value: '1', label: 'Lunes' },
+  { value: '2', label: 'Martes' },
+  { value: '3', label: 'Miercoles' },
+  { value: '4', label: 'Jueves' },
+  { value: '5', label: 'Viernes' },
+  { value: '6', label: 'Sabado' },
+  { value: '0', label: 'Domingo' },
+];
+
+const MONTH_OPTIONS = [
+  { value: 'all', label: 'Todos los meses' },
+  { value: '0', label: 'Enero' },
+  { value: '1', label: 'Febrero' },
+  { value: '2', label: 'Marzo' },
+  { value: '3', label: 'Abril' },
+  { value: '4', label: 'Mayo' },
+  { value: '5', label: 'Junio' },
+  { value: '6', label: 'Julio' },
+  { value: '7', label: 'Agosto' },
+  { value: '8', label: 'Septiembre' },
+  { value: '9', label: 'Octubre' },
+  { value: '10', label: 'Noviembre' },
+  { value: '11', label: 'Diciembre' },
+];
+
 type CultivoData = {
   idCultivo: number;
+  zonaHoraria?: string;
   nombreCultivo: string;
   conceptoPlanta: string;
   etapaCrecimiento: string | null;
@@ -39,6 +74,40 @@ type CultivoData = {
   consumoSemanal: ConsumoData[];
   limiteConsumo: number | null;
   resumenDia: ResumenDiaData;
+};
+
+const isCollectorDevice = (device: DispositivoData) => {
+  const typeName = `${device.tipoNombre || ''} ${device.nombre || ''}`.toLowerCase();
+  return device.tipoId === 1 || ['sensor', 'sensores', 'captura', 'colector', 'suelo', 'clima'].some((word) => typeName.includes(word));
+};
+
+const hasActiveCollector = (cultivo: CultivoData | null) => {
+  return Boolean(cultivo?.dispositivos?.some((device) => isCollectorDevice(device) && device.funcionamientoActivo));
+};
+
+const dateMatchesCalendarFilters = (date: Date, filters: CalendarFilters) => {
+  if (Number.isNaN(date.getTime())) return false;
+  if (filters.weekday !== 'all' && date.getDay().toString() !== filters.weekday) return false;
+  if (filters.month !== 'all' && date.getMonth().toString() !== filters.month) return false;
+  if (filters.year !== 'all' && date.getFullYear().toString() !== filters.year) return false;
+  if (filters.startDate && date < new Date(`${filters.startDate}T00:00:00`)) return false;
+  if (filters.endDate && date > new Date(`${filters.endDate}T23:59:59`)) return false;
+  return true;
+};
+
+const getDashboardYears = (cultivo: CultivoData | null) => {
+  if (!cultivo) return [new Date().getFullYear().toString()];
+  const dates = [
+    ...Object.values(cultivo.historialSensores).flat().map((item) => item.fecha),
+    ...cultivo.consumoSemanal.map((item) => item.fecha || ''),
+  ];
+  const years = Array.from(new Set(
+    dates
+      .map((value) => new Date(value))
+      .filter((date) => !Number.isNaN(date.getTime()))
+      .map((date) => date.getFullYear().toString())
+  )).sort((a, b) => Number(b) - Number(a));
+  return years.length > 0 ? years : [new Date().getFullYear().toString()];
 };
 
 export default function DashboardClient({ 
@@ -56,9 +125,16 @@ export default function DashboardClient({
   const [localCultivos, setLocalCultivos] = useState<CultivoData[]>(cultivos);
   const [selectedId, setSelectedId] = useState<string>(cultivos.length > 0 ? cultivos[0].idCultivo.toString() : "");
   const [isPending, startTransition] = useTransition();
-  const [timeLeft, setTimeLeft] = useState(300);
-  const timeLeftRef = useRef(300);
+  const [timeLeft, setTimeLeft] = useState(DASHBOARD_REFRESH_SECONDS);
+  const timeLeftRef = useRef(DASHBOARD_REFRESH_SECONDS);
   const [isClientMounted, setIsClientMounted] = useState(false);
+  const [weekdayFilter, setWeekdayFilter] = useState<CalendarFilter>('all');
+  const [monthFilter, setMonthFilter] = useState<CalendarFilter>('all');
+  const [yearFilter, setYearFilter] = useState<CalendarFilter>('all');
+  const [filterMode, setFilterMode] = useState<FilterMode>('relative');
+  const [dashboardRange, setDashboardRange] = useState<HistoryRange>('6h');
+  const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState('');
 
   useEffect(() => {
     setLocalCultivos(cultivos);
@@ -74,9 +150,18 @@ export default function DashboardClient({
     setIsClientMounted(true);
 
     const interval = setInterval(() => {
+      const activeCrop = localCultivos.find((c) => c.idCultivo.toString() === selectedId) || localCultivos[0] || null;
+      if (!hasActiveCollector(activeCrop)) {
+        if (timeLeftRef.current !== DASHBOARD_REFRESH_SECONDS) {
+          timeLeftRef.current = DASHBOARD_REFRESH_SECONDS;
+          setTimeLeft(DASHBOARD_REFRESH_SECONDS);
+        }
+        return;
+      }
+
       if (timeLeftRef.current <= 1) {
-        timeLeftRef.current = 300;
-        setTimeLeft(300);
+        timeLeftRef.current = DASHBOARD_REFRESH_SECONDS;
+        setTimeLeft(DASHBOARD_REFRESH_SECONDS);
         router.refresh();
         return;
       }
@@ -86,7 +171,18 @@ export default function DashboardClient({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [router]);
+  }, [localCultivos, router, selectedId]);
+
+  useEffect(() => {
+    if (filterMode === 'calendar') return;
+    if (dashboardRange !== '7d') {
+      setWeekdayFilter('all');
+    }
+    setMonthFilter('all');
+    setYearFilter('all');
+    setStartDateFilter('');
+    setEndDateFilter('');
+  }, [dashboardRange, filterMode]);
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -117,6 +213,8 @@ export default function DashboardClient({
   const [newCropIdRegion, setNewCropIdRegion] = useState("");
   const [newCropIdProvincia, setNewCropIdProvincia] = useState("");
   const [newCropIdDistrito, setNewCropIdDistrito] = useState("");
+  const [isOpenSuccessCrop, setIsOpenSuccessCrop] = useState(false);
+  const [successCropName, setSuccessCropName] = useState("");
 
   const [localProvincias, setLocalProvincias] = useState<any[]>([]);
   const [localDistritos, setLocalDistritos] = useState<any[]>([]);
@@ -308,7 +406,8 @@ export default function DashboardClient({
           const localCultivo = buildLocalCultivo(res, payload);
           setLocalCultivos((prev) => [...prev.filter((cultivo) => cultivo.idCultivo !== localCultivo.idCultivo), localCultivo]);
           setSelectedId(localCultivo.idCultivo.toString());
-          alert(`Cultivo '${registeredCropName}' registrado correctamente.`);
+          setSuccessCropName(registeredCropName);
+          setIsOpenSuccessCrop(true);
           setIsOpenRegisterCrop(false);
           resetCropForm();
           router.refresh();
@@ -318,6 +417,35 @@ export default function DashboardClient({
       }
     });
   };
+
+  const renderSuccessCropDialog = () => (
+    <Dialog.Root
+      open={isOpenSuccessCrop}
+      onOpenChange={setIsOpenSuccessCrop}
+    >
+      <Dialog.Content aria-describedby={undefined} style={{ maxWidth: 400, background: '#1f2937', border: '1px solid #2d3748', textAlign: 'center' }}>
+        <Dialog.Title style={{ color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+          🌱 ¡Cultivo Registrado!
+        </Dialog.Title>
+        <Text size="2" color="gray" mb="4" style={{ display: 'block', marginTop: '8px' }}>
+          El cultivo "{successCropName}" se ha registrado correctamente en la plataforma.
+        </Text>
+        <Flex gap="3" justify="center" mt="5">
+          <Button color="blue" style={{ cursor: 'pointer' }} onClick={() => {
+            setIsOpenSuccessCrop(false);
+            router.push('/dashboard/agricultor/control');
+          }}>
+            Configurar Umbrales
+          </Button>
+          <Dialog.Close>
+            <Button variant="soft" color="gray" style={{ cursor: 'pointer' }}>
+              Cerrar
+            </Button>
+          </Dialog.Close>
+        </Flex>
+      </Dialog.Content>
+    </Dialog.Root>
+  );
 
   const renderRegisterCropDialog = () => (
     <Dialog.Root
@@ -548,6 +676,98 @@ export default function DashboardClient({
 
   const hasCrops = localCultivos.length > 0;
   const cultivoActivo = hasCrops ? (localCultivos.find((c) => c.idCultivo.toString() === selectedId) || localCultivos[0]) : null;
+  const recolectorActivo = hasActiveCollector(cultivoActivo);
+  const isRelativeMode = filterMode === 'relative';
+  const canUseWeekday = !isRelativeMode || dashboardRange === '7d';
+  const canUseMonthYear = !isRelativeMode;
+  const calendarFilters: CalendarFilters = {
+    weekday: canUseWeekday ? weekdayFilter : 'all',
+    month: canUseMonthYear ? monthFilter : 'all',
+    year: canUseMonthYear ? yearFilter : 'all',
+    startDate: canUseMonthYear ? startDateFilter : '',
+    endDate: canUseMonthYear ? endDateFilter : '',
+  };
+  const availableYears = getDashboardYears(cultivoActivo);
+
+  // Helper for filtering sensors based on calendar filters
+  const getFilteredSensor = (
+    sensor: SensorData,
+    history: HistoricoPunto[],
+    type: 'soil_moisture' | 'env_humidity' | 'env_temp' | 'soil_temp'
+  ): SensorData => {
+    if (!sensor) return null;
+    const hasFilter = calendarFilters.weekday !== 'all' || calendarFilters.month !== 'all' || calendarFilters.year !== 'all';
+    if (!hasFilter) return sensor;
+
+    const filteredPoints = history.filter((p) => {
+      const date = new Date(p.fecha);
+      return dateMatchesCalendarFilters(date, calendarFilters);
+    });
+
+    if (filteredPoints.length === 0) {
+      return {
+        ...sensor,
+        valor: 0,
+        porcentaje: sensor.porcentaje !== null ? 0 : null,
+        ema: null
+      };
+    }
+
+    const sum = filteredPoints.reduce((acc, p) => acc + p.valor, 0);
+    const avgVal = sum / filteredPoints.length;
+
+    let newPorcentaje = sensor.porcentaje;
+    if (sensor.porcentaje !== null) {
+      if (type === 'soil_moisture' || type === 'env_humidity') {
+        newPorcentaje = avgVal;
+      } else {
+        newPorcentaje = (sensor.porcentaje / (sensor.valor || 1)) * avgVal;
+      }
+    }
+
+    return {
+      ...sensor,
+      valor: avgVal,
+      porcentaje: newPorcentaje,
+      ema: null
+    };
+  };
+
+  // Helper for filtering resume data based on calendar filters
+  const getFilteredResumen = (): ResumenDiaData => {
+    if (!cultivoActivo) return { riegosHoy: 0, litrosHoy: 0, ultimoRiego: null, humedadSueloProm: null, humedadAmbiental: null };
+    const resumen = cultivoActivo.resumenDia;
+    const hasFilter = calendarFilters.weekday !== 'all' || calendarFilters.month !== 'all' || calendarFilters.year !== 'all';
+    if (!hasFilter) return resumen;
+
+    const hsFiltered = cultivoActivo.historialSensores.humedadSuelo.filter((p) =>
+      dateMatchesCalendarFilters(new Date(p.fecha), calendarFilters)
+    );
+    const avgHS = hsFiltered.length > 0 ? hsFiltered.reduce((acc, p) => acc + p.valor, 0) / hsFiltered.length : null;
+
+    const haFiltered = cultivoActivo.historialSensores.humedadAmbiente.filter((p) =>
+      dateMatchesCalendarFilters(new Date(p.fecha), calendarFilters)
+    );
+    const avgHA = haFiltered.length > 0 ? haFiltered.reduce((acc, p) => acc + p.valor, 0) / haFiltered.length : null;
+
+    const consumoFiltered = cultivoActivo.consumoSemanal.filter((c) =>
+      c.fecha && dateMatchesCalendarFilters(new Date(c.fecha), calendarFilters)
+    );
+    const avgLitros = consumoFiltered.length > 0 ? consumoFiltered.reduce((acc, c) => acc + c.valor, 0) / consumoFiltered.length : 0;
+
+    const ultimoRiegoMatches = resumen.ultimoRiego && dateMatchesCalendarFilters(new Date(resumen.ultimoRiego), calendarFilters);
+
+    return {
+      riegosHoy: 0,
+      litrosHoy: Math.round(avgLitros * 10) / 10,
+      ultimoRiego: ultimoRiegoMatches ? resumen.ultimoRiego : null,
+      humedadSueloProm: avgHS,
+      humedadAmbiental: avgHA
+    };
+  };
+
+  const filteredResumen = getFilteredResumen();
+  const hasActiveFilter = calendarFilters.weekday !== 'all' || calendarFilters.month !== 'all' || calendarFilters.year !== 'all' || Boolean(calendarFilters.startDate || calendarFilters.endDate);
 
   // --- RENDER PRINCIPAL ---
   return (
@@ -575,9 +795,9 @@ export default function DashboardClient({
                 <Flex gap="3" align="center" wrap="wrap">
                   {/* Live indicator badge */}
                   <Flex align="center" gap="2" style={{
-                    background: 'var(--greenbg)',
-                    color: 'var(--green)',
-                    border: '1px solid var(--greenbrd)',
+                    background: recolectorActivo ? 'var(--greenbg)' : 'rgba(107, 114, 128, 0.12)',
+                    color: recolectorActivo ? 'var(--green)' : '#9ca3af',
+                    border: `1px solid ${recolectorActivo ? 'var(--greenbrd)' : 'rgba(156, 163, 175, 0.25)'}`,
                     padding: '4px 10px',
                     borderRadius: '6px',
                     fontSize: '10px',
@@ -588,10 +808,10 @@ export default function DashboardClient({
                       width: '6px',
                       height: '6px',
                       borderRadius: '50%',
-                      background: 'var(--green)',
-                      animation: 'pulse 2s infinite'
+                      background: recolectorActivo ? 'var(--green)' : '#6b7280',
+                      animation: recolectorActivo ? 'pulse 2s infinite' : 'none'
                     }} />
-                    En vivo
+                    {recolectorActivo ? 'En vivo' : 'Recolector inactivo'}
                   </Flex>
                   <div style={{
                     background: 'rgba(56,189,248,0.1)',
@@ -603,7 +823,7 @@ export default function DashboardClient({
                     fontFamily: 'var(--font-mono)',
                     fontWeight: 500,
                   }}>
-                     {formatTime(timeLeft)}
+                     {recolectorActivo ? formatTime(timeLeft) : 'Pausado'}
                   </div>
 
                   <Button color="blue" onClick={() => setIsOpenRegisterWaterSource(true)} style={{ cursor: 'pointer' }}>
@@ -623,18 +843,97 @@ export default function DashboardClient({
               </Flex>
             </Flex>
 
+            {/* FILTROS GLOBALES DE CALENDARIO */}
+            <Flex gap="3" wrap="wrap" mb="2" style={{ background: '#111827', padding: '12px 16px', borderRadius: '12px', border: '1px solid #1f2937' }} align="center">
+              <Text size="2" color="gray" weight="medium">Modo de tiempo:</Text>
+
+              <Flex gap="2" style={{ background: '#0f172a', padding: '4px', borderRadius: '8px', border: '1px solid #1f2937' }}>
+                <Button size="1" variant={filterMode === 'relative' ? 'solid' : 'ghost'} color="green" onClick={() => setFilterMode('relative')} style={{ cursor: 'pointer' }}>
+                  Reciente
+                </Button>
+                <Button size="1" variant={filterMode === 'calendar' ? 'solid' : 'ghost'} color="blue" onClick={() => setFilterMode('calendar')} style={{ cursor: 'pointer' }}>
+                  Calendario
+                </Button>
+              </Flex>
+
+              <Flex gap="2" style={{ background: '#0f172a', padding: '4px', borderRadius: '8px', border: '1px solid #1f2937' }}>
+                {(['6h', '24h', '7d'] as HistoryRange[]).map((range) => (
+                  <Button
+                    key={range}
+                    size="1"
+                    variant={dashboardRange === range ? 'solid' : 'ghost'}
+                    color="green"
+                    disabled={!isRelativeMode}
+                    onClick={() => setDashboardRange(range)}
+                    style={{ cursor: isRelativeMode ? 'pointer' : 'default', opacity: isRelativeMode ? 1 : 0.45 }}
+                  >
+                    {range}
+                  </Button>
+                ))}
+              </Flex>
+              
+              {false && <Select.Root value={weekdayFilter} onValueChange={setWeekdayFilter} disabled={!canUseWeekday}>
+                <Select.Trigger style={{ background: '#0f172a', color: canUseWeekday ? 'white' : '#6b7280', opacity: canUseWeekday ? 1 : 0.55, borderColor: '#1f2937', minWidth: 145 }} />
+                <Select.Content>
+                  {WEEKDAY_OPTIONS.map((option) => (
+                    <Select.Item key={option.value} value={option.value}>{option.label}</Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Root>}
+
+              {false && <Select.Root value={monthFilter} onValueChange={setMonthFilter} disabled={!canUseMonthYear}>
+                <Select.Trigger style={{ background: '#0f172a', color: canUseMonthYear ? 'white' : '#6b7280', opacity: canUseMonthYear ? 1 : 0.55, borderColor: '#1f2937', minWidth: 155 }} />
+                <Select.Content>
+                  {MONTH_OPTIONS.map((option) => (
+                    <Select.Item key={option.value} value={option.value}>{option.label}</Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Root>}
+
+              {false && <Select.Root value={yearFilter} onValueChange={setYearFilter} disabled={!canUseMonthYear}>
+                <Select.Trigger style={{ background: '#0f172a', color: canUseMonthYear ? 'white' : '#6b7280', opacity: canUseMonthYear ? 1 : 0.55, borderColor: '#1f2937', minWidth: 110 }} />
+                <Select.Content>
+                  <Select.Item value="all">Todos los años</Select.Item>
+                  {(availableYears.length > 0 ? availableYears : [new Date().getFullYear().toString()]).map((year) => (
+                    <Select.Item key={year} value={year}>{year}</Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Root>}
+              
+              <TextField.Root type="date" value={startDateFilter} onChange={(e) => setStartDateFilter(e.target.value)} disabled={!canUseMonthYear} style={{ background: '#0f172a', color: canUseMonthYear ? 'white' : '#6b7280', opacity: canUseMonthYear ? 1 : 0.55, borderColor: '#1f2937' }} />
+              <TextField.Root type="date" value={endDateFilter} onChange={(e) => setEndDateFilter(e.target.value)} disabled={!canUseMonthYear} style={{ background: '#0f172a', color: canUseMonthYear ? 'white' : '#6b7280', opacity: canUseMonthYear ? 1 : 0.55, borderColor: '#1f2937' }} />
+
+              {hasActiveFilter && (
+                <Button size="1" color="red" variant="soft" onClick={() => { setWeekdayFilter('all'); setMonthFilter('all'); setYearFilter('all'); setStartDateFilter(''); setEndDateFilter(''); }} style={{ cursor: 'pointer', marginLeft: 'auto' }}>
+                  Limpiar filtros
+                </Button>
+              )}
+              <Text size="1" color="gray" style={{ fontFamily: 'monospace', marginLeft: 'auto' }}>
+                {filterMode === 'relative'
+                  ? (dashboardRange === '7d' ? 'En 7d solo se habilita dia de semana.' : 'Calendario deshabilitado en rangos cortos.')
+                  : 'Mes, anio y dia habilitados para historico.'}
+              </Text>
+            </Flex>
+
             {/* ROW 1: Cuadrícula de Sensores Principales */}
             <Grid columns={{ initial: '1', sm: '2', lg: '4' }} gap="4">
-              <SensorCard sensor={cultivoActivo.sensores.humedadSuelo} type="soil_moisture" />
-              <SensorCard sensor={cultivoActivo.sensores.humedadAmbiente} type="env_humidity" />
-              <SensorCard sensor={cultivoActivo.sensores.temperaturaAmbiente} type="env_temp" />
-              <SensorCard sensor={cultivoActivo.sensores.temperaturaSuelo} type="soil_temp" />
+              <SensorCard sensor={getFilteredSensor(cultivoActivo.sensores.humedadSuelo, cultivoActivo.historialSensores.humedadSuelo, 'soil_moisture')} type="soil_moisture" />
+              <SensorCard sensor={getFilteredSensor(cultivoActivo.sensores.humedadAmbiente, cultivoActivo.historialSensores.humedadAmbiente, 'env_humidity')} type="env_humidity" />
+              <SensorCard sensor={getFilteredSensor(cultivoActivo.sensores.temperaturaAmbiente, cultivoActivo.historialSensores.temperaturaAmbiente, 'env_temp')} type="env_temp" />
+              <SensorCard sensor={getFilteredSensor(cultivoActivo.sensores.temperaturaSuelo, cultivoActivo.historialSensores.temperaturaSuelo, 'soil_temp')} type="soil_temp" />
             </Grid>
 
             {/* ROW 2: Gráfico Histórico (2/3) + Estado y Tanque (1/3) */}
             <Flex direction={{ initial: 'column', lg: 'row' }} gap="4">
               <Box style={{ flex: 2, minWidth: 0 }}>
-                <HistoricoSensoresCard historial={cultivoActivo.historialSensores} sensores={cultivoActivo.sensores} isClientMounted={isClientMounted} />
+                <HistoricoSensoresCard 
+                  historial={cultivoActivo.historialSensores} 
+                  sensores={cultivoActivo.sensores} 
+                  isClientMounted={isClientMounted} 
+                  timeRange={dashboardRange}
+                  calendarFilters={calendarFilters}
+                  cultivoTimezone={cultivoActivo.zonaHoraria}
+                />
               </Box>
               <Flex direction="column" gap="4" style={{ flex: 1, minWidth: 0 }}>
                 <EstadoSistemaCard dispositivos={cultivoActivo.dispositivos} />
@@ -646,11 +945,28 @@ export default function DashboardClient({
             <Flex direction={{ initial: 'column', lg: 'row' }} gap="4">
               <Box style={{ flex: 2, minWidth: 0 }}>
                 {cultivoActivo.consumoSemanal && (
-                  <ConsumoChartCard data={cultivoActivo.consumoSemanal} limite={cultivoActivo.limiteConsumo} isClientMounted={isClientMounted} />
+                  <ConsumoChartCard 
+                    data={cultivoActivo.consumoSemanal} 
+                    limite={cultivoActivo.limiteConsumo} 
+                    isClientMounted={isClientMounted} 
+                    timeRange={dashboardRange}
+                    calendarFilters={calendarFilters}
+                    cultivoTimezone={cultivoActivo.zonaHoraria}
+                  />
                 )}
               </Box>
               <Box style={{ flex: 1, minWidth: 0 }}>
-                <ResumenDiaCard resumen={cultivoActivo.resumenDia} sensores={cultivoActivo.sensores} isClientMounted={isClientMounted} />
+                <ResumenDiaCard 
+                  resumen={filteredResumen} 
+                  sensores={{
+                    humedadSuelo: getFilteredSensor(cultivoActivo.sensores.humedadSuelo, cultivoActivo.historialSensores.humedadSuelo, 'soil_moisture'),
+                    humedadAmbiente: getFilteredSensor(cultivoActivo.sensores.humedadAmbiente, cultivoActivo.historialSensores.humedadAmbiente, 'env_humidity'),
+                    temperaturaAmbiente: getFilteredSensor(cultivoActivo.sensores.temperaturaAmbiente, cultivoActivo.historialSensores.temperaturaAmbiente, 'env_temp'),
+                    temperaturaSuelo: getFilteredSensor(cultivoActivo.sensores.temperaturaSuelo, cultivoActivo.historialSensores.temperaturaSuelo, 'soil_temp')
+                  }} 
+                  isClientMounted={isClientMounted} 
+                  hasFilter={hasActiveFilter}
+                />
               </Box>
             </Flex>
           </Flex>
@@ -659,6 +975,7 @@ export default function DashboardClient({
 
       {/* DIALOGO DE REGISTRO DE CULTIVO Y FUENTE DE AGUA */}
       {renderRegisterCropDialog()}
+      {renderSuccessCropDialog()}
       {renderRegisterWaterSourceDialog()}
     </Box>
   );
@@ -756,8 +1073,21 @@ const SensorCard = ({ sensor, type }: { sensor: SensorData; type: 'soil_moisture
 };
 
 // --- SUB-COMPONENTE: GRÁFICO HISTÓRICO ---
-const HistoricoSensoresCard = ({ historial, sensores, isClientMounted }: { historial: HistorialData, sensores: any, isClientMounted: boolean }) => {
-  const [timeRange, setTimeRange] = useState<'6h' | '24h' | '7d'>('6h');
+const HistoricoSensoresCard = ({ 
+  historial, 
+  sensores, 
+  isClientMounted, 
+  timeRange,
+  calendarFilters,
+  cultivoTimezone,
+}: { 
+  historial: HistorialData; 
+  sensores: any; 
+  isClientMounted: boolean; 
+  timeRange: HistoryRange;
+  calendarFilters: CalendarFilters;
+  cultivoTimezone?: string;
+}) => {
   const [activeMetric, setActiveMetric] = useState<'humedadSuelo' | 'humedadAmbiente' | 'temperaturaSuelo' | 'temperaturaAmbiente'>('humedadSuelo');
 
   const metricConfig = {
@@ -770,23 +1100,35 @@ const HistoricoSensoresCard = ({ historial, sensores, isClientMounted }: { histo
   const config = metricConfig[activeMetric];
   const rawData = historial[activeMetric as keyof HistorialData];
   const sensorInfo = sensores[activeMetric as keyof typeof sensores];
+  const chartTimeZone = cultivoTimezone || DEFAULT_DASHBOARD_TIME_ZONE;
 
-  const filterDataByTime = (data: HistoricoPunto[], range: string) => {
+  const calendarFilteredData = rawData.filter((item) => {
+    const date = new Date(item.fecha);
+    return dateMatchesCalendarFilters(date, calendarFilters);
+  });
+
+  const filterDataByTime = (data: HistoricoPunto[], range: HistoryRange) => {
     if (data.length === 0) return [];
     const now = new Date().getTime();
     const limits = { '6h': 6 * 60 * 60 * 1000, '24h': 24 * 60 * 60 * 1000, '7d': 7 * 24 * 60 * 60 * 1000 };
-    const cutoff = now - limits[range as keyof typeof limits];
+    const cutoff = now - limits[range];
     
     return data.filter(d => new Date(d.fecha).getTime() >= cutoff).map(d => {
       const dateObj = new Date(d.fecha);
       const xLabel = range === '7d' 
-        ? dateObj.toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric' })
-        : dateObj.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+        ? dateObj.toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', timeZone: chartTimeZone })
+        : dateObj.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: chartTimeZone });
       return { ...d, xLabel, valorReal: d.valor };
     });
   };
 
-  const chartData = filterDataByTime(rawData, timeRange);
+  const resolveRange = () => {
+    const ranges: HistoryRange[] = timeRange === '6h' ? ['6h', '24h', '7d'] : timeRange === '24h' ? ['24h', '7d'] : ['7d'];
+    return ranges.find((range) => filterDataByTime(calendarFilteredData, range).length > 0) || timeRange;
+  };
+
+  const effectiveRange = resolveRange();
+  const chartData = filterDataByTime(calendarFilteredData, effectiveRange);
   const umbralVisual = sensorInfo?.umbral ? sensorInfo.umbral[config.umbralRef] : null;
 
   return (
@@ -802,17 +1144,17 @@ const HistoricoSensoresCard = ({ historial, sensores, isClientMounted }: { histo
               <Select.Item value="temperaturaAmbiente">Temperatura ambiente</Select.Item>
             </Select.Content>
           </Select.Root>
-          <Text size="3" color="gray">— últimas {timeRange}</Text>
-        </Flex>
-
-        <Flex gap="2">
-          {['6h', '24h', '7d'].map((range) => (
-            <Button key={range} variant={timeRange === range ? "soft" : "outline"} color={timeRange === range ? "green" : "gray"} onClick={() => setTimeRange(range as any)} style={{ cursor: 'pointer' }}>
-              {range}
-            </Button>
-          ))}
+          <Text size="3" color="gray">— últimas {effectiveRange}</Text>
         </Flex>
       </Flex>
+
+      {/* Filtros movidos al nivel de página principal */}
+
+      {effectiveRange !== timeRange && (
+        <Text size="1" color="gray" mb="3" as="div" style={{ fontFamily: 'monospace' }}>
+          Sin datos en {timeRange}; mostrando {effectiveRange}.
+        </Text>
+      )}
 
       {chartData.length === 0 ? (
         <Flex align="center" justify="center" style={{ height: '250px' }}>
@@ -939,69 +1281,105 @@ const TanqueCard = ({ tanque }: { tanque: TanqueData }) => {
 };
 
 // --- SUB-COMPONENTE: GRÁFICO DE CONSUMO ---
-const ConsumoChartCard = ({ data, limite, isClientMounted }: { data: ConsumoData[], limite: number | null, isClientMounted: boolean }) => {
+const ConsumoChartCard = ({ 
+  data, 
+  limite, 
+  isClientMounted,
+  timeRange,
+  calendarFilters,
+  cultivoTimezone,
+}: { 
+  data: ConsumoData[]; 
+  limite: number | null; 
+  isClientMounted: boolean;
+  timeRange: HistoryRange;
+  calendarFilters: CalendarFilters;
+  cultivoTimezone?: string;
+}) => {
+  const chartTimeZone = cultivoTimezone || DEFAULT_DASHBOARD_TIME_ZONE;
+  const calendarFilteredData = data.filter((item) => {
+    if (!item.fecha) return false;
+    const date = new Date(item.fecha);
+    return dateMatchesCalendarFilters(date, calendarFilters);
+  }).filter((item) => {
+    if (calendarFilters.month !== 'all' || calendarFilters.year !== 'all') return true;
+    if (!item.fecha) return false;
+    const date = new Date(item.fecha).getTime();
+    const now = new Date().getTime();
+    const limits = { '6h': 6 * 60 * 60 * 1000, '24h': 24 * 60 * 60 * 1000, '7d': 7 * 24 * 60 * 60 * 1000 };
+    return date >= now - limits[timeRange];
+  });
+
+  const chartData = calendarFilteredData.map(d => {
+    const dateObj = d.fecha ? new Date(d.fecha) : new Date();
+    const xLabel = d.label === 'Hoy' ? 'Hoy' : dateObj.toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', timeZone: chartTimeZone });
+    return { ...d, xLabel, valorReal: d.valor };
+  });
+
+  const config = {
+    title: 'Consumo de agua',
+    color: '#38bdf8', // sky-400
+  };
+
   return (
     <Card size="3" style={{ background: '#111827', borderColor: '#1f2937', borderRadius: '16px', height: '100%' }}>
       <Text size="3" weight="bold" color="indigo" mb="3" as="div">Consumo de agua — últimos 7 días</Text>
       
-      <Box style={{ width: '100%', minWidth: 0, height: '300px', marginTop: '10px' }}>
-        {!isClientMounted ? (
-          <Flex align="center" justify="center" style={{ width: '100%', height: '100%' }}>
-            <Text color="gray">Cargando gráfico...</Text>
-          </Flex>
-        ) : (
+      {chartData.length === 0 ? (
+        <Flex align="center" justify="center" style={{ height: '250px' }}>
+          <Text color="gray">No hay datos de consumo en este rango de tiempo.</Text>
+        </Flex>
+      ) : !isClientMounted ? (
+        <Flex align="center" justify="center" style={{ height: '250px' }}>
+          <Text color="gray">Cargando gráfico...</Text>
+        </Flex>
+      ) : (
+        <Box style={{ width: '100%', minWidth: 0, height: '250px' }}>
           <ResponsiveContainer width="100%" height={250} minWidth={0}>
-            <BarChart data={data} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-            <defs>
-              <linearGradient id="colorConsumoNormal" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.8}/>
-                <stop offset="95%" stopColor="#1e3a8a" stopOpacity={0.3}/>
-              </linearGradient>
-              <linearGradient id="colorConsumoExcedido" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#f87171" stopOpacity={0.8}/>
-                <stop offset="95%" stopColor="#991b1b" stopOpacity={0.3}/>
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
-            <XAxis dataKey="label" stroke="#4b5563" fontSize={11} tickLine={false} />
-            <YAxis stroke="#4b5563" fontSize={11} tickFormatter={(val) => `${val}L`} tickLine={false} />
-            <Tooltip 
-              cursor={false}
-              contentStyle={{ background: '#1f2937', border: '1px solid #374151', borderRadius: '8px', color: '#fff' }}
-              labelStyle={{ color: '#9ca3af', marginBottom: '2px', fontSize: '11px' }}
-              itemStyle={{ fontSize: '12px' }}
-              formatter={(value: any) => [`${value} Litros`, 'Consumo']} 
-            />
-            {limite !== null && (
-              <ReferenceLine 
-                y={limite} 
-                stroke="#ef4444" 
-                strokeDasharray="3 3" 
-                label={{ position: 'insideTopRight', value: `Límite: ${limite}L`, fill: '#ef4444', fontSize: 11, dy: -10 }}
+            <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
+              <XAxis dataKey="xLabel" stroke="#4b5563" fontSize={12} tickMargin={10} minTickGap={20} />
+              <YAxis stroke="#4b5563" fontSize={12} tickFormatter={(val) => `${val}L`} />
+              <Tooltip 
+                contentStyle={{ background: '#1f2937', border: 'none', borderRadius: '8px', color: '#fff' }} 
+                labelStyle={{ color: '#9ca3af', marginBottom: '4px' }} 
+                formatter={(value: any) => [`${value} L`, config.title]} 
               />
-            )}
-            <Bar dataKey="valor" radius={[4, 4, 0, 0]}>
-              {data.map((entry, index) => {
-                const sobrepaso = limite !== null && entry.valor > limite;
-                return (
-                  <Cell 
-                    key={`cell-${index}`} 
-                    fill={sobrepaso ? 'url(#colorConsumoExcedido)' : 'url(#colorConsumoNormal)'}
-                    stroke={sobrepaso ? '#ef4444' : '#38bdf8'}
-                    strokeWidth={sobrepaso ? 1 : 0.5}
-                  />
-                );
-              })}
-            </Bar>
-            </BarChart>
+              {limite !== null && (
+                <ReferenceLine 
+                  y={limite} 
+                  stroke="#ef4444" 
+                  strokeDasharray="3 3" 
+                  label={{ position: 'insideBottomLeft', value: `Límite ${limite}L`, fill: '#ef4444', fontSize: 12 }} 
+                />
+              )}
+              <Line 
+                type="monotone" 
+                dataKey="valorReal" 
+                stroke={config.color} 
+                strokeWidth={3} 
+                dot={false} 
+                activeDot={{ r: 6, fill: config.color, stroke: '#111827', strokeWidth: 2 }} 
+              />
+            </LineChart>
           </ResponsiveContainer>
-        )}
-      </Box>
+        </Box>
+      )}
     </Card>
   );
 };
 // --- SUB-COMPONENTE: RESUMEN DEL DÍA ---
-const ResumenDiaCard = ({ resumen, sensores, isClientMounted }: { resumen: ResumenDiaData, sensores: any, isClientMounted: boolean }) => {
+const ResumenDiaCard = ({ 
+  resumen, 
+  sensores, 
+  isClientMounted,
+  hasFilter 
+}: { 
+  resumen: ResumenDiaData; 
+  sensores: any; 
+  isClientMounted: boolean;
+  hasFilter: boolean;
+}) => {
   let salud = 100;
   const sensoresEvaluados = [
     sensores.humedadSuelo,
@@ -1094,8 +1472,8 @@ const ResumenDiaCard = ({ resumen, sensores, isClientMounted }: { resumen: Resum
       </Flex>
 
       <Box>
-        <Row label="Riegos hoy" value={`${resumen.riegosHoy} evento${resumen.riegosHoy !== 1 ? 's' : ''}`} />
-        <Row label="Litros consumidos" value={`${resumen.litrosHoy} L`} />
+        <Row label={hasFilter ? "Riegos prom. diario" : "Riegos hoy"} value={hasFilter ? "--" : `${resumen.riegosHoy} evento${resumen.riegosHoy !== 1 ? 's' : ''}`} />
+        <Row label={hasFilter ? "Consumo prom. diario" : "Litros consumidos"} value={`${resumen.litrosHoy} L`} />
         <Row label="Último riego" value={getTimeAgo(resumen.ultimoRiego)} />
         <Row label="Hum. suelo prom." value={resumen.humedadSueloProm !== null ? `${resumen.humedadSueloProm.toFixed(1)}%` : '--'} color="#4ade80" />
         <Row label="Hum. ambiental" value={resumen.humedadAmbiental !== null ? `${resumen.humedadAmbiental.toFixed(1)}%` : '--'} color="#4ade80" isLast />

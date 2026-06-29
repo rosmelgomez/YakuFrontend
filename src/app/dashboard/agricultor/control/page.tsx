@@ -6,6 +6,7 @@ import { authOptions } from '@/lib/auth';
 import { Box } from '@radix-ui/themes';
 import DashboardSkeleton from '@/components/layout/DashboardSkeleton';
 import { getControlData } from '@/services/control';
+import { getAlertasData } from '@/services/alertas';
 import { fetchFromFastAPI } from '@/lib/bff';
 import { getCultivosBase } from '@/services/cultivos-base';
 import type { CultivoBase } from '@/services/cultivos-base';
@@ -18,7 +19,7 @@ const ControlClient = nextDynamic(() => import('@/components/agricultor/control/
   loading: () => <DashboardSkeleton variant="control" />,
 });
 
-export default async function ControlPage({ searchParams }: { searchParams: Promise<{ cultivo?: string }> }) {
+export default async function ControlPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect('/auth/login');
 
@@ -35,17 +36,17 @@ export default async function ControlPage({ searchParams }: { searchParams: Prom
     return <NoCropsEmptyState title="No tienes control de riego activo" description="Para administrar los modos de riego (manual, programado o inteligente por IA) y conmutar tus bombas de agua, primero debes registrar tu cultivo." />;
   }
 
-  const resolvedParams = await searchParams;
-  const requestedCultivoId = resolvedParams.cultivo
-    ? Number.parseInt(resolvedParams.cultivo, 10)
-    : undefined;
-  const selectedCultivoId = cultivosBase.some(({ id }) => id === requestedCultivoId)
-    ? requestedCultivoId!
-    : cultivosBase[0].id;
+  const selectedCultivoId = cultivosBase[0].id;
 
   let controlData;
+  let alertasData = { umbrales: [] };
   try {
-    controlData = await getControlData(userId, selectedCultivoId);
+    const [cData, aData] = await Promise.all([
+      getControlData(userId, selectedCultivoId),
+      getAlertasData(userId, selectedCultivoId).catch(() => ({ umbrales: [] }))
+    ]);
+    controlData = cData;
+    alertasData = aData;
   } catch {
     return (
       <div style={{ color: 'white', padding: '2rem' }}>
@@ -65,7 +66,14 @@ export default async function ControlPage({ searchParams }: { searchParams: Prom
   return (
     <Box className="page-content" style={{ padding: '2rem 0' }}>
       <Box style={{ width: '100%', maxWidth: '100%', paddingLeft: '16px', paddingRight: '16px' }}>
-         <ControlClient userId={userId} cultivos={cultivosBase} data={controlData} idCultivo={selectedCultivoId} modelosML={modelosML} />
+         <ControlClient 
+           userId={userId} 
+           cultivos={cultivosBase} 
+           data={controlData} 
+           idCultivo={selectedCultivoId} 
+           modelosML={modelosML} 
+           initialUmbrales={alertasData.umbrales}
+         />
       </Box>
     </Box>
   );

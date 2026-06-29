@@ -21,11 +21,7 @@ const HistoricoMultiChart = nextDynamic(() => import('@/components/agricultor/hi
 
 import NoCropsEmptyState from '@/components/layout/NoCropsEmptyState';
 
-export default async function HistoricoPage({
-  searchParams
-}: {
-  searchParams: Promise<{ cultivo?: string, rango?: string }>
-}) {
+export default async function HistoricoPage() {
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.id) {
@@ -45,9 +41,8 @@ export default async function HistoricoPage({
     return <NoCropsEmptyState title="No tienes historial de telemetría" description="Para visualizar los gráficos históricos de humedad de suelo, humedad ambiente y temperatura, primero debes registrar tu cultivo." />;
   }
 
-  const resolvedSearchParams = await searchParams;
-  const selectedCultivoId = resolvedSearchParams.cultivo ? parseInt(resolvedSearchParams.cultivo, 10) : cultivosBase[0].id;
-  const rangoDias = resolvedSearchParams.rango ? parseInt(resolvedSearchParams.rango, 10) : 30;
+  const selectedCultivoId = cultivosBase[0].id;
+  const rangoDias = 7;
 
   const historicoData = await getHistoricoData(userId, selectedCultivoId, rangoDias);
 
@@ -55,6 +50,7 @@ export default async function HistoricoPage({
     <Box className="page-content" style={{ padding: '2rem 0' }}>
       <Box style={{ width: '100%', maxWidth: '100%', paddingLeft: '16px', paddingRight: '16px' }}>
         <HistoricoMultiChart
+          userId={userId}
           cultivos={cultivosBase}
           initialData={historicoData}
           initialCultivo={selectedCultivoId.toString()}
