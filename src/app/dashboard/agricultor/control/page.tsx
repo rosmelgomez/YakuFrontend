@@ -7,7 +7,6 @@ import { Box } from '@radix-ui/themes';
 import DashboardSkeleton from '@/components/layout/DashboardSkeleton';
 import { getControlData } from '@/services/control';
 import { getAlertasData } from '@/services/alertas';
-import { fetchFromFastAPI } from '@/lib/bff';
 import { getCultivosBase } from '@/services/cultivos-base';
 import type { CultivoBase } from '@/services/cultivos-base';
 
@@ -55,14 +54,6 @@ export default async function ControlPage() {
     );
   }
   
-  let modelosML = [];
-  try {
-    const resModels = await fetchFromFastAPI(`/ml/models?id_cultivo=${selectedCultivoId}`);
-    if (resModels.ok) {
-      modelosML = await resModels.json();
-    }
-  } catch {}
-
   return (
     <Box className="page-content" style={{ padding: '2rem 0' }}>
       <Box style={{ width: '100%', maxWidth: '100%', paddingLeft: '16px', paddingRight: '16px' }}>
@@ -71,7 +62,7 @@ export default async function ControlPage() {
            cultivos={cultivosBase} 
            data={controlData} 
            idCultivo={selectedCultivoId} 
-           modelosML={modelosML} 
+           modelosML={[]} 
            initialUmbrales={alertasData.umbrales}
          />
       </Box>

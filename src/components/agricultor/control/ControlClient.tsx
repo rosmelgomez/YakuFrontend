@@ -5,7 +5,7 @@ import React, { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, Text, Flex, Card, Button, Grid, Badge, Switch, Dialog, TextField, Checkbox, ScrollArea, Tabs, Slider } from '@radix-ui/themes';
 import { setModoOperacion, toggleBombaManual, toggleValvulaManual, toggleHorario, eliminarHorario, agregarHorario, actualizarHorario, toggleCapturaDatos, calibrarSensor, actualizarTiempoMaximoRele, obtenerDatosControlPorCultivo, ejecutarPrediccionEnVivo } from '@/actions/control';
-import { seleccionarModeloML } from '@/actions/ml';
+import { listarModelosML, seleccionarModeloML } from '@/actions/ml';
 import { guardarUmbrales } from '@/actions/alertas';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 
@@ -95,6 +95,7 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
     const [optimisticData, setOptimisticData] = useState(data);
     const [idCultivo, setIdCultivo] = useState(initialIdCultivo);
     const [modelosML, setModelosML] = useState(initialModelosML);
+    const [isLoadingModelosML, setIsLoadingModelosML] = useState(false);
     const [isLoadingCropData, setIsLoadingCropData] = useState(false);
     const [nuevaHora, setNuevaHora] = useState('08:00');
     const [nuevaDuracion, setNuevaDuracion] = useState(15);
@@ -210,6 +211,28 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
         setIdCultivo(initialIdCultivo);
         setModelosML(initialModelosML);
     }, [data, initialIdCultivo, initialUmbrales, initialModelosML]);
+
+    useEffect(() => {
+        if (activeTab !== "actuadores" || modelosML.length > 0 || isLoadingModelosML) {
+            return;
+        }
+
+        let cancelled = false;
+        setIsLoadingModelosML(true);
+        listarModelosML(idCultivo)
+            .then((res) => {
+                if (!cancelled && res.success && res.data) {
+                    setModelosML(res.data);
+                }
+            })
+            .finally(() => {
+                if (!cancelled) setIsLoadingModelosML(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [activeTab, idCultivo, modelosML.length, isLoadingModelosML]);
 
     const handleCultivoChange = async (newIdStr: string) => {
         const newId = parseInt(newIdStr, 10);
@@ -1342,7 +1365,11 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
                                             </Card>
 
                                             <Flex direction="column" gap="3" mt="1">
-                                                {modelosML && modelosML.length > 0 ? (
+                                                {isLoadingModelosML ? (
+                                                    <Card style={{ background: 'var(--surface2-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '12px', padding: '12px' }}>
+                                                        <Text size="2" color="gray">Cargando modelos inteligentes...</Text>
+                                                    </Card>
+                                                ) : modelosML && modelosML.length > 0 ? (
                                                     modelosML.map((m: any) => {
                                                         const isRF = m.algoritmo?.toLowerCase().includes('random') || 
                                                                      m.nombre_modelo?.toLowerCase().includes('random') || 

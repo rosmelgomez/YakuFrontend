@@ -3,6 +3,19 @@
 import { revalidatePath } from 'next/cache';
 import { fetchFromFastAPI } from '@/lib/bff';
 
+export async function listarModelosML(idCultivo: number) {
+  try {
+    const res = await fetchFromFastAPI(`/ml/models?id_cultivo=${idCultivo}`);
+    if (!res.ok) {
+      const errorMsg = await res.text();
+      return { success: false, error: errorMsg || 'Error al listar modelos ML' };
+    }
+    return { success: true, data: await res.json() };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Error de conexion' };
+  }
+}
+
 export async function solicitarPrediccionML(
   data: {
     humedad_suelo: number;

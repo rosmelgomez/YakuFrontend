@@ -67,6 +67,23 @@ export async function registrarSuscripcionPush(subscription: any) {
   }
 }
 
+export async function obtenerEstadoSuscripcionPush() {
+  try {
+    const res = await fetchFromFastAPI("/webpush/status");
+    if (!res.ok) {
+      return { success: true, registered: false, subscriptionCount: 0 };
+    }
+    const data = await res.json();
+    return {
+      success: true,
+      registered: Boolean(data.registered),
+      subscriptionCount: Number(data.subscriptionCount || 0),
+    };
+  } catch (error: any) {
+    return { success: false, registered: false, subscriptionCount: 0, error: error.message };
+  }
+}
+
 export async function obtenerDatosAlertaPorCultivo(idCultivo: number) {
   try {
     const res = await fetchFromFastAPI(`/dashboard/alertas?idCultivo=${idCultivo}`);

@@ -4,7 +4,15 @@ import { useState, useTransition, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, Text, Flex, Grid, Select, Card, Badge, Progress, Switch, Separator, Button, Dialog, TextField, ScrollArea } from '@radix-ui/themes';
 import { LineChart, Line, PieChart, Pie, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Cell, CartesianGrid } from 'recharts';
-import { registrarCultivo, registrarFuenteAgua, listarProvincias, listarDistritos } from '@/actions/crops';
+import {
+  registrarCultivo,
+  registrarFuenteAgua,
+  listarPlantas,
+  listarFuentesAgua,
+  listarRegiones,
+  listarProvincias,
+  listarDistritos,
+} from '@/actions/crops';
 import NoCropsEmptyState from '@/components/layout/NoCropsEmptyState';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 import CountdownTimer from './CountdownTimer';
@@ -134,6 +142,12 @@ export default function DashboardClient({
   const [dashboardRange, setDashboardRange] = useState<HistoryRange>('6h');
   const [startDateFilter, setStartDateFilter] = useState('');
   const [endDateFilter, setEndDateFilter] = useState('');
+  const [catalogsLoaded, setCatalogsLoaded] = useState(
+    catalogPlantas.length > 0 || fuentesAgua.length > 0 || regiones.length > 0
+  );
+  const [isLoadingCatalogs, setIsLoadingCatalogs] = useState(false);
+  const [localCatalogPlantas, setLocalCatalogPlantas] = useState<any[]>(catalogPlantas);
+  const [localRegiones, setLocalRegiones] = useState<any[]>(regiones);
 
   useEffect(() => {
     setLocalCultivos(cultivos);
@@ -160,6 +174,33 @@ export default function DashboardClient({
     setEndDateFilter('');
   }, [dashboardRange, filterMode]);
 
+  const ensureCatalogsLoaded = async () => {
+    if (catalogsLoaded || isLoadingCatalogs) return;
+    setIsLoadingCatalogs(true);
+    try {
+      const [plantas, fuentes, departamentos] = await Promise.all([
+        listarPlantas().catch(() => []),
+        listarFuentesAgua().catch(() => []),
+        listarRegiones().catch(() => []),
+      ]);
+      setLocalCatalogPlantas(plantas);
+      setLocalFuentesAgua(fuentes);
+      setLocalRegiones(departamentos);
+      setCatalogsLoaded(true);
+    } finally {
+      setIsLoadingCatalogs(false);
+    }
+  };
+
+  const openRegisterCrop = () => {
+    setIsOpenRegisterCrop(true);
+    void ensureCatalogsLoaded();
+  };
+
+  const openRegisterWaterSource = () => {
+    setIsOpenRegisterWaterSource(true);
+    void ensureCatalogsLoaded();
+  };
 
 
   // Local state for water sources to update dropdown dynamically without full reload
@@ -264,7 +305,7 @@ export default function DashboardClient({
   };
 
   const buildLocalCultivo = (res: any, payload: { nombre_planta: string; etapa_crecimiento?: string }) => {
-    const selectedPlant = catalogPlantas.find((planta: any) => planta.id?.toString() === newCropIdPlanta);
+    const selectedPlant = localCatalogPlantas.find((planta: any) => planta.id?.toString() === newCropIdPlanta);
     const idCultivo = getCreatedCropId(res);
 
     return {
@@ -446,16 +487,17 @@ export default function DashboardClient({
           <SearchableSelect
             value={newCropIdPlanta}
             onValueChange={setNewCropIdPlanta}
-            placeholder="Elegir especie..."
+            disabled={isLoadingCatalogs}
+            placeholder={isLoadingCatalogs ? "Cargando especies..." : "Elegir especie..."}
             searchPlaceholder="Buscar especie..."
-            options={catalogPlantas.map((p: any) => ({ value: p.id.toString(), label: `${p.nombre} (${p.tipo || 'Sin tipo'})` }))}
+            options={localCatalogPlantas.map((p: any) => ({ value: p.id.toString(), label: `${p.nombre} (${p.tipo || 'Sin tipo'})` }))}
           />
 
           <label><Text color="gray" size="2">Fuente de Agua *</Text></label>
           {localFuentesAgua.length === 0 ? (
             <Flex direction="column" gap="2" p="3" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px' }}>
               <Text size="1" color="red">No tienes fuentes de agua registradas. Necesitas al menos una para registrar tu cultivo.</Text>
-              <Button size="2" color="blue" variant="soft" style={{ cursor: 'pointer' }} onClick={() => setIsOpenRegisterWaterSource(true)}>
+              <Button size="2" color="blue" variant="soft" style={{ cursor: 'pointer' }} onClick={openRegisterWaterSource}>
                 + Registrar Fuente de Agua
               </Button>
             </Flex>
@@ -470,7 +512,7 @@ export default function DashboardClient({
                   options={localFuentesAgua.map((f: any) => ({ value: f.id.toString(), label: `${f.nombre} (${f.tipo === 'tanque' ? 'Tanque' : 'Manguera'})` }))}
                 />
               </Box>
-              <Button size="2" color="blue" variant="soft" style={{ cursor: 'pointer' }} onClick={() => setIsOpenRegisterWaterSource(true)} title="Registrar nueva fuente de agua">
+              <Button size="2" color="blue" variant="soft" style={{ cursor: 'pointer' }} onClick={openRegisterWaterSource} title="Registrar nueva fuente de agua">
                 +
               </Button>
             </Flex>
@@ -485,7 +527,7 @@ export default function DashboardClient({
                 onValueChange={(val) => { setNewCropIdRegion(val); setNewCropIdProvincia(""); setNewCropIdDistrito(""); }}
                 placeholder="Región..."
                 searchPlaceholder="Buscar región..."
-                options={regiones.map((r: any) => ({ value: r.id.toString(), label: r.nombre }))}
+                options={localRegiones.map((r: any) => ({ value: r.id.toString(), label: r.nombre }))}
               />
             </Box>
 
@@ -749,7 +791,7 @@ export default function DashboardClient({
           <NoCropsEmptyState 
             title="No tienes cultivos registrados"
             description="Comienza registrando tu primer cultivo para monitorear sus condiciones de humedad, temperatura, y automatizar su riego inteligente."
-            onAction={() => setIsOpenRegisterCrop(true)}
+            onAction={openRegisterCrop}
           />
         </Flex>
       ) : (
@@ -798,10 +840,10 @@ export default function DashboardClient({
                      <CountdownTimer recolectorActivo={recolectorActivo} onRefresh={() => router.refresh()} />
                   </div>
 
-                  <Button color="blue" onClick={() => setIsOpenRegisterWaterSource(true)} style={{ cursor: 'pointer' }}>
+                  <Button color="blue" onClick={openRegisterWaterSource} style={{ cursor: 'pointer' }}>
                     Y Registrar Fuente
                   </Button>
-                  <Button color="green" onClick={() => setIsOpenRegisterCrop(true)} style={{ cursor: 'pointer' }}>Registrar Cultivo
+                  <Button color="green" onClick={openRegisterCrop} style={{ cursor: 'pointer' }}>Registrar Cultivo
                   </Button>
                 </Flex>
                 <SearchableSelect

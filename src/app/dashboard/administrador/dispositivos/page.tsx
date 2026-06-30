@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
+import nextDynamic from "next/dynamic";
 import { Box } from "@radix-ui/themes";
 import { authOptions } from "@/lib/auth";
 import {
@@ -12,13 +13,17 @@ import {
 } from "@/actions/admin";
 import { listarFuentesAgua, listarTodosCultivos } from "@/actions/crops";
 import { listarAlmacenes } from "@/actions/almacenes";
-import DispositivosClient from "@/components/administrador/dispositivos/DispositivosClient";
+import DashboardSkeleton from "@/components/layout/DashboardSkeleton";
 
 export const metadata = {
   title: "Dispositivos - Administrador Yaku",
 };
 
 export const dynamic = "force-dynamic";
+
+const DispositivosClient = nextDynamic(() => import("@/components/administrador/dispositivos/DispositivosClient"), {
+  loading: () => <DashboardSkeleton variant="admin" />,
+});
 
 export default async function DispositivosPage() {
   const session = await getServerSession(authOptions);

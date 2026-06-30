@@ -1,14 +1,19 @@
 import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
+import nextDynamic from "next/dynamic";
 import { authOptions } from "@/lib/auth";
 import { Box } from "@radix-ui/themes";
 import { listarDispositivos, listarUsuarios } from "@/actions/admin";
 import { listarTodosCultivos } from "@/actions/crops";
 import { listarInstalacionesFirmware, listarVersionesFirmware } from "@/actions/firmware";
-import FirmwareClient from "@/components/administrador/firmware/FirmwareClient";
+import DashboardSkeleton from "@/components/layout/DashboardSkeleton";
 
 export const metadata = { title: "Firmware - Administrador Yaku" };
 export const dynamic = "force-dynamic";
+
+const FirmwareClient = nextDynamic(() => import("@/components/administrador/firmware/FirmwareClient"), {
+  loading: () => <DashboardSkeleton variant="admin" />,
+});
 
 export default async function FirmwarePage() {
   const session = await getServerSession(authOptions);

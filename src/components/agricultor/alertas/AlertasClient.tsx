@@ -4,7 +4,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, Text, Flex, Card, Button, Grid, Badge, Switch, Table } from '@radix-ui/themes';
-import { guardarNotifConfig, getVapidPublicKey, registrarSuscripcionPush, obtenerDatosAlertaPorCultivo } from '@/actions/alertas';
+import {
+  guardarNotifConfig,
+  getVapidPublicKey,
+  registrarSuscripcionPush,
+  obtenerDatosAlertaPorCultivo,
+  obtenerEstadoSuscripcionPush,
+} from '@/actions/alertas';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 
 function urlBase64ToUint8Array(base64String: string) {
@@ -80,7 +86,22 @@ export default function AlertasClient({
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [isSecure, setIsSecure] = useState(true);
   const [pushRegistered, setPushRegistered] = useState(Boolean(initialPushRegistered));
+  const [hasLoadedPushRegistration, setHasLoadedPushRegistration] = useState(Boolean(initialPushRegistered));
   const autoPushAttempted = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    obtenerEstadoSuscripcionPush().then((res) => {
+      if (!cancelled && res.success) {
+        setPushRegistered(Boolean(res.registered));
+      }
+    }).finally(() => {
+      if (!cancelled) setHasLoadedPushRegistration(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleRequestPush = async () => {
     if (
@@ -138,6 +159,7 @@ export default function AlertasClient({
   useEffect(() => {
     if (
       pushRegistered ||
+      !hasLoadedPushRegistration ||
       autoPushAttempted.current ||
       !isSecure ||
       pushStatus === 'checking' ||
@@ -149,7 +171,7 @@ export default function AlertasClient({
 
     autoPushAttempted.current = true;
     handleRequestPush();
-  }, [pushRegistered, isSecure, pushStatus]);
+  }, [pushRegistered, hasLoadedPushRegistration, isSecure, pushStatus]);
 
   const handleTestNotification = async () => {
     if (typeof window === 'undefined' || !('Notification' in window) || Notification.permission !== 'granted') return;

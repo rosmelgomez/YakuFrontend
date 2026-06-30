@@ -143,23 +143,17 @@ export async function obtenerDatosControlPorCultivo(userId: number, idCultivo: n
     const { getControlData } = await import("@/services/control");
     const { getAlertasData } = await import("@/services/alertas");
     
-    const [cData, aData, resModels] = await Promise.all([
+    const [cData, aData] = await Promise.all([
       getControlData(userId, idCultivo),
       getAlertasData(userId, idCultivo).catch(() => ({ umbrales: [] })),
-      fetchFromFastAPI(`/ml/models?id_cultivo=${idCultivo}`)
     ]);
-
-    let modelosML = [];
-    if (resModels.ok) {
-      modelosML = await resModels.json();
-    }
 
     return {
       success: true,
       data: {
         controlData: cData,
         umbrales: aData.umbrales,
-        modelosML
+        modelosML: []
       }
     };
   } catch (error: any) {

@@ -7,14 +7,10 @@ export type CultivoBase = {
 };
 
 export const getCultivosBase = cache(async (): Promise<CultivoBase[]> => {
-  const res = await fetchFromFastAPI("/dashboard/data");
+  const res = await fetchFromFastAPI("/dashboard/cultivos-base");
   if (!res.ok) {
     throw new Error("Error al conectar con el servidor backend.");
   }
 
-  const dashboardData = await res.json();
-  return dashboardData.map((cultivo: any) => ({
-    id: cultivo.idCultivo,
-    nombre_planta: cultivo.nombreCultivo,
-  }));
+  return res.json();
 });
