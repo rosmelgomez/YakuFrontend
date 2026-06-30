@@ -107,6 +107,7 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
     const [riegoActivoSeconds, setRiegoActivoSeconds] = useState<number | null>(null);
     const [isCheckingMl, setIsCheckingMl] = useState(false);
     const [lastMlCheck, setLastMlCheck] = useState<{ status: 'ok' | 'error'; message: string } | null>(null);
+    const [activeTab, setActiveTab] = useState<string>("sensores");
 
     // 1. Cronómetro de tiempo transcurrido desde el último riego en la zona horaria del cliente/agricultor
     useEffect(() => {
@@ -159,23 +160,7 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
         optimisticData.bomba?.encendida
     ]);
 
-    // 2. Polling en tiempo real (cada 5 segundos) para monitorear el estado del relé, tanque y sensores
-    useEffect(() => {
-        const pollInterval = setInterval(async () => {
-            try {
-                const res = await obtenerDatosControlPorCultivo(userId, idCultivo);
-                if (res.success && res.data) {
-                    setOptimisticData(res.data.controlData);
-                    setUmbrales(res.data.umbrales || []);
-                    setOriginalUmbrales(res.data.umbrales || []);
-                    setModelosML(res.data.modelosML || []);
-                }
-            } catch (err) {
-                console.error("Error en polling de datos de control:", err);
-            }
-        }, 5000);
-        return () => clearInterval(pollInterval);
-    }, [userId, idCultivo]);
+
 
     const formatearTiempoDesdeUltimo = (seconds: number | null): string => {
         if (seconds === null) return "Sin registros";
@@ -368,6 +353,32 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
 
     const isActuatorActive = dispositivosActuadores.some((dev: any) => dev.funcionamientoActivo);
     const isModeLocked = isActuatorActive || (bomba.encendida || valvula.abierta);
+
+    // 2. Polling en tiempo real (cada 5 segundos) para monitorear el estado del relé, tanque y sensores
+    useEffect(() => {
+        // El refresco solo debe suceder cuando estoy en la pestaña de actuadores y el dispositivo actuador está activado
+        if (activeTab !== "actuadores" || !isActuatorActive) {
+            return;
+        }
+
+        const pollInterval = setInterval(async () => {
+            try {
+                const res = await obtenerDatosControlPorCultivo(userId, idCultivo);
+                if (res.success && res.data) {
+                    setOptimisticData(res.data.controlData);
+                    // Solo sobreescribir umbrales si el usuario no los está editando
+                    if (!isEditingUmbrales) {
+                        setUmbrales(res.data.umbrales || []);
+                        setOriginalUmbrales(res.data.umbrales || []);
+                    }
+                    setModelosML(res.data.modelosML || []);
+                }
+            } catch (err) {
+                console.error("Error en polling de datos de control:", err);
+            }
+        }, 5000);
+        return () => clearInterval(pollInterval);
+    }, [userId, idCultivo, activeTab, isActuatorActive, isEditingUmbrales]);
 
     // Estados de sensores y actuadores para calcular el estado del Sistema Operativo
     const isSensorsActivos = dispositivosSensores.some((dev: any) => dev.funcionamientoActivo);
@@ -669,7 +680,7 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
             <Grid columns={seguridad.esAdmin ? { initial: '1', lg: '1.2fr 0.8fr' } : '1'} gap="5" mb="5" align="start">
                 
                 {/* COLUMNA IZQUIERDA: CONFIGURACIÓN Y CONTROL */}
-                <Tabs.Root defaultValue="sensores" style={{ width: '100%' }}>
+                <Tabs.Root value={activeTab} onValueChange={setActiveTab} style={{ width: '100%' }}>
                     <Tabs.List style={{ marginBottom: '1.5rem', background: 'var(--bg-mockup)', borderRadius: '8px', padding: '4px', border: '1px solid var(--border-mockup)', display: 'flex' }}>
                         <Tabs.Trigger value="sensores" style={{ cursor: 'pointer', padding: '8px 16px', fontSize: '0.9rem', flex: 1, textAlign: 'center' }}>
                             📡 Sensores de Captura
