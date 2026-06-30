@@ -100,6 +100,7 @@ interface AdminDashboardClientProps {
       nombre_planta: string;
       id_usuario: number;
     }>;
+    zona_horaria?: string;
   };
 }
 
@@ -111,7 +112,8 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
     modelos, 
     consumo_semanal, 
     usuarios_filtro = [], 
-    cultivos_filtro = [] 
+    cultivos_filtro = [],
+    zona_horaria = 'America/Lima',
   } = data;
 
   // Selected filters for User & Crop
@@ -192,7 +194,7 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
   const formatFecha = (isoString: string) => {
     try {
       const date = new Date(isoString);
-      return date.toLocaleString('es-PE', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
+      return date.toLocaleString('es-PE', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', timeZone: zona_horaria });
     } catch {
       return isoString;
     }
