@@ -1,7 +1,7 @@
 // src/components/agricultor/historico/HistoricoMultiChart.tsx
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
 import { Box, Text, Flex, Card, Button, Grid, ScrollArea, Select, TextField } from '@radix-ui/themes';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
@@ -85,26 +85,30 @@ const [filterMode, setFilterMode] = useState<FilterMode>('relative');
   };
 
   // Filter chart data
-  const filteredChartData = chartData.filter(item => {
-    const date = new Date(item.fecha || item.label + 'T00:00:00');
-    return matchesDateRange(date);
-  });
+  const filteredChartData = useMemo(() => {
+    return chartData.filter(item => {
+      const date = new Date(item.fecha || item.label + 'T00:00:00');
+      return matchesDateRange(date);
+    });
+  }, [chartData, startDateFilter, endDateFilter, dateRangeEnabled]);
 
   // Filter irrigation logs
-  const filteredRiegoLog = riegoLog.filter(log => {
-    let date: Date;
-    if (log.fecha) {
-      date = new Date(log.fecha);
-    } else if (log.fechaStr.includes('-')) {
-      date = new Date(log.fechaStr.replace(' ', 'T'));
-    } else {
-      const parts = log.fechaStr.split(' ')[0].split('/');
-      const timeParts = log.fechaStr.split(' ')[1] || '00:00';
-      date = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T${timeParts}`);
-    }
-    if (isNaN(date.getTime())) return true;
-    return matchesDateRange(date);
-  });
+  const filteredRiegoLog = useMemo(() => {
+    return riegoLog.filter(log => {
+      let date: Date;
+      if (log.fecha) {
+        date = new Date(log.fecha);
+      } else if (log.fechaStr.includes('-')) {
+        date = new Date(log.fechaStr.replace(' ', 'T'));
+      } else {
+        const parts = log.fechaStr.split(' ')[0].split('/');
+        const timeParts = log.fechaStr.split(' ')[1] || '00:00';
+        date = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T${timeParts}`);
+      }
+      if (isNaN(date.getTime())) return true;
+      return matchesDateRange(date);
+    });
+  }, [riegoLog, startDateFilter, endDateFilter, dateRangeEnabled]);
 
   // Compute stats helper
   const computeStatsForField = (filteredData: any[], field: string, sensorName: string) => {
@@ -124,12 +128,15 @@ const [filterMode, setFilterMode] = useState<FilterMode>('relative');
     return { sensor: sensorName, min, prom, max };
   };
 
-  const activeStats = stats ? {
-    humedadSuelo: computeStatsForField(filteredChartData, 'humedadSuelo', stats.humedadSuelo?.sensor || 'Humedad Suelo'),
-    humedadAmbiente: computeStatsForField(filteredChartData, 'humedadAmbiente', stats.humedadAmbiente?.sensor || 'Humedad Ambiente'),
-    temperaturaAmbiente: computeStatsForField(filteredChartData, 'temperaturaAmbiente', stats.temperaturaAmbiente?.sensor || 'Temp. Ambiente'),
-    temperaturaSuelo: computeStatsForField(filteredChartData, 'temperaturaSuelo', stats.temperaturaSuelo?.sensor || 'Temp. Suelo'),
-  } : null;
+  const activeStats = useMemo(() => {
+    if (!stats) return null;
+    return {
+      humedadSuelo: computeStatsForField(filteredChartData, 'humedadSuelo', stats.humedadSuelo?.sensor || 'Humedad Suelo'),
+      humedadAmbiente: computeStatsForField(filteredChartData, 'humedadAmbiente', stats.humedadAmbiente?.sensor || 'Humedad Ambiente'),
+      temperaturaAmbiente: computeStatsForField(filteredChartData, 'temperaturaAmbiente', stats.temperaturaAmbiente?.sensor || 'Temp. Ambiente'),
+      temperaturaSuelo: computeStatsForField(filteredChartData, 'temperaturaSuelo', stats.temperaturaSuelo?.sensor || 'Temp. Suelo'),
+    };
+  }, [stats, filteredChartData]);
 
   const fetchNewData = async (newCultivo: string, newRango: number) => {
     setIsLoadingData(true);

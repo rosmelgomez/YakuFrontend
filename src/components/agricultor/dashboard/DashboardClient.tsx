@@ -7,6 +7,7 @@ import { LineChart, Line, PieChart, Pie, XAxis, YAxis, Tooltip, ResponsiveContai
 import { registrarCultivo, registrarFuenteAgua, listarProvincias, listarDistritos } from '@/actions/crops';
 import NoCropsEmptyState from '@/components/layout/NoCropsEmptyState';
 import SearchableSelect from '@/components/ui/SearchableSelect';
+import CountdownTimer from './CountdownTimer';
 
 const getCreatedCropId = (res: any): number => {
   return res?.id_cultivo ?? res?.idCultivo ?? res?.id ?? 0;
@@ -125,8 +126,6 @@ export default function DashboardClient({
   const [localCultivos, setLocalCultivos] = useState<CultivoData[]>(cultivos);
   const [selectedId, setSelectedId] = useState<string>(cultivos.length > 0 ? cultivos[0].idCultivo.toString() : "");
   const [isPending, startTransition] = useTransition();
-  const [timeLeft, setTimeLeft] = useState(DASHBOARD_REFRESH_SECONDS);
-  const timeLeftRef = useRef(DASHBOARD_REFRESH_SECONDS);
   const [isClientMounted, setIsClientMounted] = useState(false);
   const [weekdayFilter, setWeekdayFilter] = useState<CalendarFilter>('all');
   const [monthFilter, setMonthFilter] = useState<CalendarFilter>('all');
@@ -148,30 +147,7 @@ export default function DashboardClient({
 
   useEffect(() => {
     setIsClientMounted(true);
-
-    const interval = setInterval(() => {
-      const activeCrop = localCultivos.find((c) => c.idCultivo.toString() === selectedId) || localCultivos[0] || null;
-      if (!hasActiveCollector(activeCrop)) {
-        if (timeLeftRef.current !== DASHBOARD_REFRESH_SECONDS) {
-          timeLeftRef.current = DASHBOARD_REFRESH_SECONDS;
-          setTimeLeft(DASHBOARD_REFRESH_SECONDS);
-        }
-        return;
-      }
-
-      if (timeLeftRef.current <= 1) {
-        timeLeftRef.current = DASHBOARD_REFRESH_SECONDS;
-        setTimeLeft(DASHBOARD_REFRESH_SECONDS);
-        router.refresh();
-        return;
-      }
-
-      timeLeftRef.current -= 1;
-      setTimeLeft(timeLeftRef.current);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [localCultivos, router, selectedId]);
+  }, []);
 
   useEffect(() => {
     if (filterMode === 'calendar') return;
@@ -184,11 +160,7 @@ export default function DashboardClient({
     setEndDateFilter('');
   }, [dashboardRange, filterMode]);
 
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s < 10 ? '0' : ''}${s}`;
-  };
+
 
   // Local state for water sources to update dropdown dynamically without full reload
   const [localFuentesAgua, setLocalFuentesAgua] = useState<any[]>(fuentesAgua);
@@ -823,7 +795,7 @@ export default function DashboardClient({
                     fontFamily: 'var(--font-mono)',
                     fontWeight: 500,
                   }}>
-                     {recolectorActivo ? formatTime(timeLeft) : 'Pausado'}
+                     <CountdownTimer recolectorActivo={recolectorActivo} onRefresh={() => router.refresh()} />
                   </div>
 
                   <Button color="blue" onClick={() => setIsOpenRegisterWaterSource(true)} style={{ cursor: 'pointer' }}>
