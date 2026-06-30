@@ -6,7 +6,6 @@ import { authOptions } from '@/lib/auth';
 import { Box } from '@radix-ui/themes';
 import DashboardSkeleton from '@/components/layout/DashboardSkeleton';
 import { getControlData } from '@/services/control';
-import { getAlertasData } from '@/services/alertas';
 import { getCultivosBase } from '@/services/cultivos-base';
 import type { CultivoBase } from '@/services/cultivos-base';
 
@@ -38,14 +37,8 @@ export default async function ControlPage() {
   const selectedCultivoId = cultivosBase[0].id;
 
   let controlData;
-  let alertasData = { umbrales: [] };
   try {
-    const [cData, aData] = await Promise.all([
-      getControlData(userId, selectedCultivoId),
-      getAlertasData(userId, selectedCultivoId).catch(() => ({ umbrales: [] }))
-    ]);
-    controlData = cData;
-    alertasData = aData;
+    controlData = await getControlData(userId, selectedCultivoId);
   } catch {
     return (
       <div style={{ color: 'white', padding: '2rem' }}>
@@ -63,7 +56,7 @@ export default async function ControlPage() {
            data={controlData} 
            idCultivo={selectedCultivoId} 
            modelosML={[]} 
-           initialUmbrales={alertasData.umbrales}
+           initialUmbrales={[]}
          />
       </Box>
     </Box>

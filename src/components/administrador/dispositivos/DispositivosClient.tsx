@@ -15,18 +15,25 @@ import {
   obtenerSiguienteClientId,
   registrarComponente,
   registrarDispositivo,
+  listarUsuarios,
+  listarTiposDispositivo,
+  listarTiposComponente,
+  listarComponentes,
+  listarTiposMetrica,
 } from "@/actions/admin";
+import { listarFuentesAgua, listarTodosCultivos } from "@/actions/crops";
+import { listarAlmacenes } from "@/actions/almacenes";
 
 export default function DispositivosClient({
   initialUsers = [],
   initialDevices = [],
   initialCrops = [],
-  tiposDispositivo = [],
-  tiposComponente = [],
+  tiposDispositivo: initialTiposDispositivo = [],
+  tiposComponente: initialTiposComponente = [],
   initialAlmacenes = [],
   initialComponents = [],
-  fuentesAgua = [],
-  metricas = [],
+  fuentesAgua: initialFuentesAgua = [],
+  metricas: initialMetricas = [],
 }: any) {
   type AssignComponentDraft = {
     id: string;
@@ -37,13 +44,88 @@ export default function DispositivosClient({
   };
 
   const [devices, setDevices] = useState(initialDevices);
-  const [components] = useState(initialComponents);
+  const [components, setComponents] = useState(initialComponents);
+  const [localUsers, setLocalUsers] = useState<any[]>(initialUsers);
+  const [localCrops, setLocalCrops] = useState<any[]>(initialCrops);
+  const [localTiposDispositivo, setLocalTiposDispositivo] = useState<any[]>(initialTiposDispositivo);
+  const [localTiposComponente, setLocalTiposComponente] = useState<any[]>(initialTiposComponente);
+  const [localAlmacenes, setLocalAlmacenes] = useState<any[]>(initialAlmacenes);
+  const [localFuentesAgua, setLocalFuentesAgua] = useState<any[]>(initialFuentesAgua);
+  const [localMetricas, setLocalMetricas] = useState<any[]>(initialMetricas);
+
+  const [adminCatalogsLoaded, setAdminCatalogsLoaded] = useState(
+    initialUsers.length > 0 ||
+    initialCrops.length > 0 ||
+    initialTiposDispositivo.length > 0 ||
+    initialTiposComponente.length > 0 ||
+    initialAlmacenes.length > 0 ||
+    initialComponents.length > 0 ||
+    initialFuentesAgua.length > 0 ||
+    initialMetricas.length > 0
+  );
+  const [isLoadingAdminCatalogs, setIsLoadingAdminCatalogs] = useState(false);
+
+  const ensureAdminCatalogsLoaded = async () => {
+    if (adminCatalogsLoaded || isLoadingAdminCatalogs) return;
+    setIsLoadingAdminCatalogs(true);
+    try {
+      const [
+        users,
+        crops,
+        devTypes,
+        compTypes,
+        stores,
+        comps,
+        water,
+        metrics
+      ] = await Promise.all([
+        listarUsuarios().catch(() => []),
+        listarTodosCultivos().catch(() => []),
+        listarTiposDispositivo().catch(() => []),
+        listarTiposComponente().catch(() => []),
+        listarAlmacenes().catch(() => []),
+        listarComponentes().catch(() => []),
+        listarFuentesAgua().catch(() => []),
+        listarTiposMetrica().catch(() => []),
+      ]);
+      setLocalUsers(users);
+      setLocalCrops(crops);
+      setLocalTiposDispositivo(devTypes);
+      setLocalTiposComponente(compTypes);
+      setLocalAlmacenes(stores);
+      setComponents(comps);
+      setLocalFuentesAgua(water);
+      setLocalMetricas(metrics);
+      setAdminCatalogsLoaded(true);
+    } finally {
+      setIsLoadingAdminCatalogs(false);
+    }
+  };
+
   const [isPending, startTransition] = useTransition();
   const [isOpenRegisterDevice, setIsOpenRegisterDevice] = useState(false);
   const [isOpenRegisterComponent, setIsOpenRegisterComponent] = useState(false);
   const [isOpenAssignDevice, setIsOpenAssignDevice] = useState(false);
   const [isOpenAssignComponent, setIsOpenAssignComponent] = useState(false);
   const [isOpenEditAssignment, setIsOpenEditAssignment] = useState(false);
+
+  useEffect(() => {
+    if (
+      isOpenRegisterDevice ||
+      isOpenRegisterComponent ||
+      isOpenAssignDevice ||
+      isOpenAssignComponent ||
+      isOpenEditAssignment
+    ) {
+      void ensureAdminCatalogsLoaded();
+    }
+  }, [
+    isOpenRegisterDevice,
+    isOpenRegisterComponent,
+    isOpenAssignDevice,
+    isOpenAssignComponent,
+    isOpenEditAssignment
+  ]);
   const [newDeviceTipoId, setNewDeviceTipoId] = useState("");
   const [newDeviceNombre, setNewDeviceNombre] = useState("");
   const [newDeviceMac, setNewDeviceMac] = useState("");
@@ -71,7 +153,7 @@ export default function DispositivosClient({
 
   useEffect(() => {
     if (!isOpenRegisterDevice) return;
-    if (!newDeviceTipoId && tiposDispositivo.length > 0) setNewDeviceTipoId(tiposDispositivo[0].id.toString());
+    if (!newDeviceTipoId && localTiposDispositivo.length > 0) setNewDeviceTipoId(localTiposDispositivo[0].id.toString());
 
     obtenerSiguienteClientId()
       .then((res) => setNewDeviceMqtt(res?.siguiente_client_id || ""))
@@ -79,7 +161,7 @@ export default function DispositivosClient({
         const next = devices.length + 1;
         setNewDeviceMqtt(`ESP32_Yaku_${next.toString().padStart(3, "0")}`);
       });
-  }, [isOpenRegisterDevice, newDeviceTipoId, tiposDispositivo, devices.length]);
+  }, [isOpenRegisterDevice, newDeviceTipoId, localTiposDispositivo, devices.length]);
 
   useEffect(() => {
     if (newDeviceTipoId === "1") {
@@ -94,7 +176,7 @@ export default function DispositivosClient({
     }
   }, [newDeviceTipoId]);
 
-  const filteredCrops = initialCrops.filter((c: any) => c.id_usuario?.toString() === assignUserId);
+  const filteredCrops = localCrops.filter((c: any) => c.id_usuario?.toString() === assignUserId);
   const WATER_SOURCE_EMPTY_MESSAGE = "No hay fuentes de agua disponibles para este cultivo";
   const selectedAssignDevice = devices.find((d: any) => d.id?.toString() === assignDeviceId);
   const selectedComponent = components.find((c: any) => c.id?.toString() === componentId);
@@ -105,15 +187,15 @@ export default function DispositivosClient({
   const fieldDeviceBaseAssignment = selectedFieldDevice?.asignaciones_iot?.find((a: any) => !a.id_componente) || selectedFieldDevice?.asignaciones_iot?.[0];
   const fieldDeviceUserId = fieldDeviceBaseAssignment?.id_usuario;
   const fieldDeviceCropId = fieldDeviceBaseAssignment?.id_cultivo;
-  const metricByCode = (code: string) => metricas.find((m: any) => m.codigo === code);
+  const metricByCode = (code: string) => localMetricas.find((m: any) => m.codigo === code);
   const getCropId = (crop: any) => crop?.id_cultivo ?? crop?.id;
   const getCropWaterSourceId = (crop: any) => crop?.id_fuente_agua;
-  const findCrop = (cropId: any) => initialCrops.find((c: any) => getCropId(c)?.toString() === cropId?.toString());
+  const findCrop = (cropId: any) => localCrops.find((c: any) => getCropId(c)?.toString() === cropId?.toString());
   const waterSourcesForAssignment = (userId: any, cropId: any) => {
     const crop = findCrop(cropId);
     const cropWaterSourceId = getCropWaterSourceId(crop);
     if (!userId || !crop || !cropWaterSourceId) return [];
-    return fuentesAgua.filter(
+    return localFuentesAgua.filter(
       (f: any) => f.id_usuario?.toString() === userId?.toString() &&
         f.id?.toString() === cropWaterSourceId?.toString()
     );
@@ -575,12 +657,12 @@ export default function DispositivosClient({
         <Dialog.Content aria-describedby={undefined} style={{ maxWidth: 520, background: "var(--surface-mockup)", border: "1px solid var(--border-mockup)" }}>
           <Dialog.Title style={{ color: "white" }}>Registrar Nuevo Dispositivo IoT</Dialog.Title>
           <Flex direction="column" gap="3" mt="3">
-            <SearchableSelect value={newDeviceTipoId} onValueChange={setNewDeviceTipoId} placeholder="Tipo" searchPlaceholder="Buscar tipo..." options={tiposDispositivo.map((t: any) => ({ value: t.id.toString(), label: t.nombre }))} />
+            <SearchableSelect value={newDeviceTipoId} onValueChange={setNewDeviceTipoId} placeholder="Tipo" searchPlaceholder="Buscar tipo..." options={localTiposDispositivo.map((t: any) => ({ value: t.id.toString(), label: t.nombre }))} />
             <TextField.Root placeholder="Nombre del dispositivo" value={newDeviceNombre} onChange={(e) => setNewDeviceNombre(e.target.value)} />
             <TextField.Root placeholder="MAC" value={newDeviceMac} onChange={(e) => setNewDeviceMac(e.target.value)} />
             <Grid columns="2" gap="3"><TextField.Root value={newDeviceMqtt} disabled /><TextField.Root value={newDeviceFirmware} onChange={(e) => setNewDeviceFirmware(e.target.value)} /></Grid>
             <Grid columns="2" gap="3"><TextField.Root value={newDevicePub} disabled /><TextField.Root value={newDeviceSub} disabled /></Grid>
-            <SearchableSelect value={newDeviceAlmacenId} onValueChange={setNewDeviceAlmacenId} placeholder="Almacen" searchPlaceholder="Buscar almacen..." options={initialAlmacenes.map((a: any) => ({ value: a.id.toString(), label: a.nombre }))} />
+            <SearchableSelect value={newDeviceAlmacenId} onValueChange={setNewDeviceAlmacenId} placeholder="Almacen" searchPlaceholder="Buscar almacen..." options={localAlmacenes.map((a: any) => ({ value: a.id.toString(), label: a.nombre }))} />
           </Flex>
           <Flex gap="3" mt="6" justify="end"><Dialog.Close><Button variant="soft" color="gray">Cancelar</Button></Dialog.Close><Button color="green" onClick={handleRegisterDeviceSubmit}>Registrar</Button></Flex>
         </Dialog.Content>
@@ -590,9 +672,9 @@ export default function DispositivosClient({
         <Dialog.Content aria-describedby={undefined} style={{ maxWidth: 450, background: "var(--surface-mockup)", border: "1px solid var(--border-mockup)" }}>
           <Dialog.Title style={{ color: "white" }}>Registrar Componente</Dialog.Title>
           <Flex direction="column" gap="3" mt="3">
-            <SearchableSelect value={newCompTipoId} onValueChange={setNewCompTipoId} placeholder="Modelo" searchPlaceholder="Buscar modelo..." options={tiposComponente.map((t: any) => ({ value: t.id.toString(), label: `${t.nombre_modelo} (${t.categoria})` }))} />
+            <SearchableSelect value={newCompTipoId} onValueChange={setNewCompTipoId} placeholder="Modelo" searchPlaceholder="Buscar modelo..." options={localTiposComponente.map((t: any) => ({ value: t.id.toString(), label: `${t.nombre_modelo} (${t.categoria})` }))} />
             <TextField.Root placeholder="Numero de serie" value={newCompSerial} onChange={(e) => setNewCompSerial(e.target.value)} />
-            <SearchableSelect value={newCompAlmacenId} onValueChange={setNewCompAlmacenId} placeholder="Almacen" searchPlaceholder="Buscar almacen..." options={initialAlmacenes.map((a: any) => ({ value: a.id.toString(), label: a.nombre }))} />
+            <SearchableSelect value={newCompAlmacenId} onValueChange={setNewCompAlmacenId} placeholder="Almacen" searchPlaceholder="Buscar almacen..." options={localAlmacenes.map((a: any) => ({ value: a.id.toString(), label: a.nombre }))} />
           </Flex>
           <Flex gap="3" mt="6" justify="end"><Dialog.Close><Button variant="soft" color="gray">Cancelar</Button></Dialog.Close><Button color="green" onClick={handleRegisterComponentSubmit}>Registrar</Button></Flex>
         </Dialog.Content>
@@ -603,7 +685,7 @@ export default function DispositivosClient({
           <Dialog.Title style={{ color: "white" }}>Asignar Dispositivo</Dialog.Title>
           <Flex direction="column" gap="3" mt="3">
             <SearchableSelect value={assignDeviceId} onValueChange={(value) => { setAssignDeviceId(value); setAssignComponents((prev) => prev.map((row) => ({ ...row, fuenteAguaId: "" }))); }} placeholder="Dispositivo" searchPlaceholder="Buscar dispositivo..." options={devices.filter((d: any) => d.en_almacen && d.estado === "disponible").map((d: any) => ({ value: d.id.toString(), label: d.nombre }))} />
-            <SearchableSelect value={assignUserId} onValueChange={(v) => { setAssignUserId(v); setAssignCropId(""); setAssignComponents((prev) => prev.map((row) => ({ ...row, fuenteAguaId: "" }))); }} placeholder="Agricultor" searchPlaceholder="Buscar agricultor..." options={initialUsers.filter((u: any) => u.id_rol === 2).map((u: any) => ({ value: u.id.toString(), label: `${u.nombre} ${u.apellido || ""}`.trim() }))} />
+            <SearchableSelect value={assignUserId} onValueChange={(v) => { setAssignUserId(v); setAssignCropId(""); setAssignComponents((prev) => prev.map((row) => ({ ...row, fuenteAguaId: "" }))); }} placeholder="Agricultor" searchPlaceholder="Buscar agricultor..." options={localUsers.filter((u: any) => u.id_rol === 2).map((u: any) => ({ value: u.id.toString(), label: `${u.nombre} ${u.apellido || ""}`.trim() }))} />
             <SearchableSelect value={assignCropId} onValueChange={(value) => { setAssignCropId(value); setAssignComponents((prev) => prev.map((row) => ({ ...row, fuenteAguaId: "" }))); }} disabled={!assignUserId} placeholder="Cultivo" searchPlaceholder="Buscar cultivo..." options={filteredCrops.map((c: any) => ({ value: c.id.toString(), label: c.nombre_planta }))} />
 
             <Box mt="2" style={{ borderTop: "1px solid var(--border-mockup)", paddingTop: 14 }}>
@@ -678,7 +760,7 @@ export default function DispositivosClient({
                           <Box mt="3">
                             <Text size="2" weight="bold" style={{ color: "white" }} as="div" mb="2">Parametros que captura</Text>
                             <Grid columns={{ initial: "1", sm: "2" }} gap="2">
-                              {metricas.map((m: any) => {
+                              {localMetricas.map((m: any) => {
                                 const metricId = m.id.toString();
                                 return (
                                   <Flex key={m.id} align="center" gap="2" style={{ minHeight: 32 }}>
@@ -752,7 +834,7 @@ export default function DispositivosClient({
               <Box>
                 <Text size="2" weight="bold" style={{ color: "white" }} as="div" mb="2">Parametros que captura</Text>
                 <Grid columns={{ initial: "1", sm: "2" }} gap="2">
-                  {metricas.map((m: any) => {
+                  {localMetricas.map((m: any) => {
                     const metricId = m.id.toString();
                     return (
                       <Flex key={m.id} align="center" gap="2" style={{ minHeight: 32 }}>
@@ -796,7 +878,7 @@ export default function DispositivosClient({
                 onValueChange={setEditMetricId}
                 placeholder="Parametro de captura"
                 searchPlaceholder="Buscar parametro..."
-                options={metricas.map((m: any) => ({ value: m.id.toString(), label: `${m.nombre} (${m.codigo})` }))}
+                options={localMetricas.map((m: any) => ({ value: m.id.toString(), label: `${m.nombre} (${m.codigo})` }))}
               />
             )}
             {showEditWaterSource && (

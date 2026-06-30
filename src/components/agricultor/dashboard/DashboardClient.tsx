@@ -3,7 +3,11 @@
 import { useState, useTransition, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, Text, Flex, Grid, Select, Card, Badge, Progress, Switch, Separator, Button, Dialog, TextField, ScrollArea } from '@radix-ui/themes';
-import { LineChart, Line, PieChart, Pie, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Cell, CartesianGrid } from 'recharts';
+import nextDynamic from 'next/dynamic';
+
+const DashboardHistoryChart = nextDynamic(() => import('@/components/charts/DashboardHistoryChart'), { ssr: false });
+const DashboardConsumptionChart = nextDynamic(() => import('@/components/charts/DashboardConsumptionChart'), { ssr: false });
+const DashboardHealthGauge = nextDynamic(() => import('@/components/charts/DashboardHealthGauge'), { ssr: false });
 import {
   registrarCultivo,
   registrarFuenteAgua,
@@ -1179,19 +1183,7 @@ const HistoricoSensoresCard = ({
           <Text color="gray">Cargando gráfico...</Text>
         </Flex>
       ) : (
-        <Box style={{ width: '100%', minWidth: 0, height: '250px' }}>
-          <ResponsiveContainer width="100%" height={250} minWidth={0}>
-            <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <XAxis dataKey="xLabel" stroke="#4b5563" fontSize={12} tickMargin={10} minTickGap={20} />
-              <YAxis stroke="#4b5563" fontSize={12} domain={config.isPercentage ? [0, 100] : ['auto', 'auto']} tickFormatter={(val) => `${val}${config.isPercentage ? '%' : '°'}`} />
-              <Tooltip contentStyle={{ background: '#1f2937', border: 'none', borderRadius: '8px', color: '#fff' }} labelStyle={{ color: '#9ca3af', marginBottom: '4px' }} formatter={(value: any) => [`${value}${config.isPercentage ? '%' : '°C'}`, config.title]} />
-              {umbralVisual !== null && (
-                <ReferenceLine y={umbralVisual} stroke="#ef4444" strokeDasharray="3 3" label={{ position: 'insideBottomLeft', value: `${config.umbralRef === 'min' ? 'mín' : 'máx'} ${umbralVisual}${config.isPercentage ? '%' : '°'}`, fill: '#ef4444', fontSize: 12 }} />
-              )}
-              <Line type="monotone" dataKey="valorReal" stroke={config.color} strokeWidth={3} dot={false} activeDot={{ r: 6, fill: config.color, stroke: '#111827', strokeWidth: 2 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </Box>
+        <DashboardHistoryChart chartData={chartData} config={config} umbralVisual={umbralVisual} />
       )}
     </Card>
   );
@@ -1341,36 +1333,7 @@ const ConsumoChartCard = ({
           <Text color="gray">Cargando gráfico...</Text>
         </Flex>
       ) : (
-        <Box style={{ width: '100%', minWidth: 0, height: '250px' }}>
-          <ResponsiveContainer width="100%" height={250} minWidth={0}>
-            <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
-              <XAxis dataKey="xLabel" stroke="#4b5563" fontSize={12} tickMargin={10} minTickGap={20} />
-              <YAxis stroke="#4b5563" fontSize={12} tickFormatter={(val) => `${val}L`} />
-              <Tooltip 
-                contentStyle={{ background: '#1f2937', border: 'none', borderRadius: '8px', color: '#fff' }} 
-                labelStyle={{ color: '#9ca3af', marginBottom: '4px' }} 
-                formatter={(value: any) => [`${value} L`, config.title]} 
-              />
-              {limite !== null && (
-                <ReferenceLine 
-                  y={limite} 
-                  stroke="#ef4444" 
-                  strokeDasharray="3 3" 
-                  label={{ position: 'insideBottomLeft', value: `Límite ${limite}L`, fill: '#ef4444', fontSize: 12 }} 
-                />
-              )}
-              <Line 
-                type="monotone" 
-                dataKey="valorReal" 
-                stroke={config.color} 
-                strokeWidth={3} 
-                dot={false} 
-                activeDot={{ r: 6, fill: config.color, stroke: '#111827', strokeWidth: 2 }} 
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </Box>
+        <DashboardConsumptionChart chartData={chartData} config={config} limite={limite} />
       )}
     </Card>
   );
@@ -1442,24 +1405,7 @@ const ResumenDiaCard = ({
             <Text color="gray">Cargando gráfico...</Text>
           </Flex>
         ) : (
-          <ResponsiveContainer width="100%" height={110} minWidth={0}>
-            <PieChart margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-            <Pie
-              data={saludData}
-              cx="50%"
-              cy="80%"
-              startAngle={180}
-              endAngle={0}
-              innerRadius={46}
-              outerRadius={58}
-              dataKey="value"
-              stroke="none"
-            >
-              <Cell fill={colorSalud} />
-              <Cell fill="#1e293b" />
-            </Pie>
-            </PieChart>
-          </ResponsiveContainer>
+          <DashboardHealthGauge saludData={saludData} colorSalud={colorSalud} />
         )}
         <div style={{
           position: 'absolute',

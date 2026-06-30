@@ -96,3 +96,16 @@ export async function obtenerDatosAlertaPorCultivo(idCultivo: number) {
     return { success: false, error: error.message || "Error al obtener datos." };
   }
 }
+
+export async function obtenerNotifConfig() {
+  try {
+    const res = await fetchFromFastAPI("/dashboard/alertas/config");
+    if (!res.ok) {
+      throw new Error(await res.text() || "Error al obtener configuración de notificaciones");
+    }
+    const data = await res.json();
+    return { success: true, data };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Error al obtener config." };
+  }
+}

@@ -1,6 +1,11 @@
+import { cache } from "react";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { createBffToken } from "@/lib/bff-token";
+
+const getCachedSession = cache(async () => {
+  return getServerSession(authOptions);
+});
 
 function getFastAPIUrl() {
   const configuredUrl = process.env.FASTAPI_API_URL?.trim().replace(/\/$/, "");
@@ -36,7 +41,7 @@ export async function fetchPublicFastAPI(endpoint: string, options: RequestInit 
 }
 
 export async function fetchFromFastAPI(endpoint: string, options: RequestInit = {}) {
-  const session = await getServerSession(authOptions);
+  const session = await getCachedSession();
   if (!session?.user?.id) {
     throw new Error("No autorizado: Sesion de usuario invalida");
   }

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Box, Text, Flex, Card, Button, Grid, Badge, Switch, Dialog, TextField, Checkbox, ScrollArea, Tabs, Slider } from '@radix-ui/themes';
 import { setModoOperacion, toggleBombaManual, toggleValvulaManual, toggleHorario, eliminarHorario, agregarHorario, actualizarHorario, toggleCapturaDatos, calibrarSensor, actualizarTiempoMaximoRele, obtenerDatosControlPorCultivo, ejecutarPrediccionEnVivo } from '@/actions/control';
 import { listarModelosML, seleccionarModeloML } from '@/actions/ml';
-import { guardarUmbrales } from '@/actions/alertas';
+import { guardarUmbrales, obtenerDatosAlertaPorCultivo } from '@/actions/alertas';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 
 function ScheduleItem({ h, handleToggleHorario, handleEliminarHorario }: { h: any, handleToggleHorario: any, handleEliminarHorario: any }) {
@@ -199,14 +199,43 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
     const [isEditingUmbrales, setIsEditingUmbrales] = useState(false);
     const [isSavingUmbrales, setIsSavingUmbrales] = useState(false);
     const [showRecommendBanner, setShowRecommendBanner] = useState(false);
+    const [isLoadingUmbrales, setIsLoadingUmbrales] = useState(false);
+
+    useEffect(() => {
+        let cancelled = false;
+        if (!idCultivo) return;
+        if (initialUmbrales && initialUmbrales.length > 0) {
+            setUmbrales(initialUmbrales);
+            setOriginalUmbrales(initialUmbrales);
+            return;
+        }
+
+        setIsLoadingUmbrales(true);
+        obtenerDatosAlertaPorCultivo(idCultivo)
+            .then((res: any) => {
+                if (!cancelled && res.success && res.data) {
+                    setUmbrales(res.data.umbrales || []);
+                    setOriginalUmbrales(res.data.umbrales || []);
+                }
+            })
+            .finally(() => {
+                if (!cancelled) setIsLoadingUmbrales(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [idCultivo, initialUmbrales]);
 
     useEffect(() => {
         setOptimisticData(data);
         setMaxRelayMinutes(data.bomba.timeoutMin || 10);
         const currentModo = data.modo.predictivoActivo ? 'predictivo' : (data.modo.programadoActivo ? 'programado' : 'manual');
         setSelectedModo(currentModo);
-        setUmbrales(initialUmbrales || []);
-        setOriginalUmbrales(initialUmbrales || []);
+        if (initialUmbrales && initialUmbrales.length > 0) {
+            setUmbrales(initialUmbrales || []);
+            setOriginalUmbrales(initialUmbrales || []);
+        }
         setIsEditingUmbrales(false);
         setIdCultivo(initialIdCultivo);
         setModelosML(initialModelosML);
@@ -795,70 +824,80 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
                                 )}
                                 
                                 <Flex direction="column" gap="5">
-                                    {umbrales.map((u: any) => (
-                                        <Box key={u.id}>
-                                            <Flex justify="between" align="center" mb="1">
-                                                <Text color="gray" size="2">{u.nombre}</Text>
-                                                {isEditingUmbrales ? (
-                                                    <Flex align="center" gap="1">
-                                                        <input 
-                                                            type="number" 
-                                                            className="threshold-input"
-                                                            value={u.min}
-                                                            onChange={(e) => handleMinChange(u.id, e.target.value)}
-                                                            onBlur={() => handleInputBlur(u.id, 'min')}
-                                                            style={{
-                                                                width: '45px',
-                                                                background: 'rgba(30, 41, 59, 0.5)',
-                                                                border: '1px solid var(--border-mockup)',
-                                                                borderRadius: '4px',
-                                                                color: 'var(--green-9)',
-                                                                textAlign: 'center',
-                                                                fontSize: '13px',
-                                                                fontWeight: 'bold',
-                                                                padding: '1px 2px',
-                                                                outline: 'none'
-                                                            }}
-                                                        />
-                                                        <Text size="1" color="gray" weight="bold">-</Text>
-                                                        <input 
-                                                            type="number" 
-                                                            className="threshold-input"
-                                                            value={u.max}
-                                                            onChange={(e) => handleMaxChange(u.id, e.target.value)}
-                                                            onBlur={() => handleInputBlur(u.id, 'max')}
-                                                            style={{
-                                                                width: '45px',
-                                                                background: 'rgba(30, 41, 59, 0.5)',
-                                                                border: '1px solid var(--border-mockup)',
-                                                                borderRadius: '4px',
-                                                                color: 'var(--green-9)',
-                                                                textAlign: 'center',
-                                                                fontSize: '13px',
-                                                                fontWeight: 'bold',
-                                                                padding: '1px 2px',
-                                                                outline: 'none'
-                                                            }}
-                                                        />
-                                                        <Text color="green" size="2" weight="bold">{u.unidad}</Text>
-                                                    </Flex>
-                                                ) : (
-                                                    <Text color="green" size="2" weight="bold">{u.min} - {u.max} {u.unidad}</Text>
-                                                )}
-                                            </Flex>
-                                            <Slider 
-                                                value={[
-                                                    Math.min(Number(u.min) || 0, Number(u.max) || 0),
-                                                    Math.max(Number(u.min) || 0, Number(u.max) || 0)
-                                                ]} 
-                                                min={0} 
-                                                max={100} 
-                                                step={1} 
-                                                onValueChange={(v) => handleSliderChange(u.id, v)}
-                                                style={{ pointerEvents: isEditingUmbrales ? 'auto' : 'none' }}
-                                            />
-                                        </Box>
-                                    ))}
+                                    {isLoadingUmbrales ? (
+                                        <Text size="2" color="gray" style={{ textAlign: 'center', padding: '1rem' }}>
+                                            Cargando umbrales del cultivo...
+                                        </Text>
+                                    ) : umbrales.length === 0 ? (
+                                        <Text size="2" color="gray" style={{ textAlign: 'center', padding: '1rem' }}>
+                                            No hay umbrales registrados para este cultivo.
+                                        </Text>
+                                    ) : (
+                                        umbrales.map((u: any) => (
+                                            <Box key={u.id}>
+                                                <Flex justify="between" align="center" mb="1">
+                                                    <Text color="gray" size="2">{u.nombre}</Text>
+                                                    {isEditingUmbrales ? (
+                                                        <Flex align="center" gap="1">
+                                                            <input 
+                                                                type="number" 
+                                                                className="threshold-input"
+                                                                value={u.min}
+                                                                onChange={(e) => handleMinChange(u.id, e.target.value)}
+                                                                onBlur={() => handleInputBlur(u.id, 'min')}
+                                                                style={{
+                                                                    width: '45px',
+                                                                    background: 'rgba(30, 41, 59, 0.5)',
+                                                                    border: '1px solid var(--border-mockup)',
+                                                                    borderRadius: '4px',
+                                                                    color: 'var(--green-9)',
+                                                                    textAlign: 'center',
+                                                                    fontSize: '13px',
+                                                                    fontWeight: 'bold',
+                                                                    padding: '1px 2px',
+                                                                    outline: 'none'
+                                                                }}
+                                                            />
+                                                            <Text size="1" color="gray" weight="bold">-</Text>
+                                                            <input 
+                                                                type="number" 
+                                                                className="threshold-input"
+                                                                value={u.max}
+                                                                onChange={(e) => handleMaxChange(u.id, e.target.value)}
+                                                                onBlur={() => handleInputBlur(u.id, 'max')}
+                                                                style={{
+                                                                    width: '45px',
+                                                                    background: 'rgba(30, 41, 59, 0.5)',
+                                                                    border: '1px solid var(--border-mockup)',
+                                                                    borderRadius: '4px',
+                                                                    color: 'var(--green-9)',
+                                                                    textAlign: 'center',
+                                                                    fontSize: '13px',
+                                                                    fontWeight: 'bold',
+                                                                    padding: '1px 2px',
+                                                                    outline: 'none'
+                                                                }}
+                                                            />
+                                                            <Text color="green" size="2" weight="bold">{u.unidad}</Text>
+                                                        </Flex>
+                                                    ) : (
+                                                        <Text color="green" size="2" weight="bold">{u.min} - {u.max} {u.unidad}</Text>
+                                                    )}
+                                                </Flex>
+                                                <Slider 
+                                                    value={[
+                                                        Math.min(Number(u.min) || 0, Number(u.max) || 0),
+                                                        Math.max(Number(u.min) || 0, Number(u.max) || 0)
+                                                    ]} 
+                                                    min={0} 
+                                                    max={100} 
+                                                    step={1} 
+                                                    onValueChange={(v) => handleSliderChange(u.id, v)}
+                                                    style={{ pointerEvents: isEditingUmbrales ? 'auto' : 'none' }}
+                                                />
+                                            </Box>
+                                        ))
+                                    )}
                                     
                                     {!isEditingUmbrales ? (
                                         <Button 

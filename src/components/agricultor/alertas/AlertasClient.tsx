@@ -10,6 +10,7 @@ import {
   registrarSuscripcionPush,
   obtenerDatosAlertaPorCultivo,
   obtenerEstadoSuscripcionPush,
+  obtenerNotifConfig,
 } from '@/actions/alertas';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 
@@ -71,15 +72,43 @@ export default function AlertasClient({
     setCurrentPage(1);
   }, [initialData, initialCultivo]);
 
+  const [isLoadingNotifConfig, setIsLoadingNotifConfig] = useState(
+    initialNotifConfig.length === 0
+  );
+
   useEffect(() => {
-    setNotifConfigs(initialNotifConfig || []);
-    setOriginalNotifConfigs(initialNotifConfig || []);
-    setIsEditingPreferencias(false);
+    let cancelled = false;
+    if (initialNotifConfig && initialNotifConfig.length > 0) {
+      setNotifConfigs(initialNotifConfig);
+      setOriginalNotifConfigs(initialNotifConfig);
+      setIsLoadingNotifConfig(false);
+      setIsEditingPreferencias(false);
+      return;
+    }
+
+    setIsLoadingNotifConfig(true);
+    obtenerNotifConfig()
+      .then((res: any) => {
+        if (!cancelled && res.success && res.data) {
+          setNotifConfigs(res.data.configs || []);
+          setOriginalNotifConfigs(res.data.configs || []);
+          setHasConfigState(res.data.has_config || false);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingNotifConfig(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [initialNotifConfig]);
 
   useEffect(() => {
-    setHasConfigState(initialHasNotifConfig);
-  }, [initialHasNotifConfig]);
+    if (initialNotifConfig && initialNotifConfig.length > 0) {
+      setHasConfigState(initialHasNotifConfig);
+    }
+  }, [initialHasNotifConfig, initialNotifConfig]);
 
   // Web Push Status States
   const [pushStatus, setPushStatus] = useState<'checking' | 'not-supported' | 'default' | 'granted' | 'denied'>('checking');
@@ -337,7 +366,11 @@ export default function AlertasClient({
             
             {/* Lista agrupada en pequeños cards en un grid de 2 columnas */}
             <Box style={{ flexGrow: 1, paddingRight: '6px' }}>
-              {!hasConfigState && !isEditingPreferencias ? (
+              {isLoadingNotifConfig ? (
+                <Flex direction="column" align="center" justify="center" p="5" style={{ minHeight: '220px' }}>
+                  <Text size="2" color="gray">Cargando preferencias...</Text>
+                </Flex>
+              ) : !hasConfigState && !isEditingPreferencias ? (
                 <Flex 
                   direction="column" 
                   align="center" 

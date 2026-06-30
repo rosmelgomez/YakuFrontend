@@ -5,7 +5,7 @@ import nextDynamic from 'next/dynamic';
 import { authOptions } from '@/lib/auth';
 import { Box } from '@radix-ui/themes';
 import DashboardSkeleton from '@/components/layout/DashboardSkeleton';
-import { getAlertasData, getNotifConfig } from '@/services/alertas';
+import { getAlertasData } from '@/services/alertas';
 import { getCultivosBase } from '@/services/cultivos-base';
 
 import NoCropsEmptyState from '@/components/layout/NoCropsEmptyState';
@@ -36,10 +36,12 @@ export default async function AlertasPage({ searchParams }: { searchParams: Prom
   const resolvedParams = await searchParams;
   const selectedCultivoId = resolvedParams.cultivo ? parseInt(resolvedParams.cultivo, 10) : cultivosBase[0].id;
 
-  const [alertasData, notifConfig] = await Promise.all([
-    getAlertasData(userId, selectedCultivoId),
-    getNotifConfig(),
-  ]);
+  let alertasData = { alertasActivas: [], historial: [] };
+  try {
+    alertasData = await getAlertasData(userId, selectedCultivoId);
+  } catch (error) {
+    console.error("Error al cargar alertas:", error);
+  }
 
   return (
     <Box className="page-content" style={{ padding: '2rem 0' }}>
@@ -49,8 +51,8 @@ export default async function AlertasPage({ searchParams }: { searchParams: Prom
             cultivos={cultivosBase} 
             initialData={alertasData} 
             initialCultivo={selectedCultivoId} 
-            initialNotifConfig={notifConfig.configs} 
-            initialHasNotifConfig={notifConfig.has_config}
+            initialNotifConfig={[]} 
+            initialHasNotifConfig={false}
             initialPushRegistered={false}
           />
       </Box>
