@@ -20,6 +20,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     let socket: WebSocket | null = null;
     let reconnectTimeout: NodeJS.Timeout | null = null;
     let autoHideTimeout: NodeJS.Timeout | null = null;
+    let idleTimeout: number | null = null;
+    let fallbackTimeout: NodeJS.Timeout | null = null;
     let reconnectAttempts = 0;
     let stopped = false;
 
@@ -89,9 +91,22 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       }
     };
 
-    connectWS();
+    const startWhenIdle = () => {
+      if (typeof window === 'undefined') return;
+      if ('requestIdleCallback' in window) {
+        idleTimeout = window.requestIdleCallback(() => void connectWS(), { timeout: 3000 });
+        return;
+      }
+      fallbackTimeout = setTimeout(() => void connectWS(), 1500);
+    };
+
+    startWhenIdle();
     return () => {
       stopped = true;
+      if (idleTimeout !== null && 'cancelIdleCallback' in window) {
+        window.cancelIdleCallback(idleTimeout);
+      }
+      if (fallbackTimeout) clearTimeout(fallbackTimeout);
       if (socket) socket.onclose = null;
       socket?.close();
       if (reconnectTimeout) clearTimeout(reconnectTimeout);

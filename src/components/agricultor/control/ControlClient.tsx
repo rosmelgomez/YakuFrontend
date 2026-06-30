@@ -414,16 +414,16 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
         try {
             const res = await ejecutarPrediccionEnVivo(userId, idCultivo);
             if (!res.success) {
-                setLastMlCheck({ status: 'error', message: res.error || 'No se pudo ejecutar la predicciÃ³n ML.' });
+                setLastMlCheck({ status: 'error', message: res.error || 'No se pudo ejecutar la predicción ML.' });
                 if (!silent) alert(`Error al verificar ML: ${res.error}`);
                 return;
             }
 
             const recomendacion = res.data?.recomendacion === 'regar' ? 'REGAR' : 'NO REGAR';
-            setLastMlCheck({ status: 'ok', message: `Ãšltima verificaciÃ³n ML: ${recomendacion}` });
+            setLastMlCheck({ status: 'ok', message: `Última verificación ML: ${recomendacion}` });
             await refreshControlData();
         } catch (err: any) {
-            setLastMlCheck({ status: 'error', message: err.message || 'Error al ejecutar la predicciÃ³n ML.' });
+            setLastMlCheck({ status: 'error', message: err.message || 'Error al ejecutar la predicción ML.' });
             if (!silent) alert(`Error al verificar ML: ${err.message}`);
         } finally {
             setIsCheckingMl(false);
@@ -1323,20 +1323,10 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
                                                           )}
                                                       </Box>
                                                 </Flex>
-                                                <Flex justify="between" align="center" gap="3" mt="3" wrap="wrap">
+                                                <Flex justify="start" align="center" gap="3" mt="3">
                                                     <Text size="1" color={lastMlCheck?.status === 'error' ? 'red' : 'gray'}>
-                                                        {isCheckingMl ? 'Verificando ML...' : (lastMlCheck?.message || 'VerificaciÃ³n ML lista.')}
+                                                        {isCheckingMl ? 'Verificando ML...' : (lastMlCheck?.message || 'Verificación ML lista.')}
                                                     </Text>
-                                                    <Button
-                                                        size="1"
-                                                        color="purple"
-                                                        variant="soft"
-                                                        disabled={isCheckingMl || !modo.tieneModelo || !isActuatorActive}
-                                                        onClick={() => runLiveMlCheck(false)}
-                                                        style={{ cursor: isCheckingMl || !modo.tieneModelo || !isActuatorActive ? 'default' : 'pointer' }}
-                                                    >
-                                                        {isCheckingMl ? 'Verificando...' : 'Verificar ML ahora'}
-                                                    </Button>
                                                 </Flex>
                                                 {optimisticData.ultimaPrediccion && optimisticData.ultimaPrediccion.variables && (
                                                     <Box mt="3" pt="2" style={{ borderTop: '1px solid var(--border-mockup)' }}>

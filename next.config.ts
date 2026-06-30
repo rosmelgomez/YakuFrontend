@@ -39,8 +39,15 @@ const contentSecurityPolicy = [
 const nextConfig: NextConfig = {
   /* config options here */
   reactCompiler: true,
+  poweredByHeader: false,
+  compress: true,
   allowedDevOrigins,
   experimental: {
+    optimizePackageImports: [
+      "@radix-ui/themes",
+      "lucide-react",
+      "recharts",
+    ],
     serverActions: {
       allowedOrigins: serverActionAllowedOrigins,
     },
