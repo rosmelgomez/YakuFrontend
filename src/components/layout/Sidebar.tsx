@@ -18,7 +18,8 @@ import {
   Database,
   User,
   Warehouse,
-  HardDriveUpload
+  HardDriveUpload,
+  MessageSquareText
 } from 'lucide-react';
 
 export default function Sidebar({ initials = "JR" }: { initials?: string }) {
@@ -27,8 +28,9 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
   const [openProfile, setOpenProfile] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const { data: session } = useSession();
-  const isAdmin = (session?.user as any)?.rol === 'administrador';
-  const isFarmer = (session?.user as any)?.rol === 'agricultor';
+  const userRole = session?.user?.rol;
+  const isAdmin = userRole === 'administrador';
+  const isFarmer = userRole === 'agricultor';
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -181,6 +183,7 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
               <SidebarButton href="/dashboard/agricultor/alertas" active={pathname?.includes('/alertas')} icon={<Bell size={22} />} onPrefetch={router.prefetch} />
               <SidebarButton href="/dashboard/agricultor/control" active={pathname?.includes('/control')} icon={<Settings size={22} />} onPrefetch={router.prefetch} />
               <SidebarButton href="/dashboard/agricultor/ml" active={pathname?.includes('/ml')} icon={<Brain size={22} />} onPrefetch={router.prefetch} />
+              <SidebarButton href="/dashboard/agricultor/feedback" active={pathname?.includes('/feedback')} icon={<MessageSquareText size={22} />} onPrefetch={router.prefetch} />
             </>
           )}
           {isAdmin && (
@@ -190,6 +193,7 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
               <SidebarButton href="/dashboard/administrador/dispositivos" active={pathname === '/dashboard/administrador/dispositivos'} icon={<Cpu size={22} />} onPrefetch={router.prefetch} />
               <SidebarButton href="/dashboard/administrador/firmware" active={pathname === '/dashboard/administrador/firmware'} icon={<HardDriveUpload size={22} />} onPrefetch={router.prefetch} />
               <SidebarButton href="/dashboard/administrador/catalogo" active={pathname === '/dashboard/administrador/catalogo'} icon={<MapPin size={22} />} onPrefetch={router.prefetch} />
+              <SidebarButton href="/dashboard/administrador/feedback" active={pathname === '/dashboard/administrador/feedback'} icon={<MessageSquareText size={22} />} onPrefetch={router.prefetch} />
               <SidebarButton href="/dashboard/administrador/respaldo" active={pathname === '/dashboard/administrador/respaldo'} icon={<Database size={22} />} onPrefetch={router.prefetch} />
               <SidebarButton href="/dashboard/administrador/almacenes" active={pathname === '/dashboard/administrador/almacenes'} icon={<Warehouse size={22} />} onPrefetch={router.prefetch} />
             </>

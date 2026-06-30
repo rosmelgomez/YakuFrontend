@@ -12,6 +12,30 @@ import SearchableSelect from '@/components/ui/SearchableSelect';
 
 export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }: any) {
   const { modelo, modelos, historial, umbral, predicciones } = data;
+  
+  const comp = data?.comparativa_fases || {
+    manual_litros: 0.0,
+    manual_estres: 0.0,
+    manual_dias: 0,
+    programado_litros: 0.0,
+    programado_estres: 0.0,
+    programado_dias: 0,
+    ml_litros: 0.0,
+    ml_estres: 0.0,
+    ml_dias: 0,
+    ahorro_agua: 0.0,
+    reduccion_estres: 0.0
+  };
+
+  const maxLitros = Math.max(comp.manual_litros, comp.programado_litros, comp.ml_litros, 0.1);
+  const wManualLitros = `${(comp.manual_litros / maxLitros) * 100}%`;
+  const wProgLitros = `${(comp.programado_litros / maxLitros) * 100}%`;
+  const wMlLitros = `${(comp.ml_litros / maxLitros) * 100}%`;
+
+  const wManualEstres = `${comp.manual_estres}%`;
+  const wProgEstres = `${comp.programado_estres}%`;
+  const wMlEstres = `${comp.ml_estres}%`;
+
   const [loading, setLoading] = useState(false);
   const [prediction, setPrediction] = useState<any>(null);
   const router = useRouter();
@@ -561,10 +585,10 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
             <Box mb="3">
               <Flex justify="between" mb="1" style={{ fontSize: '11px' }}>
                 <Text color="gray" style={{ fontFamily: 'var(--font-mono)' }}>Fase 1: Manual</Text>
-                <Text weight="bold" style={{ color: 'var(--red)', fontFamily: 'var(--font-mono)' }}>2.8 L</Text>
+                <Text weight="bold" style={{ color: 'var(--red)', fontFamily: 'var(--font-mono)' }}>{comp.manual_litros} L</Text>
               </Flex>
               <div style={{ height: '8px', background: 'var(--dim-mockup)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: '100%', background: 'var(--red)', opacity: 0.8 }} />
+                <div style={{ height: '100%', width: wManualLitros, background: 'var(--red)', opacity: 0.8 }} />
               </div>
             </Box>
 
@@ -572,10 +596,10 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
             <Box mb="3">
               <Flex justify="between" mb="1" style={{ fontSize: '11px' }}>
                 <Text color="gray" style={{ fontFamily: 'var(--font-mono)' }}>Fase 2: Reactivo / Programado</Text>
-                <Text weight="bold" style={{ color: 'var(--amber)', fontFamily: 'var(--font-mono)' }}>1.4 L</Text>
+                <Text weight="bold" style={{ color: 'var(--amber)', fontFamily: 'var(--font-mono)' }}>{comp.programado_litros} L</Text>
               </Flex>
               <div style={{ height: '8px', background: 'var(--dim-mockup)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: '50%', background: 'var(--amber)' }} />
+                <div style={{ height: '100%', width: wProgLitros, background: 'var(--amber)' }} />
               </div>
             </Box>
 
@@ -583,10 +607,10 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
             <Box>
               <Flex justify="between" mb="1" style={{ fontSize: '11px' }}>
                 <Text color="gray" style={{ fontFamily: 'var(--font-mono)' }}>Fase 3: ML predictivo</Text>
-                <Text weight="bold" style={{ color: 'var(--green)', fontFamily: 'var(--font-mono)' }}>0.9 L</Text>
+                <Text weight="bold" style={{ color: 'var(--green)', fontFamily: 'var(--font-mono)' }}>{comp.ml_litros} L</Text>
               </Flex>
               <div style={{ height: '8px', background: 'var(--dim-mockup)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: '32%', background: 'var(--green)' }} />
+                <div style={{ height: '100%', width: wMlLitros, background: 'var(--green)' }} />
               </div>
             </Box>
           </Box>
@@ -601,10 +625,10 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
             <Box mb="3">
               <Flex justify="between" mb="1" style={{ fontSize: '11px' }}>
                 <Text color="gray" style={{ fontFamily: 'var(--font-mono)' }}>Fase 1: Manual</Text>
-                <Text weight="bold" style={{ color: 'var(--red)', fontFamily: 'var(--font-mono)' }}>18.4%</Text>
+                <Text weight="bold" style={{ color: 'var(--red)', fontFamily: 'var(--font-mono)' }}>{comp.manual_estres}%</Text>
               </Flex>
               <div style={{ height: '8px', background: 'var(--dim-mockup)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: '100%', background: 'var(--red)', opacity: 0.8 }} />
+                <div style={{ height: '100%', width: wManualEstres, background: 'var(--red)', opacity: 0.8 }} />
               </div>
             </Box>
 
@@ -612,10 +636,10 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
             <Box mb="3">
               <Flex justify="between" mb="1" style={{ fontSize: '11px' }}>
                 <Text color="gray" style={{ fontFamily: 'var(--font-mono)' }}>Fase 2: Reactivo / Programado</Text>
-                <Text weight="bold" style={{ color: 'var(--amber)', fontFamily: 'var(--font-mono)' }}>8.1%</Text>
+                <Text weight="bold" style={{ color: 'var(--amber)', fontFamily: 'var(--font-mono)' }}>{comp.programado_estres}%</Text>
               </Flex>
               <div style={{ height: '8px', background: 'var(--dim-mockup)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: '44%', background: 'var(--amber)' }} />
+                <div style={{ height: '100%', width: wProgEstres, background: 'var(--amber)' }} />
               </div>
             </Box>
 
@@ -623,10 +647,10 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
             <Box>
               <Flex justify="between" mb="1" style={{ fontSize: '11px' }}>
                 <Text color="gray" style={{ fontFamily: 'var(--font-mono)' }}>Fase 3: ML predictivo</Text>
-                <Text weight="bold" style={{ color: 'var(--green)', fontFamily: 'var(--font-mono)' }}>2.3%</Text>
+                <Text weight="bold" style={{ color: 'var(--green)', fontFamily: 'var(--font-mono)' }}>{comp.ml_estres}%</Text>
               </Flex>
               <div style={{ height: '8px', background: 'var(--dim-mockup)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: '12%', background: 'var(--green)' }} />
+                <div style={{ height: '100%', width: wMlEstres, background: 'var(--green)' }} />
               </div>
             </Box>
           </Box>
@@ -635,21 +659,21 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
         {/* Resumen de KPIs */}
         <Grid columns={{ initial: '1', sm: '3' }} gap="3" mt="5">
           <div style={{ padding: '12px', background: 'var(--greenbg)', border: '1px solid var(--greenbrd)', borderRadius: '8px', textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--green)' }}>67%</div>
+            <div style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--green)' }}>{comp.ahorro_agua}%</div>
             <div style={{ fontSize: '9px', color: 'var(--green)', fontFamily: 'var(--font-mono)', marginTop: '2px', lineHeight: '1.2' }}>
               Ahorro de agua<br/>ML vs Manual
             </div>
           </div>
 
           <div style={{ padding: '12px', background: 'var(--purplebg)', border: '1px solid var(--purplebrd)', borderRadius: '8px', textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--purple)' }}>87.5%</div>
+            <div style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--purple)' }}>{comp.reduccion_estres}%</div>
             <div style={{ fontSize: '9px', color: 'var(--purple)', fontFamily: 'var(--font-mono)', marginTop: '2px', lineHeight: '1.2' }}>
               Reducción de estrés<br/>ML vs Manual
             </div>
           </div>
 
           <div style={{ padding: '12px', background: 'var(--amberbg)', border: '1px solid var(--amberbrd)', borderRadius: '8px', textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--amber)' }}>3.8%</div>
+            <div style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--amber)' }}>{(modelo?.mae || 0.0).toFixed(1)}%</div>
             <div style={{ fontSize: '9px', color: 'var(--amber)', fontFamily: 'var(--font-mono)', marginTop: '2px', lineHeight: '1.2' }}>
               MAE del modelo<br/>en validación
             </div>

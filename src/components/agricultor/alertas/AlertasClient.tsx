@@ -332,35 +332,38 @@ export default function AlertasClient({
         `
       }} />
 
-      <Card size="2" mb="4" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)' }}>
-        <Flex justify="between" align={{ initial: 'start', sm: 'center' }} gap="3" wrap="wrap">
-          <Box>
-            <Text size="3" weight="bold" color="indigo" as="div">Notificaciones del navegador</Text>
-            <Text size="2" color="gray" as="div">
-              {pushStatus === 'granted' && 'Activadas y sincronizadas con Yaku.'}
-              {pushStatus === 'default' && 'Actívalas para recibir alertas aunque el panel no esté abierto.'}
-              {pushStatus === 'denied' && 'Bloqueadas por el navegador. Debes habilitarlas desde los permisos del sitio.'}
-              {pushStatus === 'not-supported' && 'Este navegador no admite notificaciones Push.'}
-              {pushStatus === 'checking' && 'Comprobando compatibilidad…'}
-              {!isSecure && ' Se requiere HTTPS o localhost.'}
-            </Text>
-          </Box>
-          <Flex gap="2">
-            {pushStatus === 'default' && isSecure && (
-              <Button onClick={handleRequestPush} disabled={isSubscribing}>
-                {isSubscribing ? 'Activando…' : 'Activar notificaciones'}
-              </Button>
-            )}
-            {pushStatus === 'granted' && (
-              <Button variant="soft" onClick={handleTestNotification}>Probar notificación</Button>
-            )}
-          </Flex>
-        </Flex>
-      </Card>
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 mb-4">
+        {/* Columna Izquierda: Panel de Configuración (toma 6 columnas de 12 en xl) */}
+        <div className="col-span-1 xl:col-span-6">
+          {/* Card 1: Notificaciones del navegador */}
+          <Card size="2" mb="4" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)' }}>
+            <Flex justify="between" align={{ initial: 'start', sm: 'center' }} gap="3" wrap="wrap">
+              <Box>
+                <Text size="3" weight="bold" color="indigo" as="div">Notificaciones del navegador</Text>
+                <Text size="2" color="gray" as="div">
+                  {pushStatus === 'granted' && 'Activadas y sincronizadas con Yaku.'}
+                  {pushStatus === 'default' && 'Actívalas para recibir alertas aunque el panel no esté abierto.'}
+                  {pushStatus === 'denied' && 'Bloqueadas por el navegador. Debes habilitarlas desde los permisos del sitio.'}
+                  {pushStatus === 'not-supported' && 'Este navegador no admite notificaciones Push.'}
+                  {pushStatus === 'checking' && 'Comprobando compatibilidad…'}
+                  {!isSecure && ' Se requiere HTTPS o localhost.'}
+                </Text>
+              </Box>
+              <Flex gap="2">
+                {pushStatus === 'default' && isSecure && (
+                  <Button onClick={handleRequestPush} disabled={isSubscribing}>
+                    {isSubscribing ? 'Activando…' : 'Activar notificaciones'}
+                  </Button>
+                )}
+                {pushStatus === 'granted' && (
+                  <Button variant="soft" onClick={handleTestNotification}>Probar notificación</Button>
+                )}
+              </Flex>
+            </Flex>
+          </Card>
 
-      <div className="top-cards-container">
-        {/* Card 2: Preferencias de Canales */}
-        <Card size="3" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', display: 'flex', flexDirection: 'column', height: '100%' }}>
+          {/* Card 2: Preferencias de Canales */}
+          <Card size="3" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', display: 'flex', flexDirection: 'column', height: 'auto' }}>
           <Text size="4" weight="bold" color="indigo" mb="5" as="div">Preferencias de canales</Text>
           <Flex direction="column" gap="4" style={{ flexGrow: 1 }}>
             
@@ -393,7 +396,7 @@ export default function AlertasClient({
                   </Text>
                 </Flex>
               ) : (
-                <Grid columns={{ initial: '1', sm: '2', md: '3' }} gap="3" mb="3">
+                <Grid columns={{ initial: '2', sm: '2', md: '3' }} gap="3" mb="3">
                   {categorias.map((cat) => {
                     const bajo = notifConfigs.find((c: any) => c.id_tipo_alerta === cat.bajoId);
                     const alto = notifConfigs.find((c: any) => c.id_tipo_alerta === cat.altoId);
@@ -621,6 +624,81 @@ export default function AlertasClient({
           </Flex>
         </Card>
       </div>
+
+      {/* Columna Derecha: Guía Explicativa Simple (toma 6 columnas de 12 en xl) */}
+      <div className="col-span-1 xl:col-span-6">
+        <Card size="3" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '16px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <Text size="4" weight="bold" color="indigo" mb="2" as="div">
+            ¿Cómo funcionan las alertas?
+          </Text>
+          <Text size="2" color="gray" mb="4" as="div">
+            Una guía sencilla para personalizar cómo y cuándo te avisa Yaku sobre el estado de tus plantas:
+          </Text>
+          
+          <Flex direction="column" gap="3" style={{ flexGrow: 1 }}>
+            <Box style={{ background: 'rgba(30, 41, 59, 0.15)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-mockup)' }}>
+              <Flex gap="2" align="center" mb="1">
+                <Badge color="indigo">Activar notificaciones</Badge>
+                <Text size="2" weight="bold">Avisos directos en tu pantalla</Text>
+              </Flex>
+              <Text size="2" color="gray" as="div" style={{ lineHeight: '1.4' }}>
+                Da permiso a tu navegador para recibir alertas. Te avisará de inmediato en tu celular o computadora, incluso si tienes la aplicación cerrada.
+              </Text>
+            </Box>
+
+            <Box style={{ background: 'rgba(30, 41, 59, 0.15)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-mockup)' }}>
+              <Flex gap="2" align="center" mb="1">
+                <Badge color="indigo">Probar notificación</Badge>
+                <Text size="2" weight="bold">Mensaje de prueba</Text>
+              </Flex>
+              <Text size="2" color="gray" as="div" style={{ lineHeight: '1.4' }}>
+                Envía un mensaje instantáneo de prueba para comprobar que tu dispositivo está bien configurado y listo para recibir las alertas.
+              </Text>
+            </Box>
+
+            <Box style={{ background: 'rgba(30, 41, 59, 0.15)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-mockup)' }}>
+              <Flex gap="2" align="center" mb="1">
+                <Badge color="blue">Switch Panel</Badge>
+                <Text size="2" weight="bold">Mostrar alertas en Yaku</Text>
+              </Flex>
+              <Text size="2" color="gray" as="div" style={{ lineHeight: '1.4' }}>
+                Habilita los avisos dentro del panel. Si ocurre un problema, se registrará en la tabla inferior y disparará notificaciones push en tu pantalla.
+              </Text>
+            </Box>
+
+            <Box style={{ background: 'rgba(30, 41, 59, 0.15)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-mockup)' }}>
+              <Flex gap="2" align="center" mb="1">
+                <Badge color="purple">Switch Correo</Badge>
+                <Text size="2" weight="bold">Enviar por correo</Text>
+              </Flex>
+              <Text size="2" color="gray" as="div" style={{ lineHeight: '1.4' }}>
+                Envía un correo electrónico automático con el detalle del problema (ej. falta de agua) directamente al correo con el que te registraste.
+              </Text>
+            </Box>
+
+            <Box style={{ background: 'rgba(30, 41, 59, 0.15)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-mockup)' }}>
+              <Flex gap="2" align="center" mb="1">
+                <Badge color="amber">Frecuencia / Recordatorio</Badge>
+                <Text size="2" weight="bold">Repetir aviso</Text>
+              </Flex>
+              <Text size="2" color="gray" as="div" style={{ lineHeight: '1.4' }}>
+                Elige cada cuánto tiempo quieres que Yaku te vuelva a avisar si la anomalía continúa, repitiéndose en ese intervalo hasta que el problema se solucione.
+              </Text>
+            </Box>
+
+            <Box style={{ background: 'rgba(30, 41, 59, 0.15)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-mockup)' }}>
+              <Flex gap="2" align="center" mb="1">
+                <Badge color="green">Umbrales (Pág. Control)</Badge>
+                <Text size="2" weight="bold">Límites de tu planta</Text>
+              </Flex>
+              <Text size="2" color="gray" as="div" style={{ lineHeight: '1.4' }}>
+                Son los límites mínimos y máximos tolerables (ej. mínimo 40% de humedad). Si el sensor mide algo fuera de este rango, se activarán tus alertas.
+              </Text>
+            </Box>
+          </Flex>
+        </Card>
+      </div>
+    </div>
 
       {/* Card 3: Historial y Alertas Activas (a lo ancho completo debajo) */}
       <Card size="3" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)' }}>
