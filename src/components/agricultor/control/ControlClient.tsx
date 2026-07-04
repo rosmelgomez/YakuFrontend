@@ -532,11 +532,10 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
             },
         }));
         startTransition(async () => {
-            try {
-                await setModoOperacion(userId, idCultivo, bomba.id, m);
-            } catch (err: any) {
+            const res = await setModoOperacion(userId, idCultivo, bomba.id, m);
+            if (res && !res.success) {
                 setOptimisticData(previousData);
-                alert(`Error al cambiar modo: ${err.message}`);
+                alert(`Error al cambiar modo: ${res.error}`);
             }
         });
     };
@@ -597,11 +596,10 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
             }));
         }
         startTransition(async () => {
-            try {
-                await toggleBombaManual(userId, bomba.id, nextState);
-            } catch (err: any) {
+            const res = await toggleBombaManual(userId, bomba.id, nextState);
+            if (res && !res.success) {
                 setOptimisticData(previousData);
-                alert(`Error al conmutar la bomba: ${err.message}`);
+                alert(`Error al conmutar la bomba: ${res.error}`);
             }
         });
     };
@@ -619,11 +617,10 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
             valvula: { ...(current.valvula || { id: current.bomba?.id, pin: 25 }), abierta: nextState },
         }));
         startTransition(async () => {
-            try {
-                await toggleValvulaManual(userId, valvula.id || bomba.id, nextState);
-            } catch (err: any) {
+            const res = await toggleValvulaManual(userId, valvula.id || bomba.id, nextState);
+            if (res && !res.success) {
                 setOptimisticData(previousData);
-                alert(`Error al conmutar la valvula: ${err.message}`);
+                alert(`Error al conmutar la valvula: ${res.error}`);
             }
         });
     };
@@ -636,7 +633,10 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
                 // Si agregamos el horario estando en pestaña programado pero el backend aún no está activo, lo activamos
                 const modoActual = modo.actual?.toLowerCase();
                 if (modoActual !== 'programado' && modoActual !== 'programado (ml)') {
-                    await setModoOperacion(userId, idCultivo, bomba.id, 'programado');
+                    const res = await setModoOperacion(userId, idCultivo, bomba.id, 'programado');
+                    if (res && !res.success) {
+                        alert(`Error al cambiar modo: ${res.error}`);
+                    }
                 }
             } catch (err: any) {
                 alert(`Error al agregar horario: ${err.message}`);
