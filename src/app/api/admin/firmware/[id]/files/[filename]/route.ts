@@ -20,11 +20,12 @@ export async function GET(
     const detail = payload?.detail || "Segmento no disponible";
     return NextResponse.json({ detail }, { status: response.status });
   }
-  return new NextResponse(response.body, {
+  const data = await response.arrayBuffer();
+  return new NextResponse(data, {
     status: 200,
     headers: {
       "Content-Type": "application/octet-stream",
-      "Content-Length": response.headers.get("content-length") || "",
+      "Content-Length": data.byteLength.toString(),
       "Cache-Control": "no-store",
     },
   });

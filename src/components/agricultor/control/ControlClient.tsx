@@ -94,7 +94,7 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
     const [isPending, startTransition] = useTransition();
     const [optimisticData, setOptimisticData] = useState(data);
     const [idCultivo, setIdCultivo] = useState(initialIdCultivo);
-    const [modelosML, setModelosML] = useState(initialModelosML);
+    const [modelosML, setModelosML] = useState<any[] | null>(initialModelosML || null);
     const [isLoadingModelosML, setIsLoadingModelosML] = useState(false);
     const [isLoadingCropData, setIsLoadingCropData] = useState(false);
     const [nuevaHora, setNuevaHora] = useState('08:00');
@@ -238,11 +238,10 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
         }
         setIsEditingUmbrales(false);
         setIdCultivo(initialIdCultivo);
-        setModelosML(initialModelosML);
-    }, [data, initialIdCultivo, initialUmbrales, initialModelosML]);
+    }, [data, initialIdCultivo, initialUmbrales]);
 
     useEffect(() => {
-        if (activeTab !== "actuadores" || modelosML.length > 0 || isLoadingModelosML) {
+        if (activeTab !== "actuadores" || modelosML !== null || isLoadingModelosML) {
             return;
         }
 
@@ -250,9 +249,16 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
         setIsLoadingModelosML(true);
         listarModelosML(idCultivo)
             .then((res) => {
-                if (!cancelled && res.success && res.data) {
-                    setModelosML(res.data);
+                if (!cancelled) {
+                    if (res.success && res.data) {
+                        setModelosML(res.data);
+                    } else {
+                        setModelosML([]);
+                    }
                 }
+            })
+            .catch(() => {
+                if (!cancelled) setModelosML([]);
             })
             .finally(() => {
                 if (!cancelled) setIsLoadingModelosML(false);
@@ -261,7 +267,7 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
         return () => {
             cancelled = true;
         };
-    }, [activeTab, idCultivo, modelosML.length, isLoadingModelosML]);
+    }, [activeTab, idCultivo, modelosML, isLoadingModelosML]);
 
     const handleCultivoChange = async (newIdStr: string) => {
         const newId = parseInt(newIdStr, 10);
@@ -274,7 +280,7 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
                 setOptimisticData(res.data.controlData);
                 setUmbrales(res.data.umbrales || []);
                 setOriginalUmbrales(res.data.umbrales || []);
-                setModelosML(res.data.modelosML || []);
+                setModelosML(null);
                 setIsEditingUmbrales(false);
             } else {
                 alert(res.error || "Error al cargar los datos del cultivo.");
@@ -423,7 +429,6 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
                         setUmbrales(res.data.umbrales || []);
                         setOriginalUmbrales(res.data.umbrales || []);
                     }
-                    setModelosML(res.data.modelosML || []);
                 }
             } catch (err) {
                 console.error("Error en polling de datos de control:", err);
@@ -456,7 +461,6 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
             setOptimisticData(fresh.data.controlData);
             setUmbrales(fresh.data.umbrales || []);
             setOriginalUmbrales(fresh.data.umbrales || []);
-            setModelosML(fresh.data.modelosML || []);
         }
     };
 
@@ -545,10 +549,53 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
         }
         const previousData = optimisticData;
         const nextState = !bomba.encendida;
-        setOptimisticData((current: any) => ({
-            ...current,
-            bomba: { ...current.bomba, encendida: nextState },
-        }));
+        if (nextState) {
+            const prevPaused = previousData.sesionPausada;
+            const startSecs = prevPaused?.activa ? prevPaused.segundosTranscurridos : 0;
+            const plannedSecs = prevPaused?.activa ? prevPaused.duracionSegundos : (maxRelayMinutes * 60);
+            const refDate = new Date();
+            setOptimisticData((current: any) => ({
+                ...current,
+                bomba: { ...current.bomba, encendida: true },
+                riegoActivo: {
+                    id: previousData.riegoActivo?.id || 9999,
+                    segundosTranscurridos: startSecs,
+                    duracionSegundos: plannedSecs,
+                    fechaInicio: refDate.toISOString(),
+                    fechaReferencia: refDate.toISOString()
+                },
+                sesionPausada: {
+                    activa: false,
+                    motivo: null,
+                    segundosTranscurridos: 0,
+                    duracionSegundos: 0,
+                    tiempoRestanteSeg: 0
+                }
+            }));
+        } else {
+            const prevActive = previousData.riegoActivo;
+            const prevPaused = previousData.sesionPausada;
+            const baseElapsed = Number(prevActive?.segundosTranscurridos || 0);
+            const referenceDate = prevActive?.fechaReferencia ? new Date(prevActive.fechaReferencia) : null;
+            const liveElapsed = referenceDate && !Number.isNaN(referenceDate.getTime())
+                ? Math.max(0, Math.floor((Date.now() - referenceDate.getTime()) / 1000))
+                : 0;
+            const totalElapsed = baseElapsed + liveElapsed;
+            const planned = Number(prevActive?.duracionSegundos || prevPaused?.duracionSegundos || (maxRelayMinutes * 60));
+            const finalElapsed = Math.min(totalElapsed, planned);
+            setOptimisticData((current: any) => ({
+                ...current,
+                bomba: { ...current.bomba, encendida: false },
+                riegoActivo: null,
+                sesionPausada: {
+                    activa: true,
+                    motivo: 'apagado_manual',
+                    segundosTranscurridos: finalElapsed,
+                    duracionSegundos: planned,
+                    tiempoRestanteSeg: Math.max(0, planned - finalElapsed)
+                }
+            }));
+        }
         startTransition(async () => {
             try {
                 await toggleBombaManual(userId, bomba.id, nextState);
@@ -972,7 +1019,7 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
                                                             Restante: {formatearSegundos(optimisticData.sesionPausada.tiempoRestanteSeg || 0)}
                                                         </Text>
                                                         <Text size="1" color="gray">
-                                                            Pausado por: <strong style={{ color: '#f87171' }}>{optimisticData.sesionPausada.motivo === 'sensor_error' ? 'Error de lectura de sensor' : 'Falta de agua física en el tanque'}</strong>. El riego se reanudará automáticamente al normalizarse.
+                                                            Pausado por: <strong style={{ color: '#f87171' }}>{optimisticData.sesionPausada.motivo === 'sensor_error' ? 'Error de lectura de sensor' : optimisticData.sesionPausada.motivo === 'apagado_manual' ? 'Pausa manual' : 'Falta de agua física en el tanque'}</strong>. {optimisticData.sesionPausada.motivo === 'apagado_manual' ? 'El riego se puede reanudar en cualquier momento volviendo a activar la bomba.' : 'El riego se reanudará automáticamente al normalizarse.'}
                                                         </Text>
                                                     </Flex>
                                                 ) : bomba.encendida ? (
@@ -1148,7 +1195,7 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
                                         >
                                             <Flex direction="column" gap="1" align="center" justify="center" p="2">
                                                 <Text size="7">🧠</Text>
-                                                <Text size="2" weight="bold" style={{ color: selectedModo === 'predictivo' ? '#c084fc' : 'white' }}>Predictivo (ML)</Text>
+                                                <Text size="2" weight="bold" style={{ color: selectedModo === 'predictivo' ? '#c084fc' : 'white' }}>Clasificador (ML)</Text>
                                                 <Text size="1" color="gray" style={{ lineHeight: '1.2' }}>Inteligente por sensores.</Text>
                                                 {selectedModo === 'predictivo' ? (
                                                     <Badge color="purple" style={{ marginTop: '4px' }}>Activo</Badge>
@@ -1372,6 +1419,11 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
                                                                   {optimisticData.ultimaPrediccion.probabilidad !== null && (
                                                                       <Text size="1" color="gray" style={{ display: 'block', marginTop: '2px' }}>
                                                                           Probabilidad: {(optimisticData.ultimaPrediccion.probabilidad * 100).toFixed(1)}%
+                                                                      </Text>
+                                                                  )}
+                                                                  {optimisticData.ultimaPrediccion.nombre_modelo && (
+                                                                      <Text size="1" color="gray" style={{ display: 'block', marginTop: '2px' }}>
+                                                                          Modelo: <span style={{ color: '#d1d5db' }}>{optimisticData.ultimaPrediccion.nombre_modelo}</span>
                                                                       </Text>
                                                                   )}
                                                                   <Text size="1" color="gray" style={{ display: 'block', marginTop: '2px', fontFamily: 'monospace' }}>

@@ -1,8 +1,10 @@
 // src/actions/admin.ts
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { fetchFromFastAPI } from "@/lib/bff";
+
+const CATALOG_CACHE_SECONDS = 86400;
 
 // --- GESTIÓN DE USUARIOS (HU-30, HU-31) ---
 
@@ -82,6 +84,7 @@ export async function registrarRegion(nombre: string) {
     throw new Error(await res.text() || "Error al registrar departamento");
   }
   revalidatePath('/dashboard/administrador');
+  revalidateTag('ubicacion:regiones', 'max');
   return res.json();
 }
 
@@ -95,6 +98,7 @@ export async function registrarProvincia(idRegion: number, nombre: string) {
     throw new Error(await res.text() || "Error al registrar provincia");
   }
   revalidatePath('/dashboard/administrador');
+  revalidateTag('ubicacion:provincias', 'max');
   return res.json();
 }
 
@@ -108,6 +112,7 @@ export async function registrarDistrito(idProvincia: number, nombre: string) {
     throw new Error(await res.text() || "Error al registrar distrito");
   }
   revalidatePath('/dashboard/administrador');
+  revalidateTag('ubicacion:distritos', 'max');
   return res.json();
 }
 
@@ -126,6 +131,7 @@ export async function registrarPlanta(
     throw new Error(await res.text() || "Error al registrar planta en el catálogo");
   }
   revalidatePath('/dashboard/administrador');
+  revalidateTag('catalogo:plantas', 'max');
   return res.json();
 }
 
@@ -142,6 +148,7 @@ export async function actualizarParametrosPlanta(
     throw new Error(await res.text() || "Error al actualizar los parámetros de la planta");
   }
   revalidatePath('/dashboard/administrador/catalogo');
+  revalidateTag('catalogo:plantas', 'max');
   return res.json();
 }
 
@@ -187,7 +194,9 @@ export async function registrarComponente(payload: {
 }
 
 export async function listarTiposDispositivo() {
-  const res = await fetchFromFastAPI("/dispositivos/tipos");
+  const res = await fetchFromFastAPI("/dispositivos/tipos", {
+    next: { revalidate: CATALOG_CACHE_SECONDS, tags: ['catalogo:tipos-dispositivo'] },
+  });
   if (!res.ok) {
     throw new Error("Error al obtener tipos de dispositivo");
   }
@@ -195,7 +204,9 @@ export async function listarTiposDispositivo() {
 }
 
 export async function listarTiposComponente() {
-  const res = await fetchFromFastAPI("/dispositivos/componentes/tipos");
+  const res = await fetchFromFastAPI("/dispositivos/componentes/tipos", {
+    next: { revalidate: CATALOG_CACHE_SECONDS, tags: ['catalogo:tipos-componente'] },
+  });
   if (!res.ok) {
     throw new Error("Error al obtener tipos de componente");
   }
@@ -211,7 +222,9 @@ export async function listarComponentes() {
 }
 
 export async function listarPlantas() {
-  const res = await fetchFromFastAPI("/plantas");
+  const res = await fetchFromFastAPI("/plantas", {
+    next: { revalidate: CATALOG_CACHE_SECONDS, tags: ['catalogo:plantas'] },
+  });
   if (!res.ok) {
     throw new Error("Error al listar plantas");
   }
@@ -311,7 +324,9 @@ export async function obtenerSiguienteClientId() {
 }
 
 export async function listarTiposMetrica() {
-  const res = await fetchFromFastAPI("/dispositivos/metricas");
+  const res = await fetchFromFastAPI("/dispositivos/metricas", {
+    next: { revalidate: CATALOG_CACHE_SECONDS, tags: ['catalogo:metricas'] },
+  });
   if (!res.ok) {
     throw new Error("Error al obtener tipos de métricas");
   }
@@ -384,4 +399,3 @@ export async function cambiarEstadoComponenteStock(componenteId: number, nuevoEs
   revalidatePath('/dashboard/administrador');
   return res.json();
 }
-

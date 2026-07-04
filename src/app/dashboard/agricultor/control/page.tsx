@@ -8,6 +8,7 @@ import DashboardSkeleton from '@/components/layout/DashboardSkeleton';
 import { getControlData } from '@/services/control';
 import { getCultivosBase } from '@/services/cultivos-base';
 import type { CultivoBase } from '@/services/cultivos-base';
+import { listarModelosML } from '@/actions/ml';
 
 import NoCropsEmptyState from '@/components/layout/NoCropsEmptyState';
 
@@ -37,8 +38,16 @@ export default async function ControlPage() {
   const selectedCultivoId = cultivosBase[0].id;
 
   let controlData;
+  let modelosML = [];
   try {
-    controlData = await getControlData(userId, selectedCultivoId);
+    const [cData, mlRes] = await Promise.all([
+      getControlData(userId, selectedCultivoId),
+      listarModelosML(selectedCultivoId).catch(() => ({ success: false, data: [] }))
+    ]);
+    controlData = cData;
+    if (mlRes.success && mlRes.data) {
+      modelosML = mlRes.data;
+    }
   } catch {
     return (
       <div style={{ color: 'white', padding: '2rem' }}>
@@ -55,7 +64,7 @@ export default async function ControlPage() {
            cultivos={cultivosBase} 
            data={controlData} 
            idCultivo={selectedCultivoId} 
-           modelosML={[]} 
+           modelosML={modelosML} 
            initialUmbrales={[]}
          />
       </Box>

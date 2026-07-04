@@ -606,7 +606,7 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
             {/* ML */}
             <Box>
               <Flex justify="between" mb="1" style={{ fontSize: '11px' }}>
-                <Text color="gray" style={{ fontFamily: 'var(--font-mono)' }}>Fase 3: ML predictivo</Text>
+                <Text color="gray" style={{ fontFamily: 'var(--font-mono)' }}>Fase 3: ML clasificador</Text>
                 <Text weight="bold" style={{ color: 'var(--green)', fontFamily: 'var(--font-mono)' }}>{comp.ml_litros} L</Text>
               </Flex>
               <div style={{ height: '8px', background: 'var(--dim-mockup)', borderRadius: '4px', overflow: 'hidden' }}>
@@ -646,7 +646,7 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
             {/* ML */}
             <Box>
               <Flex justify="between" mb="1" style={{ fontSize: '11px' }}>
-                <Text color="gray" style={{ fontFamily: 'var(--font-mono)' }}>Fase 3: ML predictivo</Text>
+                <Text color="gray" style={{ fontFamily: 'var(--font-mono)' }}>Fase 3: ML clasificador</Text>
                 <Text weight="bold" style={{ color: 'var(--green)', fontFamily: 'var(--font-mono)' }}>{comp.ml_estres}%</Text>
               </Flex>
               <div style={{ height: '8px', background: 'var(--dim-mockup)', borderRadius: '4px', overflow: 'hidden' }}>
