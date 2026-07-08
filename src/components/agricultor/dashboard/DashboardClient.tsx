@@ -845,7 +845,7 @@ export default function DashboardClient({
                   </div>
 
                   <Button color="blue" onClick={openRegisterWaterSource} style={{ cursor: 'pointer' }}>
-                    Y Registrar Fuente
+                    Registrar Fuente
                   </Button>
                   <Button color="green" onClick={openRegisterCrop} style={{ cursor: 'pointer' }}>Registrar Cultivo
                   </Button>
