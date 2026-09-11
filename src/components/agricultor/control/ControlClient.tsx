@@ -438,8 +438,8 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
     }, [userId, idCultivo, activeTab, isActuatorActive, isEditingUmbrales]);
 
     // Estados de sensores y actuadores para calcular el estado del Sistema Operativo
-    const isSensorsActivos = dispositivosSensores.some((dev: any) => dev.funcionamientoActivo);
-    const isActuadoresActivos = dispositivosActuadores.some((dev: any) => dev.funcionamientoActivo);
+    const isSensorsActivos = dispositivosSensores.some((dev: any) => dev.funcionamientoActivo && dev.conectado);
+    const isActuadoresActivos = dispositivosActuadores.some((dev: any) => dev.funcionamientoActivo && dev.conectado);
 
     let badgeColor = "red";
     let badgeText = "Sistema inactivo";
@@ -830,8 +830,8 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
                                                     )}
                                                 </Box>
                                                 <Flex gap="3" align="center">
-                                                    <Badge color={(dev.estado === 'activo' || dev.funcionamientoActivo) ? 'green' : 'red'} variant="soft">
-                                                        {(dev.estado === 'activo' || dev.funcionamientoActivo) ? 'Online' : 'Offline'}
+                                                    <Badge color={dev.conectado ? 'green' : 'red'} variant="soft">
+                                                        {dev.conectado ? 'Online' : 'Offline'}
                                                     </Badge>
                                                     <Switch 
                                                         checked={dev.funcionamientoActivo} 
@@ -1108,8 +1108,8 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
                                                         )}
                                                     </Box>
                                                     <Flex gap="3" align="center">
-                                                        <Badge color={(dev.estado === 'activo' || dev.funcionamientoActivo) ? 'green' : 'red'} variant="soft">
-                                                            {(dev.estado === 'activo' || dev.funcionamientoActivo) ? 'Online' : 'Offline'}
+                                                        <Badge color={dev.conectado ? 'green' : 'red'} variant="soft">
+                                                            {dev.conectado ? 'Online' : 'Offline'}
                                                         </Badge>
                                                         <Switch 
                                                             checked={dev.funcionamientoActivo} 

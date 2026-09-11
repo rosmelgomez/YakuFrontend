@@ -4,6 +4,7 @@ import React, { useEffect, useState, useTransition } from "react";
 import { Badge, Box, Button, Card, Checkbox, Dialog, Flex, Grid, Text, TextField } from "@radix-ui/themes";
 import { Cpu, Layers, Plus, Trash2 } from "lucide-react";
 import SearchableSelect from "@/components/ui/SearchableSelect";
+import { deviceMqttTopics } from "@/lib/device-mqtt";
 import {
   actualizarAsignacionComponente,
   asignarComponenteADispositivo,
@@ -59,7 +60,6 @@ export default function DispositivosClient({
     initialTiposDispositivo.length > 0 ||
     initialTiposComponente.length > 0 ||
     initialAlmacenes.length > 0 ||
-    initialComponents.length > 0 ||
     initialFuentesAgua.length > 0 ||
     initialMetricas.length > 0
   );
@@ -130,8 +130,10 @@ export default function DispositivosClient({
   const [newDeviceNombre, setNewDeviceNombre] = useState("");
   const [newDeviceMac, setNewDeviceMac] = useState("");
   const [newDeviceMqtt, setNewDeviceMqtt] = useState("");
-  const [newDevicePub, setNewDevicePub] = useState("");
-  const [newDeviceSub, setNewDeviceSub] = useState("");
+  const { publish: newDevicePub, subscribe: newDeviceSub } = deviceMqttTopics(
+    localTiposDispositivo.find((t: any) => String(t.id) === newDeviceTipoId),
+    newDeviceMqtt,
+  );
   const [newDeviceAlmacenId, setNewDeviceAlmacenId] = useState("");
   const [newDeviceFirmware, setNewDeviceFirmware] = useState("v1.0.0");
   const [newCompTipoId, setNewCompTipoId] = useState("");
@@ -163,19 +165,6 @@ export default function DispositivosClient({
       });
   }, [isOpenRegisterDevice, newDeviceTipoId, localTiposDispositivo, devices.length]);
 
-  useEffect(() => {
-    if (newDeviceTipoId === "1") {
-      setNewDevicePub("yaku/riego/datos");
-      setNewDeviceSub("yaku/valvula/comando");
-    } else if (newDeviceTipoId === "2") {
-      setNewDevicePub("yaku/tanque/datos");
-      setNewDeviceSub("yaku/riego/comando");
-    } else {
-      setNewDevicePub("");
-      setNewDeviceSub("");
-    }
-  }, [newDeviceTipoId]);
-
   const filteredCrops = localCrops.filter((c: any) => c.id_usuario?.toString() === assignUserId);
   const WATER_SOURCE_EMPTY_MESSAGE = "No hay fuentes de agua disponibles para este cultivo";
   const selectedAssignDevice = devices.find((d: any) => d.id?.toString() === assignDeviceId);
@@ -204,6 +193,7 @@ export default function DispositivosClient({
   const availableWaterSources = waterSourcesForAssignment(fieldDeviceUserId, fieldDeviceCropId);
   const editWaterSources = waterSourcesForAssignment(editAssignment?.id_usuario, editAssignment?.id_cultivo);
   const isTankDevice = (device: any) => {
+    if (device?.metodo_medicion || device?.tipo?.metodo_medicion) return true;
     const typeName = `${device?.tipo?.nombre || ""} ${device?.tipo?.descripcion || ""}`.toLowerCase();
     const topicPub = `${device?.topic_pub || ""}`.toLowerCase();
     const name = `${device?.nombre || ""}`.toLowerCase();
@@ -212,14 +202,14 @@ export default function DispositivosClient({
   const showAssignWaterSource = isTankDevice(selectedAssignDevice);
   const showFieldWaterSource = isTankDevice(selectedFieldDevice);
   const showEditWaterSource = isTankDevice(editAssignment?.device);
-  const isActuatorModel = (model: any) => `${model?.categoria || ""}`.toLowerCase() === "actuador";
-  const selectedComponentIsActuator = isActuatorModel(selectedComponentModel);
-  const editAssignmentIsActuator = isActuatorModel(editAssignment?.componente?.modelo);
+  const isMetriclessModel = (model: any) => ["actuador", "pantalla"].includes(`${model?.categoria || ""}`.toLowerCase());
+  const selectedComponentIsMetricless = isMetriclessModel(selectedComponentModel);
+  const editAssignmentIsMetricless = isMetriclessModel(editAssignment?.componente?.modelo);
 
   const inferMetricIdsForComponent = (value: string) => {
     const comp = components.find((c: any) => c.id?.toString() === value);
     const model = comp?.modelo;
-    if (isActuatorModel(model)) return [];
+    if (isMetriclessModel(model)) return [];
 
     const modelMetricId = model?.id_tipo_metrica?.toString();
     const modelName = `${model?.nombre_modelo || ""} ${model?.descripcion || ""}`.toLowerCase();
@@ -361,7 +351,13 @@ export default function DispositivosClient({
           firmware_version: newDeviceFirmware || undefined,
           estado: "disponible",
         });
-        if (res.id || res.id_dispositivo) window.location.reload();
+        if (res.id || res.id_dispositivo) {
+          setDevices((prev: any[]) => [...prev.filter((d) => d.id !== (res.id ?? res.id_dispositivo)), { ...res, id: res.id ?? res.id_dispositivo }]);
+          setIsOpenRegisterDevice(false);
+          setNewDeviceNombre("");
+          setNewDeviceMac("");
+          setNewDeviceMqtt("");
+        }
       } catch (err: any) {
         alert(`Error al registrar dispositivo: ${err.message}`);
       }
@@ -382,7 +378,11 @@ export default function DispositivosClient({
           id_almacen: parseInt(newCompAlmacenId, 10),
           estado: "disponible",
         });
-        if (res.id) window.location.reload();
+        if (res.id) {
+          setComponents((prev: any[]) => [...prev.filter((c) => c.id !== res.id), res]);
+          setIsOpenRegisterComponent(false);
+          setNewCompSerial("");
+        }
       } catch (err: any) {
         alert(`Error al registrar componente: ${err.message}`);
       }
@@ -397,10 +397,10 @@ export default function DispositivosClient({
 
     for (const row of assignComponents) {
       const rowComponent = components.find((c: any) => c.id?.toString() === row.componentId);
-      const rowIsActuator = isActuatorModel(rowComponent?.modelo);
-      if (!row.componentId || !row.pin || (!rowIsActuator && row.metricIds.length === 0)) {
-        alert(rowIsActuator
-          ? "Complete componente y pin GPIO por cada actuador agregado."
+      const rowIsMetricless = isMetriclessModel(rowComponent?.modelo);
+      if (!row.componentId || !row.pin || (!rowIsMetricless && row.metricIds.length === 0)) {
+        alert(rowIsMetricless
+          ? "Complete componente y pin GPIO por cada componente agregado."
           : "Complete componente, pin GPIO y al menos un parametro por cada componente agregado."
         );
         return;
@@ -419,12 +419,12 @@ export default function DispositivosClient({
         if (res.status === "ok") {
           for (const row of assignComponents) {
             const rowComponent = components.find((c: any) => c.id?.toString() === row.componentId);
-            const rowIsActuator = isActuatorModel(rowComponent?.modelo);
+            const rowIsMetricless = isMetriclessModel(rowComponent?.modelo);
             await asignarComponenteADispositivo({
               id_dispositivo: parseInt(assignDeviceId, 10),
               id_componente: parseInt(row.componentId, 10),
               pin_gpio: parseInt(row.pin, 10),
-              id_tipo_metrica: rowIsActuator ? null : row.metricIds.map((id) => parseInt(id, 10)),
+              id_tipo_metrica: rowIsMetricless ? null : row.metricIds.map((id) => parseInt(id, 10)),
               id_fuente_agua: showAssignWaterSource && assignWaterSources.some((f: any) => f.id?.toString() === row.fuenteAguaId) ? parseInt(row.fuenteAguaId, 10) : undefined,
             });
           }
@@ -437,8 +437,8 @@ export default function DispositivosClient({
   };
 
   const handleAssignComponent = async () => {
-    if (!componentDeviceId || !componentId || !componentPin || (!selectedComponentIsActuator && componentMetricIds.length === 0)) {
-      alert(selectedComponentIsActuator
+    if (!componentDeviceId || !componentId || !componentPin || (!selectedComponentIsMetricless && componentMetricIds.length === 0)) {
+      alert(selectedComponentIsMetricless
         ? "Seleccione dispositivo, componente y pin GPIO."
         : "Seleccione dispositivo, componente, pin GPIO y al menos un parametro de captura."
       );
@@ -458,7 +458,7 @@ export default function DispositivosClient({
           id_dispositivo: parseInt(componentDeviceId, 10),
           id_componente: parseInt(componentId, 10),
           pin_gpio: pin,
-          id_tipo_metrica: selectedComponentIsActuator ? null : metricPayload.length === 1 ? metricPayload[0] : metricPayload,
+          id_tipo_metrica: selectedComponentIsMetricless ? null : metricPayload.length === 1 ? metricPayload[0] : metricPayload,
           id_fuente_agua: showFieldWaterSource && availableWaterSources.some((f: any) => f.id?.toString() === componentFuenteAguaId) ? parseInt(componentFuenteAguaId, 10) : undefined,
         });
         if (res.status === "ok") window.location.reload();
@@ -469,14 +469,14 @@ export default function DispositivosClient({
   };
 
   const handleUpdateAssignment = async () => {
-    if (!editAssignment || !editPin || (!editAssignmentIsActuator && !editMetricId)) {
-      alert(editAssignmentIsActuator ? "Complete GPIO." : "Complete GPIO y parametro de captura.");
+    if (!editAssignment || !editPin || (!editAssignmentIsMetricless && !editMetricId)) {
+      alert(editAssignmentIsMetricless ? "Complete GPIO." : "Complete GPIO y parametro de captura.");
       return;
     }
 
     const pin = parseInt(editPin, 10);
-    const metricId = editAssignmentIsActuator ? null : parseInt(editMetricId, 10);
-    if (!Number.isInteger(pin) || pin < 0 || (!editAssignmentIsActuator && !Number.isInteger(metricId))) {
+    const metricId = editAssignmentIsMetricless ? null : parseInt(editMetricId, 10);
+    if (!Number.isInteger(pin) || pin < 0 || (!editAssignmentIsMetricless && !Number.isInteger(metricId))) {
       alert("Ingrese valores validos para GPIO y parametro.");
       return;
     }
@@ -571,6 +571,7 @@ export default function DispositivosClient({
                 <Text size="1" color="gray" style={{ fontFamily: "monospace" }}>MAC: {d.mac_address || "Sin MAC"}</Text>
                 <Flex gap="1" mt="1" align="center" wrap="wrap">
                   <Badge color="green" size="1" variant="outline">{d.tipo?.nombre}</Badge>
+                  {d.metodo_medicion && <Badge color="blue" size="1">{d.metodo_medicion === "flujometro" ? "Volumen por pulsos" : "Volumen por nivel"}</Badge>}
                   {d.almacen && <Badge color="blue" size="1" variant="soft">{d.almacen.nombre}</Badge>}
                   <Badge color={d.estado === "reparacion" ? "amber" : "green"} size="1" variant="soft">{d.estado}</Badge>
                 </Flex>
@@ -658,13 +659,23 @@ export default function DispositivosClient({
           <Dialog.Title style={{ color: "white" }}>Registrar Nuevo Dispositivo IoT</Dialog.Title>
           <Flex direction="column" gap="3" mt="3">
             <SearchableSelect value={newDeviceTipoId} onValueChange={setNewDeviceTipoId} placeholder="Tipo" searchPlaceholder="Buscar tipo..." options={localTiposDispositivo.map((t: any) => ({ value: t.id.toString(), label: t.nombre }))} />
+            <Text size="2" color="gray">
+              Proximidad: calcula litros por la variación del nivel del tanque. Flujómetro: mide litros mediante pulsos en la conexión directa.
+            </Text>
             <TextField.Root placeholder="Nombre del dispositivo" value={newDeviceNombre} onChange={(e) => setNewDeviceNombre(e.target.value)} />
             <TextField.Root placeholder="MAC" value={newDeviceMac} onChange={(e) => setNewDeviceMac(e.target.value)} />
             <Grid columns="2" gap="3"><TextField.Root value={newDeviceMqtt} disabled /><TextField.Root value={newDeviceFirmware} onChange={(e) => setNewDeviceFirmware(e.target.value)} /></Grid>
-            <Grid columns="2" gap="3"><TextField.Root value={newDevicePub} disabled /><TextField.Root value={newDeviceSub} disabled /></Grid>
+            <Box>
+              <Text as="label" htmlFor="device-topic-pub" size="2">Tópico MQTT de publicación</Text>
+              <TextField.Root id="device-topic-pub" value={newDevicePub} readOnly placeholder="Se completa al seleccionar el tipo" />
+            </Box>
+            <Box>
+              <Text as="label" htmlFor="device-topic-sub" size="2">Tópico MQTT de comandos</Text>
+              <TextField.Root id="device-topic-sub" value={newDeviceSub} readOnly placeholder="Se completa con el Client ID" />
+            </Box>
             <SearchableSelect value={newDeviceAlmacenId} onValueChange={setNewDeviceAlmacenId} placeholder="Almacen" searchPlaceholder="Buscar almacen..." options={localAlmacenes.map((a: any) => ({ value: a.id.toString(), label: a.nombre }))} />
           </Flex>
-          <Flex gap="3" mt="6" justify="end"><Dialog.Close><Button variant="soft" color="gray">Cancelar</Button></Dialog.Close><Button color="green" onClick={handleRegisterDeviceSubmit}>Registrar</Button></Flex>
+          <Flex gap="3" mt="6" justify="end"><Dialog.Close><Button variant="soft" color="gray">Cancelar</Button></Dialog.Close><Button color="green" disabled={isPending} onClick={handleRegisterDeviceSubmit}>Registrar</Button></Flex>
         </Dialog.Content>
       </Dialog.Root>
 
@@ -676,7 +687,7 @@ export default function DispositivosClient({
             <TextField.Root placeholder="Numero de serie" value={newCompSerial} onChange={(e) => setNewCompSerial(e.target.value)} />
             <SearchableSelect value={newCompAlmacenId} onValueChange={setNewCompAlmacenId} placeholder="Almacen" searchPlaceholder="Buscar almacen..." options={localAlmacenes.map((a: any) => ({ value: a.id.toString(), label: a.nombre }))} />
           </Flex>
-          <Flex gap="3" mt="6" justify="end"><Dialog.Close><Button variant="soft" color="gray">Cancelar</Button></Dialog.Close><Button color="green" onClick={handleRegisterComponentSubmit}>Registrar</Button></Flex>
+          <Flex gap="3" mt="6" justify="end"><Dialog.Close><Button variant="soft" color="gray">Cancelar</Button></Dialog.Close><Button color="green" disabled={isPending} onClick={handleRegisterComponentSubmit}>Registrar</Button></Flex>
         </Dialog.Content>
       </Dialog.Root>
 
@@ -706,7 +717,7 @@ export default function DispositivosClient({
                   {assignComponents.map((row, index) => {
                     const selected = components.find((c: any) => c.id?.toString() === row.componentId);
                     const selectedModel = selected?.modelo;
-                    const selectedIsActuator = isActuatorModel(selectedModel);
+                    const selectedIsActuator = isMetriclessModel(selectedModel);
                     const selectedByOtherRows = assignComponents
                       .filter((item) => item.id !== row.id)
                       .map((item) => item.componentId)
@@ -754,7 +765,7 @@ export default function DispositivosClient({
 
                         {selectedIsActuator ? (
                           <Text size="1" color="gray" as="div" mt="3">
-                            Este componente es un actuador de salida; no captura parametros. Solo se registra el GPIO del rele.
+                            Este componente no captura parámetros. Para LCD I2C, registre SDA (GPIO13); SCL usa GPIO14 en el firmware.
                           </Text>
                         ) : (
                           <Box mt="3">
@@ -826,9 +837,9 @@ export default function DispositivosClient({
                 )
               )}
             </Grid>
-            {selectedComponentIsActuator ? (
+            {selectedComponentIsMetricless ? (
               <Text size="1" color="gray">
-                Este componente es un actuador de salida; no captura parametros. Solo se registra el GPIO del rele.
+                Este componente no captura parámetros. Para LCD I2C, registre SDA (GPIO13); SCL usa GPIO14 en el firmware.
               </Text>
             ) : (
               <Box>
@@ -868,9 +879,9 @@ export default function DispositivosClient({
               {editAssignment?.componente?.modelo?.nombre_modelo || "Componente"} en {editAssignment?.device?.nombre || "dispositivo"}
             </Text>
             <TextField.Root placeholder="Pin GPIO" value={editPin} onChange={(e) => setEditPin(e.target.value)} />
-            {editAssignmentIsActuator ? (
+            {editAssignmentIsMetricless ? (
               <Text size="1" color="gray">
-                Este componente es un actuador de salida; no captura parametros. Solo se edita el GPIO del rele.
+                Este componente no captura parámetros. Para LCD I2C, el pin principal es SDA.
               </Text>
             ) : (
               <SearchableSelect

@@ -22,6 +22,7 @@ type FirmwareVersion = {
   tipo_dispositivo: string;
   descripcion?: string;
   publicado: boolean;
+  descontinuado?: boolean;
   fecha_registro: string;
   manifiesto: { segmentos: FirmwareSegment[] };
   archivos_faltantes?: string[];
@@ -44,6 +45,7 @@ type Device = {
   nombre: string;
   estado?: string;
   firmware_version?: string;
+  metodo_medicion?: string;
   mac_address?: string;
   tipo?: { nombre?: string };
   asignaciones_iot?: Array<{
@@ -71,6 +73,8 @@ type Crop = {
 };
 
 type Provisioning = {
+  tipo_fuente?: string;
+  metodo_medicion?: string;
   device_uid: string;
   agricultor: string;
   cultivo: string;
@@ -94,9 +98,10 @@ const defaultAddress = (name: string) => {
 };
 
 const firmwareTypeForDevice = (device?: Device) => {
-  const typeName = `${device?.tipo?.nombre ?? ""} ${device?.nombre ?? ""}`.toLowerCase();
-  if (typeName.includes("s3") || typeName.includes("colector") || typeName.includes("sensor")) return "sensores";
-  if (typeName.includes("actuador") || typeName.includes("nivel") || typeName.includes("riego")) return "riego";
+  const typeName = `${device?.tipo?.nombre ?? ""}`.toLowerCase();
+  if (device?.metodo_medicion === "flujometro" || typeName.includes("fluj")) return "riego_flujo";
+  if (device?.metodo_medicion === "proximidad" || /actuador|proximidad|tanque|nivel|riego/.test(typeName)) return "riego";
+  if (/s3|colector|sensor/.test(typeName)) return "sensores";
   return "";
 };
 
@@ -172,7 +177,8 @@ export default function FirmwareClient({
   const publishedVersions = useMemo(
     () => initialVersions.filter((item) => (
       item.publicado
-      && (!selectedDeviceFirmwareType || item.tipo_dispositivo === selectedDeviceFirmwareType)
+      && !item.descontinuado
+      && Boolean(selectedDeviceFirmwareType) && item.tipo_dispositivo === selectedDeviceFirmwareType
     )),
     [initialVersions, selectedDeviceFirmwareType],
   );
@@ -195,8 +201,8 @@ export default function FirmwareClient({
   }, [terminal]);
 
   useEffect(() => {
-    if (versionId && !publishedVersions.some((item) => item.id === Number(versionId))) {
-      setVersionId("");
+    if (!publishedVersions.some((item) => item.id === Number(versionId))) {
+      setVersionId(publishedVersions.length === 1 ? String(publishedVersions[0].id) : "");
     }
   }, [publishedVersions, versionId]);
 
@@ -295,7 +301,7 @@ export default function FirmwareClient({
   }
 
   async function installFirmware() {
-    if (!selectedVersion || !selectedDevice || !flasherRef.current || !chipCompatible) return;
+    if (!selectedVersion || !selectedDevice || !flasherRef.current || !chipCompatible || !publishedVersions.some((item) => item.id === selectedVersion.id)) return;
     setBusy(true);
     setError("");
     setProgress(0);
@@ -343,6 +349,8 @@ export default function FirmwareClient({
       await flasherRef.current.sendProvisioning({
         schema_version: 1,
         device_uid: provisioning.device_uid,
+        tipo_fuente: provisioning.tipo_fuente,
+        metodo_medicion: provisioning.metodo_medicion,
         asignaciones: provisioning.asignaciones,
         captura_segundos: provisioning.captura_segundos,
         cooldown_riego_minutos: provisioning.cooldown_riego_minutos,
@@ -357,7 +365,7 @@ export default function FirmwareClient({
           tls: provisioning.mqtt.tls,
         },
       });
-      setStatus("Configuracion enviada al dispositivo.");
+      setStatus("ESP32 confirmó el guardado de la configuración. Comprueba la conexión WiFi en el monitor.");
       setWifiPassword("");
       setMqttPassword("");
     } catch (reason) {
@@ -632,7 +640,7 @@ export default function FirmwareClient({
               <div className={styles.formGrid}>
                 <label className={styles.field}><span className={styles.label}>Version</span><input required name="version" placeholder="1.0.0" className={styles.input} /></label>
                 <label className={styles.field}><span className={styles.label}>Chip</span><select name="chip" className={styles.select}><option>ESP32</option><option>ESP32-S3</option></select></label>
-                <label className={styles.field}><span className={styles.label}>Funcion</span><select name="tipo_dispositivo" className={styles.select}><option value="sensores">Sensores</option><option value="riego">Riego y tanque</option></select></label>
+                <label className={styles.field}><span className={styles.label}>Funcion</span><select name="tipo_dispositivo" className={styles.select}><option value="sensores">Sensores</option><option value="riego">Riego con proximidad (tanque)</option><option value="riego_flujo">Riego con flujómetro (conexión directa)</option></select></label>
                 <label className={styles.field}><span className={styles.label}>Descripcion</span><input name="descripcion" className={styles.input} /></label>
                 <label className={`${styles.field} ${styles.fieldFull}`}><span className={styles.label}>Binarios</span><input required type="file" accept=".bin" multiple className={styles.input} onChange={chooseFiles} /></label>
               </div>

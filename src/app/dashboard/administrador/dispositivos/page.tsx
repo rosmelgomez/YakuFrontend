@@ -31,8 +31,9 @@ export default async function DispositivosPage() {
   if ((session.user as { rol?: string }).rol !== "administrador") redirect("/dashboard/agricultor");
 
   let devices = [];
+  let components = [];
   try {
-    devices = await listarDispositivos();
+    [devices, components] = await Promise.all([listarDispositivos(), listarComponentes()]);
   } catch (error) {
     console.error("Error al cargar dispositivos:", error);
   }
@@ -47,7 +48,7 @@ export default async function DispositivosPage() {
           tiposDispositivo={[]}
           tiposComponente={[]}
           initialAlmacenes={[]}
-          initialComponents={[]}
+          initialComponents={components}
           fuentesAgua={[]}
           metricas={[]}
         />

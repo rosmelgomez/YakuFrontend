@@ -172,6 +172,8 @@ export async function registrarDispositivo(payload: {
     throw new Error(await res.text() || "Error al registrar dispositivo");
   }
   revalidatePath('/dashboard/administrador');
+  revalidatePath('/dashboard/administrador/dispositivos');
+  revalidatePath('/dashboard/administrador/almacenes');
   return res.json();
 }
 
@@ -190,12 +192,14 @@ export async function registrarComponente(payload: {
     throw new Error(await res.text() || "Error al registrar componente");
   }
   revalidatePath('/dashboard/administrador');
+  revalidatePath('/dashboard/administrador/dispositivos');
+  revalidatePath('/dashboard/administrador/almacenes');
   return res.json();
 }
 
 export async function listarTiposDispositivo() {
   const res = await fetchFromFastAPI("/dispositivos/tipos", {
-    next: { revalidate: CATALOG_CACHE_SECONDS, tags: ['catalogo:tipos-dispositivo'] },
+    cache: 'no-store',
   });
   if (!res.ok) {
     throw new Error("Error al obtener tipos de dispositivo");
@@ -205,7 +209,7 @@ export async function listarTiposDispositivo() {
 
 export async function listarTiposComponente() {
   const res = await fetchFromFastAPI("/dispositivos/componentes/tipos", {
-    next: { revalidate: CATALOG_CACHE_SECONDS, tags: ['catalogo:tipos-componente'] },
+    cache: 'no-store',
   });
   if (!res.ok) {
     throw new Error("Error al obtener tipos de componente");
@@ -325,7 +329,7 @@ export async function obtenerSiguienteClientId() {
 
 export async function listarTiposMetrica() {
   const res = await fetchFromFastAPI("/dispositivos/metricas", {
-    next: { revalidate: CATALOG_CACHE_SECONDS, tags: ['catalogo:metricas'] },
+    cache: 'no-store',
   });
   if (!res.ok) {
     throw new Error("Error al obtener tipos de métricas");

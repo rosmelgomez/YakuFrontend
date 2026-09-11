@@ -213,7 +213,7 @@ export default function DashboardClient({
   // Water source creation states
   const [isOpenRegisterWaterSource, setIsOpenRegisterWaterSource] = useState(false);
   const [newWaterSourceName, setNewWaterSourceName] = useState("");
-  const [newWaterSourceTipo, setNewWaterSourceTipo] = useState("tanque"); // 'tanque' or 'manguera'
+  const [newWaterSourceTipo, setNewWaterSourceTipo] = useState("tanque"); // 'tanque' o 'conexion_directa'
   const [newWaterSourceCapacidad, setNewWaterSourceCapacidad] = useState("");
   const [newWaterSourceAltura, setNewWaterSourceAltura] = useState("");
   const [newWaterSourceAlturaSeguridad, setNewWaterSourceAlturaSeguridad] = useState("10"); // default 10 cm
@@ -513,7 +513,7 @@ export default function DashboardClient({
                   onValueChange={setNewCropIdFuenteAgua}
                   placeholder="Elegir fuente de agua..."
                   searchPlaceholder="Buscar fuente..."
-                  options={localFuentesAgua.map((f: any) => ({ value: f.id.toString(), label: `${f.nombre} (${f.tipo === 'tanque' ? 'Tanque' : 'Manguera'})` }))}
+                  options={localFuentesAgua.map((f: any) => ({ value: f.id.toString(), label: `${f.nombre} (${f.tipo === 'tanque' ? 'Tanque' : 'Conexión directa'})` }))}
                 />
               </Box>
               <Button size="2" color="blue" variant="soft" style={{ cursor: 'pointer' }} onClick={openRegisterWaterSource} title="Registrar nueva fuente de agua">
@@ -642,7 +642,7 @@ export default function DashboardClient({
             <Select.Trigger style={{ background: '#111827', color: 'white' }} />
             <Select.Content>
               <Select.Item value="tanque">Tanque / Reservorio</Select.Item>
-              <Select.Item value="manguera">Manguera / Conexión directa (Sin telemetría de volumen)</Select.Item>
+              <Select.Item value="conexion_directa">Conexión directa (medición con flujómetro)</Select.Item>
             </Select.Content>
           </Select.Root>
 
