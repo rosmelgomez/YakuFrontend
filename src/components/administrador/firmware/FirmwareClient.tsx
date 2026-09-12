@@ -13,6 +13,7 @@ import {
   obtenerProvisionamientoFirmware,
 } from "@/actions/firmware";
 import { EspFlasher, FirmwareSegment } from "@/lib/firmware/esp-flasher";
+import { firmwareTypeForDevice } from "@/lib/firmware/compatibility";
 import styles from "./FirmwareClient.module.css";
 
 type FirmwareVersion = {
@@ -95,14 +96,6 @@ const defaultAddress = (name: string) => {
   if (lower.includes("boot_app0")) return "0xe000";
   if (lower.includes("bootloader")) return "0x0";
   return "0x10000";
-};
-
-const firmwareTypeForDevice = (device?: Device) => {
-  const typeName = `${device?.tipo?.nombre ?? ""}`.toLowerCase();
-  if (device?.metodo_medicion === "flujometro" || typeName.includes("fluj")) return "riego_flujo";
-  if (device?.metodo_medicion === "proximidad" || /actuador|proximidad|tanque|nivel|riego/.test(typeName)) return "riego";
-  if (/s3|colector|sensor/.test(typeName)) return "sensores";
-  return "";
 };
 
 export default function FirmwareClient({
@@ -307,12 +300,17 @@ export default function FirmwareClient({
     setProgress(0);
     let installationId: number | null = null;
     try {
-      const installation = await iniciarInstalacionFirmware({
+      const result = await iniciarInstalacionFirmware({
         id_firmware: selectedVersion.id,
         id_dispositivo: selectedDevice.id_dispositivo ?? selectedDevice.id!,
         chip_detectado: chip,
       });
-      const currentInstallationId = Number(installation.id);
+      if (!result.ok) {
+        setError(result.error);
+        setStatus("Instalacion no iniciada.");
+        return;
+      }
+      const currentInstallationId = Number(result.installation.id);
       installationId = currentInstallationId;
       setStatus("Descargando y verificando segmentos...");
       await actualizarInstalacionFirmware(currentInstallationId, { estado: "instalando", progreso: 0 });

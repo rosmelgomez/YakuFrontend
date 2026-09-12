@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { fetchFromFastAPI } from "@/lib/bff";
+import { installationResult } from "@/lib/firmware/installation-result";
 
 async function jsonOrThrow(res: Response, fallback: string) {
   if (!res.ok) throw new Error((await res.text()) || fallback);
@@ -29,13 +30,12 @@ export async function iniciarInstalacionFirmware(payload: {
   chip_detectado?: string;
   mac_detectada?: string;
 }) {
-  return jsonOrThrow(
+  return installationResult(
     await fetchFromFastAPI("/firmware/installations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     }),
-    "No se pudo iniciar la instalacion",
   );
 }
 
@@ -65,4 +65,3 @@ export async function descontinuarVersionFirmware(versionId: number) {
   revalidatePath("/dashboard/administrador/firmware");
   return result;
 }
-
