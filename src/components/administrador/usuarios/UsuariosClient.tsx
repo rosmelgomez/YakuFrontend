@@ -53,19 +53,32 @@ export default function UsuariosClient({ initialUsers = [], initialDevices = [],
 
   const handleRegisterUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newUserNombre || !newUserCorreo || !newUserContrasena) {
+    if (!newUserNombre.trim() || !newUserCorreo.trim() || !newUserContrasena) {
       alert("Por favor, complete todos los campos obligatorios.");
+      return;
+    }
+
+    if (newUserContrasena.length < 10) {
+      alert("La contraseña debe tener al menos 10 caracteres.");
+      return;
+    }
+
+    const hasUpper = /[A-Z]/.test(newUserContrasena);
+    const hasLower = /[a-z]/.test(newUserContrasena);
+    const hasDigit = /\d/.test(newUserContrasena);
+    if (!hasUpper || !hasLower || !hasDigit) {
+      alert("La contraseña debe incluir al menos una letra mayúscula, una minúscula y un número.");
       return;
     }
 
     startTransition(async () => {
       try {
         const res = await registrarUsuario({
-          nombre: newUserNombre,
-          apellido: newUserApellido || undefined,
-          correo: newUserCorreo,
+          nombre: newUserNombre.trim(),
+          apellido: newUserApellido.trim() || undefined,
+          correo: newUserCorreo.trim().toLowerCase(),
           contrasena: newUserContrasena,
-          telefono: newUserTelefono || undefined,
+          telefono: newUserTelefono.trim() || undefined,
           id_rol: parseInt(newUserRolId, 10),
         });
 
@@ -194,7 +207,12 @@ export default function UsuariosClient({ initialUsers = [], initialDevices = [],
                 <TextField.Root type="email" placeholder="Correo" value={newUserCorreo} onChange={(e) => setNewUserCorreo(e.target.value)} required />
                 <TextField.Root placeholder="Telefono" value={newUserTelefono} onChange={(e) => setNewUserTelefono(e.target.value)} />
               </Grid>
-              <TextField.Root type="password" placeholder="Contrasena" value={newUserContrasena} onChange={(e) => setNewUserContrasena(e.target.value)} required />
+              <Box>
+                <TextField.Root type="password" placeholder="Contraseña" value={newUserContrasena} onChange={(e) => setNewUserContrasena(e.target.value)} required />
+                <Text size="1" color="gray" mt="1" as="div">
+                  Mínimo 10 caracteres, con mayúsculas, minúsculas y números.
+                </Text>
+              </Box>
               <Select.Root value={newUserRolId} onValueChange={setNewUserRolId}>
                 <Select.Trigger />
                 <Select.Content>

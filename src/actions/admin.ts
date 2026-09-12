@@ -257,7 +257,21 @@ export async function registrarUsuario(payload: {
     body: JSON.stringify(payload)
   });
   if (!res.ok) {
-    throw new Error(await res.text() || "Error al registrar usuario");
+    const raw = await res.text();
+    let parsedMsg = "Error al registrar usuario";
+    try {
+      const json = JSON.parse(raw);
+      if (typeof json.detail === "string") {
+        parsedMsg = json.detail;
+      } else if (Array.isArray(json.detail)) {
+        parsedMsg = json.detail.map((d: any) => d.msg || JSON.stringify(d)).join("; ");
+      } else if (json.message) {
+        parsedMsg = json.message;
+      }
+    } catch {
+      if (raw) parsedMsg = raw;
+    }
+    throw new Error(parsedMsg);
   }
   revalidatePath('/dashboard/administrador');
   return res.json();
