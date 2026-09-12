@@ -410,7 +410,12 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
     );
 
     const isActuatorActive = dispositivosActuadores.some((dev: any) => dev.funcionamientoActivo);
-    const isModeLocked = isActuatorActive || (bomba.encendida || valvula.abierta);
+    const isConexionDirecta = Boolean(
+        optimisticData.esConexionDirecta ||
+        optimisticData.fuenteAgua?.tipo === 'conexion_directa' ||
+        optimisticData.actuadorTipo?.metodoMedicion === 'flujometro'
+    );
+    const isModeLocked = isActuatorActive || (bomba.encendida || (!isConexionDirecta && valvula.abierta));
 
     // 2. Polling en tiempo real (cada 5 segundos) para monitorear el estado del relé, tanque y sensores
     useEffect(() => {
@@ -542,8 +547,9 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
 
     const handleToggleBomba = async () => {
         if (!bomba.id) return;
+        const actuatorLabel = isConexionDirecta ? "la válvula de riego" : "la bomba";
         if (!isActuatorActive && !bomba.encendida) {
-            alert("No se puede activar la bomba: el dispositivo actuador esta apagado.");
+            alert(`No se puede activar ${actuatorLabel}: el dispositivo actuador está apagado.`);
             return;
         }
         const previousData = optimisticData;
@@ -582,10 +588,13 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
             const totalElapsed = baseElapsed + liveElapsed;
             const planned = Number(prevActive?.duracionSegundos || prevPaused?.duracionSegundos || (maxRelayMinutes * 60));
             const finalElapsed = Math.min(totalElapsed, planned);
+            const nowIso = new Date().toISOString();
+            setUltimoRiegoSeconds(0);
             setOptimisticData((current: any) => ({
                 ...current,
                 bomba: { ...current.bomba, encendida: false },
                 riegoActivo: null,
+                ultimoRiegoFechaFin: nowIso,
                 sesionPausada: {
                     activa: true,
                     motivo: 'apagado_manual',
@@ -599,7 +608,7 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
             const res = await toggleBombaManual(userId, bomba.id, nextState);
             if (res && !res.success) {
                 setOptimisticData(previousData);
-                alert(`Error al conmutar la bomba: ${res.error}`);
+                alert(`Error al conmutar ${actuatorLabel}: ${res.error}`);
             }
         });
     };
@@ -993,17 +1002,35 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
                                         <Card size="2" style={{ background: 'var(--surface2-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '12px' }}>
                                             <Flex direction="column" gap="2" p="2">
                                                 <Text size="2" weight="bold" color="gray">Tiempo desde el último riego</Text>
-                                                <Text size="6" weight="bold" style={{ color: '#60a5fa', fontFamily: 'monospace' }}>
-                                                    {formatearTiempoDesdeUltimo(ultimoRiegoSeconds)}
-                                                </Text>
-                                                <Text size="1" color="gray">Tiempo transcurrido desde que finalizó la última sesión de riego exitosa.</Text>
+                                                {bomba.encendida ? (
+                                                    <Flex direction="column" gap="1">
+                                                        <Flex align="center" gap="2" style={{ marginTop: '4px' }}>
+                                                            <Box style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#10b981', animation: 'pulse 1s infinite' }} />
+                                                            <Text size="5" weight="bold" style={{ color: '#34d399', fontFamily: 'monospace' }}>
+                                                                Riego en curso
+                                                            </Text>
+                                                        </Flex>
+                                                        <Text size="1" color="gray" style={{ marginTop: '2px' }}>
+                                                            Sesión de riego en ejecución actualmente. El cronómetro se reiniciará al finalizar.
+                                                        </Text>
+                                                    </Flex>
+                                                ) : (
+                                                    <>
+                                                        <Text size="6" weight="bold" style={{ color: '#60a5fa', fontFamily: 'monospace' }}>
+                                                            {formatearTiempoDesdeUltimo(ultimoRiegoSeconds)}
+                                                        </Text>
+                                                        <Text size="1" color="gray">Tiempo transcurrido desde que finalizó la última sesión de riego exitosa.</Text>
+                                                    </>
+                                                )}
                                             </Flex>
                                         </Card>
 
                                         {/* Cronómetro 2: Estado del relé y suspensión */}
                                         <Card size="2" style={{ background: 'var(--surface2-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '12px' }}>
                                             <Flex direction="column" gap="2" p="2">
-                                                <Text size="2" weight="bold" color="gray">Cronómetro de Ejecución del Relé</Text>
+                                                <Text size="2" weight="bold" color="gray">
+                                                    {isConexionDirecta ? "Cronómetro de Ejecución de Válvula" : "Cronómetro de Ejecución del Relé"}
+                                                </Text>
                                                 {optimisticData.sesionPausada?.activa ? (
                                                     <Flex direction="column" gap="1">
                                                         <Flex align="center" gap="2">
@@ -1019,7 +1046,19 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
                                                             Restante: {formatearSegundos(optimisticData.sesionPausada.tiempoRestanteSeg || 0)}
                                                         </Text>
                                                         <Text size="1" color="gray">
-                                                            Pausado por: <strong style={{ color: '#f87171' }}>{optimisticData.sesionPausada.motivo === 'sensor_error' ? 'Error de lectura de sensor' : optimisticData.sesionPausada.motivo === 'apagado_manual' ? 'Pausa manual' : 'Falta de agua física en el tanque'}</strong>. {optimisticData.sesionPausada.motivo === 'apagado_manual' ? 'El riego se puede reanudar en cualquier momento volviendo a activar la bomba.' : 'El riego se reanudará automáticamente al normalizarse.'}
+                                                            Pausado por: <strong style={{ color: '#f87171' }}>
+                                                                {optimisticData.sesionPausada.motivo === 'sin_flujo'
+                                                                    ? 'Sin flujo de agua detectado en la tubería'
+                                                                    : optimisticData.sesionPausada.motivo === 'sensor_error'
+                                                                    ? 'Error de lectura de sensor'
+                                                                    : optimisticData.sesionPausada.motivo === 'apagado_manual'
+                                                                    ? 'Pausa manual'
+                                                                    : isConexionDirecta
+                                                                    ? 'Ausencia de flujo de agua'
+                                                                    : 'Falta de agua física en el tanque'}
+                                                            </strong>. {optimisticData.sesionPausada.motivo === 'apagado_manual'
+                                                                ? (isConexionDirecta ? 'El riego se puede reanudar en cualquier momento volviendo a abrir la válvula.' : 'El riego se puede reanudar en cualquier momento volviendo a activar la bomba.')
+                                                                : (isConexionDirecta ? 'El riego se reanudará automáticamente al detectar flujo de agua.' : 'El riego se reanudará automáticamente al normalizarse.')}
                                                         </Text>
                                                     </Flex>
                                                 ) : bomba.encendida ? (
@@ -1027,26 +1066,34 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
                                                         <Flex align="center" gap="2">
                                                             <Box style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', animation: 'pulse 1s infinite' }} />
                                                             <Text size="2" weight="bold" style={{ color: '#34d399' }}>
-                                                                Bomba Activa (Regando)
+                                                                {isConexionDirecta ? "Válvula de Riego Activa (Abierta)" : "Bomba Activa (Regando)"}
                                                             </Text>
                                                         </Flex>
                                                         <Text size="6" weight="bold" style={{ color: '#34d399', fontFamily: 'monospace', marginTop: '4px' }}>
                                                             {formatearSegundos(riegoActivoSeconds || 0)} / {formatearSegundos(optimisticData.riegoActivo?.duracionSegundos || bomba.timeoutMin * 60)}
                                                         </Text>
-                                                        <Text size="1" color="gray">La bomba de agua se encuentra encendida y regando activamente el cultivo.</Text>
+                                                        <Text size="1" color="gray">
+                                                            {isConexionDirecta
+                                                                ? "La electroválvula de riego se encuentra abierta y el sensor de flujo monitorea el caudal hacia el cultivo."
+                                                                : "La bomba de agua se encuentra encendida y regando activamente el cultivo."}
+                                                        </Text>
                                                     </Flex>
                                                 ) : (
                                                     <Flex direction="column" gap="1">
                                                         <Flex align="center" gap="2">
                                                             <Box style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#6b7280' }} />
                                                             <Text size="2" weight="bold" color="gray">
-                                                                Inactivo (Bomba Apagada)
+                                                                {isConexionDirecta ? "Inactivo (Válvula Cerrada)" : "Inactivo (Bomba Apagada)"}
                                                             </Text>
                                                         </Flex>
                                                         <Text size="6" weight="bold" style={{ color: '#9ca3af', fontFamily: 'monospace', marginTop: '4px' }}>
                                                             00:00:00
                                                         </Text>
-                                                        <Text size="1" color="gray">No hay sesiones de riego activas o en pausa en este momento.</Text>
+                                                        <Text size="1" color="gray">
+                                                            {isConexionDirecta
+                                                                ? "La electroválvula de riego se encuentra cerrada. No hay riego en ejecución."
+                                                                : "No hay sesiones de riego activas o en pausa en este momento."}
+                                                        </Text>
                                                     </Flex>
                                                 )}
                                             </Flex>
@@ -1060,9 +1107,13 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
                                     <Card size="3" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '8px' }}>
                                         <Flex justify="between" align="end" gap="4" wrap="wrap">
                                             <Box style={{ flex: '1 1 320px' }}>
-                                                <Text size="3" weight="bold" color="indigo" as="div">Tiempo maximo del rele por evento de riego</Text>
+                                                <Text size="3" weight="bold" color="indigo" as="div">
+                                                    {isConexionDirecta ? "Tiempo máximo de apertura de válvula por evento" : "Tiempo máximo del relé por evento de riego"}
+                                                </Text>
                                                 <Text size="2" color="gray" mt="1" as="div">
-                                                    Apaga la bomba automaticamente en riego manual y ML.
+                                                    {isConexionDirecta
+                                                        ? "Cierra la válvula automáticamente en riego manual y ML."
+                                                        : "Apaga la bomba automáticamente en riego manual y ML."}
                                                 </Text>
                                             </Box>
                                             <Flex align="end" gap="3" wrap="wrap">
@@ -1214,83 +1265,128 @@ export default function ControlClient({ userId, cultivos, data, idCultivo: initi
                                     <Card size="3" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '16px' }}>
                                         <Flex direction="column" gap="4">
                                             <Box mb="2">
-                                                <Text size="4" weight="bold" color="indigo" mb="1" as="div">🔧 Riego Manual Directo</Text>
-                                                <Text size="2" color="gray">Control directo y en tiempo real del motor de la bomba y la electroválvula de llenado.</Text>
+                                                <Text size="4" weight="bold" color="indigo" mb="1" as="div">
+                                                    {isConexionDirecta ? "🔧 Riego Manual Directo (Conexión Directa)" : "🔧 Riego Manual Directo"}
+                                                </Text>
+                                                <Text size="2" color="gray">
+                                                    {isConexionDirecta
+                                                        ? "Control directo y en tiempo real de la electroválvula de riego con monitoreo de caudal mediante sensor de flujo YF-S201."
+                                                        : "Control directo y en tiempo real del motor de la bomba y la electroválvula de llenado."}
+                                                </Text>
                                             </Box>
 
-                                            <Grid columns={{ initial: '1', sm: '2', lg: '1' }} gap="4" my="2">
-                                                {/* Columna Motor / Bomba */}
-                                                <Card style={{ background: 'var(--surface2-mockup)', borderColor: 'var(--border-mockup)', padding: '20px', borderRadius: '12px' }}>
-                                                    <Flex direction="column" align="center" justify="center" gap="4">
-                                                        <Text size="3" weight="bold" color="indigo">Motor de Riego</Text>
-                                                        <Box style={{
-                                                            width: '100px', height: '100px', borderRadius: '50%',
-                                                            border: bomba.encendida ? '3px solid #3b82f6' : '3px solid var(--border-mockup)',
-                                                            background: bomba.encendida ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
-                                                            display: 'flex', flexDirection: 'column', alignItems: 'center', justify: 'center',
-                                                            boxShadow: bomba.encendida ? '0 0 20px rgba(59, 130, 246, 0.25)' : 'none',
-                                                            transition: 'all 0.3s'
-                                                        } as any}>
-                                                            <Text size="6" style={{ filter: bomba.encendida ? 'drop-shadow(0 0 8px #60a5fa)' : 'none' }}>💧</Text>
-                                                            <Text size="1" weight="bold" style={{ color: bomba.encendida ? '#60a5fa' : '#6b7280', marginTop: '4px', letterSpacing: '1px' }}>
-                                                                {bomba.encendida ? 'ENCENDIDO' : 'APAGADO'}
+                                            {isConexionDirecta ? (
+                                                <Box my="2">
+                                                    <Card style={{ background: 'var(--surface2-mockup)', borderColor: 'var(--border-mockup)', padding: '24px', borderRadius: '12px', maxWidth: '520px', margin: '0 auto' }}>
+                                                        <Flex direction="column" align="center" justify="center" gap="4">
+                                                            <Flex align="center" gap="2">
+                                                                <Text size="3" weight="bold" color="indigo">Electroválvula de Riego</Text>
+                                                                <Badge color="blue" variant="soft" size="1">Conexión Directa</Badge>
+                                                                <Badge color="cyan" variant="outline" size="1">Sensor YF-S201</Badge>
+                                                            </Flex>
+                                                            <Box style={{
+                                                                width: '110px', height: '110px', borderRadius: '50%',
+                                                                border: bomba.encendida ? '3px solid #22c55e' : '3px solid var(--border-mockup)',
+                                                                background: bomba.encendida ? 'rgba(34, 197, 94, 0.12)' : 'transparent',
+                                                                display: 'flex', flexDirection: 'column', alignItems: 'center', justify: 'center',
+                                                                boxShadow: bomba.encendida ? '0 0 25px rgba(34, 197, 94, 0.3)' : 'none',
+                                                                transition: 'all 0.3s'
+                                                            } as any}>
+                                                                <Text size="7" style={{ filter: bomba.encendida ? 'drop-shadow(0 0 10px #4ade80)' : 'none' }}>🚰</Text>
+                                                                <Text size="1" weight="bold" style={{ color: bomba.encendida ? '#4ade80' : '#6b7280', marginTop: '4px', letterSpacing: '1px' }}>
+                                                                    {bomba.encendida ? 'ABIERTA' : 'CERRADA'}
+                                                                </Text>
+                                                            </Box>
+                                                            <Button
+                                                                color={bomba.encendida ? "red" : "green"}
+                                                                variant="solid"
+                                                                disabled={!bomba.id}
+                                                                onClick={handleToggleBomba}
+                                                                style={{ cursor: 'pointer', width: '100%', maxWidth: '260px' }}
+                                                            >
+                                                                {bomba.encendida ? '⏹ Cerrar Válvula' : '▶ Abrir Válvula'}
+                                                            </Button>
+                                                            <Text size="1" color="gray" align="center" style={{ minHeight: '32px', display: 'flex', alignItems: 'center' }}>
+                                                                Controla el paso de agua hacia los aspersores/goteo del cultivo. El flujómetro YF-S201 mide el volumen consumido en litros.
                                                             </Text>
-                                                        </Box>
-                                                        <Button
-                                                            color={bomba.encendida ? "red" : "green"}
-                                                            variant="solid"
-                                                            disabled={!bomba.id}
-                                                            onClick={handleToggleBomba}
-                                                            style={{ cursor: 'pointer', width: '100%', maxWidth: '220px' }}
-                                                        >
-                                                            {bomba.encendida ? '⏹ Apagar Bomba' : '▶ Encender Bomba'}
-                                                        </Button>
-                                                        <Text size="1" color="gray" align="center" style={{ minHeight: '32px', display: 'flex', alignItems: 'center' }}>
-                                                            Activa el flujo principal de agua hacia los cultivos.
-                                                        </Text>
-                                                    </Flex>
-                                                </Card>
+                                                        </Flex>
+                                                    </Card>
+                                                </Box>
+                                            ) : (
+                                                <Grid columns={{ initial: '1', sm: '2', lg: '1' }} gap="4" my="2">
+                                                    {/* Columna Motor / Bomba */}
+                                                    <Card style={{ background: 'var(--surface2-mockup)', borderColor: 'var(--border-mockup)', padding: '20px', borderRadius: '12px' }}>
+                                                        <Flex direction="column" align="center" justify="center" gap="4">
+                                                            <Text size="3" weight="bold" color="indigo">Motor de Riego</Text>
+                                                            <Box style={{
+                                                                width: '100px', height: '100px', borderRadius: '50%',
+                                                                border: bomba.encendida ? '3px solid #3b82f6' : '3px solid var(--border-mockup)',
+                                                                background: bomba.encendida ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                                                                display: 'flex', flexDirection: 'column', alignItems: 'center', justify: 'center',
+                                                                boxShadow: bomba.encendida ? '0 0 20px rgba(59, 130, 246, 0.25)' : 'none',
+                                                                transition: 'all 0.3s'
+                                                            } as any}>
+                                                                <Text size="6" style={{ filter: bomba.encendida ? 'drop-shadow(0 0 8px #60a5fa)' : 'none' }}>💧</Text>
+                                                                <Text size="1" weight="bold" style={{ color: bomba.encendida ? '#60a5fa' : '#6b7280', marginTop: '4px', letterSpacing: '1px' }}>
+                                                                    {bomba.encendida ? 'ENCENDIDO' : 'APAGADO'}
+                                                                </Text>
+                                                            </Box>
+                                                            <Button
+                                                                color={bomba.encendida ? "red" : "green"}
+                                                                variant="solid"
+                                                                disabled={!bomba.id}
+                                                                onClick={handleToggleBomba}
+                                                                style={{ cursor: 'pointer', width: '100%', maxWidth: '220px' }}
+                                                            >
+                                                                {bomba.encendida ? '⏹ Apagar Bomba' : '▶ Encender Bomba'}
+                                                            </Button>
+                                                            <Text size="1" color="gray" align="center" style={{ minHeight: '32px', display: 'flex', alignItems: 'center' }}>
+                                                                Activa el flujo principal de agua hacia los cultivos.
+                                                            </Text>
+                                                        </Flex>
+                                                    </Card>
 
-                                                {/* Columna Electroválvula */}
-                                                <Card style={{ background: 'var(--surface2-mockup)', borderColor: 'var(--border-mockup)', padding: '20px', borderRadius: '12px' }}>
-                                                    <Flex direction="column" align="center" justify="center" gap="4">
-                                                        <Text size="3" weight="bold" color="indigo">Electroválvula</Text>
-                                                        <Box style={{
-                                                            width: '100px', height: '100px', borderRadius: '50%',
-                                                            border: valvula.abierta ? '3px solid #22c55e' : '3px solid var(--border-mockup)',
-                                                            background: valvula.abierta ? 'rgba(34, 197, 94, 0.1)' : 'transparent',
-                                                            display: 'flex', flexDirection: 'column', alignItems: 'center', justify: 'center',
-                                                            boxShadow: valvula.abierta ? '0 0 20px rgba(34, 197, 94, 0.25)' : 'none',
-                                                            transition: 'all 0.3s'
-                                                        } as any}>
-                                                            <Text size="6" style={{ filter: valvula.abierta ? 'drop-shadow(0 0 8px #4ade80)' : 'none' }}>🚰</Text>
-                                                            <Text size="1" weight="bold" style={{ color: valvula.abierta ? '#4ade80' : '#6b7280', marginTop: '4px', letterSpacing: '1px' }}>
-                                                                {valvula.abierta ? 'ABIERTA' : 'CERRADA'}
+                                                    {/* Columna Electroválvula */}
+                                                    <Card style={{ background: 'var(--surface2-mockup)', borderColor: 'var(--border-mockup)', padding: '20px', borderRadius: '12px' }}>
+                                                        <Flex direction="column" align="center" justify="center" gap="4">
+                                                            <Text size="3" weight="bold" color="indigo">Electroválvula</Text>
+                                                            <Box style={{
+                                                                width: '100px', height: '100px', borderRadius: '50%',
+                                                                border: valvula.abierta ? '3px solid #22c55e' : '3px solid var(--border-mockup)',
+                                                                background: valvula.abierta ? 'rgba(34, 197, 94, 0.1)' : 'transparent',
+                                                                display: 'flex', flexDirection: 'column', alignItems: 'center', justify: 'center',
+                                                                boxShadow: valvula.abierta ? '0 0 20px rgba(34, 197, 94, 0.25)' : 'none',
+                                                                transition: 'all 0.3s'
+                                                            } as any}>
+                                                                <Text size="6" style={{ filter: valvula.abierta ? 'drop-shadow(0 0 8px #4ade80)' : 'none' }}>🚰</Text>
+                                                                <Text size="1" weight="bold" style={{ color: valvula.abierta ? '#4ade80' : '#6b7280', marginTop: '4px', letterSpacing: '1px' }}>
+                                                                    {valvula.abierta ? 'ABIERTA' : 'CERRADA'}
+                                                                </Text>
+                                                            </Box>
+                                                            <Button
+                                                                color={valvula.abierta ? "red" : "green"}
+                                                                variant="solid"
+                                                                disabled={!valvula.id && !bomba.id}
+                                                                onClick={handleToggleValvula}
+                                                                style={{ cursor: 'pointer', width: '100%', maxWidth: '220px' }}
+                                                            >
+                                                                {valvula.abierta ? '⏹ Cerrar Válvula' : '▶ Abrir Válvula'}
+                                                            </Button>
+                                                            <Text size="1" color="gray" align="center" style={{ minHeight: '32px', display: 'flex', alignItems: 'center' }}>
+                                                                Apertura automática ante ausencia de agua en el tanque.
                                                             </Text>
-                                                        </Box>
-                                                        <Button
-                                                            color={valvula.abierta ? "red" : "green"}
-                                                            variant="solid"
-                                                            disabled={!valvula.id && !bomba.id}
-                                                            onClick={handleToggleValvula}
-                                                            style={{ cursor: 'pointer', width: '100%', maxWidth: '220px' }}
-                                                        >
-                                                            {valvula.abierta ? '⏹ Cerrar Válvula' : '▶ Abrir Válvula'}
-                                                        </Button>
-                                                        <Text size="1" color="gray" align="center" style={{ minHeight: '32px', display: 'flex', alignItems: 'center' }}>
-                                                            Apertura automática ante ausencia de agua en el tanque.
-                                                        </Text>
-                                                    </Flex>
-                                                </Card>
-                                            </Grid>
+                                                        </Flex>
+                                                    </Card>
+                                                </Grid>
+                                            )}
 
                                             {!isActuatorActive && (
                                                 <Text size="1" color="red" align="center" style={{ marginTop: '8px' }} as="div">
-                                                    ⚠️ Dispositivo actuador apagado. Actívelo arriba en esta pestaña para poder encender la bomba.
+                                                    ⚠️ Dispositivo actuador apagado. Actívelo arriba en esta pestaña para poder {isConexionDirecta ? 'abrir la válvula' : 'encender la bomba'}.
                                                 </Text>
                                             )}
                                             <Text size="1" color="gray" align="center" style={{ fontFamily: 'monospace', marginTop: '4px' }} as="div">
-                                                Tiempo máximo del relé por evento: {bomba.timeoutMin} minutos
+                                                {isConexionDirecta ? 'Tiempo máximo de apertura por evento: ' : 'Tiempo máximo del relé por evento: '} {bomba.timeoutMin} minutos
                                             </Text>
                                         </Flex>
                                     </Card>
