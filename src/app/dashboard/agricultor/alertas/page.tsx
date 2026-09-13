@@ -44,18 +44,20 @@ export default async function AlertasPage({ searchParams }: { searchParams: Prom
   }
 
   return (
-    <Box className="page-content" style={{ padding: '2rem 0' }}>
-      <Box style={{ width: '100%', maxWidth: '100%', paddingLeft: '16px', paddingRight: '16px' }}>
-          <AlertasClient 
-            userId={userId} 
-            cultivos={cultivosBase} 
-            initialData={alertasData} 
-            initialCultivo={selectedCultivoId} 
-            initialNotifConfig={[]} 
-            initialHasNotifConfig={false}
-            initialPushRegistered={false}
-          />
-      </Box>
+    <Box
+      className="page-content"
+      px={{ initial: "4", sm: "5", md: "6" }}
+      py={{ initial: "4", sm: "5", md: "6" }}
+    >
+      <AlertasClient 
+        userId={userId} 
+        cultivos={cultivosBase} 
+        initialData={alertasData} 
+        initialCultivo={selectedCultivoId} 
+        initialNotifConfig={[]} 
+        initialHasNotifConfig={false}
+        initialPushRegistered={false}
+      />
     </Box>
   );
 }

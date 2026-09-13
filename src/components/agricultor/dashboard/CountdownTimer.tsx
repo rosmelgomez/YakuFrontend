@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 
 type CountdownTimerProps = {
   recolectorActivo: boolean;
-  onRefresh: () => void;
+  onRefresh?: () => void;
   refreshSeconds?: number;
 };
 
@@ -27,7 +27,7 @@ export default function CountdownTimer({
       if (timeLeftRef.current <= 1) {
         timeLeftRef.current = refreshSeconds;
         setTimeLeft(refreshSeconds);
-        onRefresh();
+        onRefresh?.();
       } else {
         timeLeftRef.current -= 1;
         setTimeLeft(timeLeftRef.current);

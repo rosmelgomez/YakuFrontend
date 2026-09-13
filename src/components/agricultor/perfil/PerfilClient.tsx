@@ -11,6 +11,10 @@ export default function PerfilClient({ user }: { user: any }) {
   const [apellido, setApellido] = useState(user.apellido || "");
   const [correo, setCorreo] = useState(user.correo || user.email || "");
   const [telefono, setTelefono] = useState(user.telefono || "");
+  const [dni, setDni] = useState(user.dni || "");
+  const [fechaNacimiento, setFechaNacimiento] = useState(user.fecha_nacimiento ? String(user.fecha_nacimiento).substring(0, 10) : "");
+  const [direccion, setDireccion] = useState(user.direccion || "");
+  const [zonaHoraria, setZonaHoraria] = useState(user.zona_horaria || "America/Lima");
   const [contrasena, setContrasena] = useState("");
   const [confirmarContrasena, setConfirmarContrasena] = useState("");
   
@@ -46,10 +50,14 @@ export default function PerfilClient({ user }: { user: any }) {
     startTransition(async () => {
       try {
         const payload: any = {
-          nombre,
-          apellido: apellido || undefined,
-          correo,
-          telefono: telefono || undefined
+          nombre: nombre.trim(),
+          apellido: apellido?.trim() || undefined,
+          correo: correo.trim().toLowerCase(),
+          telefono: telefono?.trim() || undefined,
+          dni: dni?.trim() || undefined,
+          fecha_nacimiento: fechaNacimiento || undefined,
+          direccion: direccion?.trim() || undefined,
+          zona_horaria: zonaHoraria || "America/Lima",
         };
         if (contrasena) {
           payload.contrasena = contrasena;
@@ -58,7 +66,8 @@ export default function PerfilClient({ user }: { user: any }) {
         const res = await actualizarPerfil(payload);
         if (res.success) {
           if (contrasena) {
-            await signOut({ callbackUrl: '/auth/login' });
+            await signOut({ redirect: false });
+            window.location.href = '/auth/login';
             return;
           }
           setSuccessMsg("✓ Perfil actualizado correctamente. Inicie sesión nuevamente para ver todos los cambios reflejados en el menú lateral.");
@@ -122,6 +131,17 @@ export default function PerfilClient({ user }: { user: any }) {
                   {(user.rol || (isAdmin ? "administrador" : "agricultor")).toUpperCase()}
                 </Badge>
               </Flex>
+
+              {dni && (
+                <Text size="1" color="cyan" style={{ fontFamily: 'monospace' }}>
+                  DNI: {dni}
+                </Text>
+              )}
+              {direccion && (
+                <Text size="1" color="gray" style={{ maxWidth: '200px', margin: '0 auto', fontSize: '0.75rem' }}>
+                  📍 {direccion}
+                </Text>
+              )}
 
               <Text size="1" color="gray" style={{ fontStyle: 'italic', maxWidth: '200px', margin: '0 auto', lineHeight: '1.4' }} mt="3">
                 {isAdmin 
@@ -226,6 +246,82 @@ export default function PerfilClient({ user }: { user: any }) {
                         <span style={{ fontSize: '14px', marginRight: '4px' }}>📞</span>
                       </TextField.Slot>
                     </TextField.Root>
+                  </Box>
+                </Grid>
+
+                <Grid columns={{ initial: '1', sm: '2' }} gap="4">
+                  <Box>
+                    <label style={{ display: 'block', fontSize: '0.85rem', color: '#9ca3af', marginBottom: '6px', fontWeight: '500' }}>
+                      DNI / Documento de Identidad
+                    </label>
+                    <TextField.Root 
+                      placeholder="8 dígitos"
+                      maxLength={20}
+                      value={dni}
+                      onChange={(e) => setDni(e.target.value)}
+                      style={{ background: '#1e293b', color: 'white' }}
+                    >
+                      <TextField.Slot>
+                        <span style={{ fontSize: '14px', marginRight: '4px' }}>🪪</span>
+                      </TextField.Slot>
+                    </TextField.Root>
+                  </Box>
+
+                  <Box>
+                    <label style={{ display: 'block', fontSize: '0.85rem', color: '#9ca3af', marginBottom: '6px', fontWeight: '500' }}>
+                      Fecha de Nacimiento
+                    </label>
+                    <TextField.Root 
+                      type="date"
+                      value={fechaNacimiento}
+                      onChange={(e) => setFechaNacimiento(e.target.value)}
+                      style={{ background: '#1e293b', color: 'white' }}
+                    />
+                  </Box>
+                </Grid>
+
+                <Grid columns={{ initial: '1', sm: '2' }} gap="4">
+                  <Box>
+                    <label style={{ display: 'block', fontSize: '0.85rem', color: '#9ca3af', marginBottom: '6px', fontWeight: '500' }}>
+                      Dirección Personal / Fiscal
+                    </label>
+                    <TextField.Root 
+                      placeholder="Av., Calle, Distrito"
+                      value={direccion}
+                      onChange={(e) => setDireccion(e.target.value)}
+                      style={{ background: '#1e293b', color: 'white' }}
+                    >
+                      <TextField.Slot>
+                        <span style={{ fontSize: '14px', marginRight: '4px' }}>📍</span>
+                      </TextField.Slot>
+                    </TextField.Root>
+                  </Box>
+
+                  <Box>
+                    <label style={{ display: 'block', fontSize: '0.85rem', color: '#9ca3af', marginBottom: '6px', fontWeight: '500' }}>
+                      Zona Horaria
+                    </label>
+                    <select
+                      value={zonaHoraria}
+                      onChange={(e) => setZonaHoraria(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '7px 12px',
+                        borderRadius: '6px',
+                        background: '#1e293b',
+                        color: 'white',
+                        border: '1px solid #334155',
+                        fontSize: '0.875rem',
+                        height: '36px',
+                      }}
+                    >
+                      <option value="America/Lima">America/Lima (UTC-5)</option>
+                      <option value="America/Bogota">America/Bogota (UTC-5)</option>
+                      <option value="America/Santiago">America/Santiago (UTC-3)</option>
+                      <option value="America/Argentina/Buenos_Aires">America/Buenos_Aires (UTC-3)</option>
+                      <option value="America/Mexico_City">America/Mexico_City (UTC-6)</option>
+                      <option value="UTC">UTC</option>
+                    </select>
                   </Box>
                 </Grid>
 

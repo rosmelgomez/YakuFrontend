@@ -33,17 +33,19 @@ export default async function FirmwarePage() {
     .map((result) => result.reason instanceof Error ? result.reason.message : "No se pudo cargar informacion del backend");
 
   return (
-    <Box className="page-content" style={{ padding: "2rem 0" }}>
-      <Box style={{ width: "100%", maxWidth: "100%", paddingLeft: 16, paddingRight: 16 }}>
-        <FirmwareClient
-          initialVersions={versionsResult.status === "fulfilled" ? versionsResult.value : []}
-          initialInstallations={installationsResult.status === "fulfilled" ? installationsResult.value : []}
-          devices={devicesResult.status === "fulfilled" ? devicesResult.value : []}
-          users={usersResult.status === "fulfilled" ? usersResult.value : []}
-          crops={cropsResult.status === "fulfilled" ? cropsResult.value : []}
-          loadErrors={loadErrors}
-        />
-      </Box>
+    <Box
+      className="page-content"
+      px={{ initial: "4", sm: "5", md: "6" }}
+      py={{ initial: "4", sm: "5", md: "6" }}
+    >
+      <FirmwareClient
+        initialVersions={versionsResult.status === "fulfilled" ? versionsResult.value : []}
+        initialInstallations={installationsResult.status === "fulfilled" ? installationsResult.value : []}
+        devices={devicesResult.status === "fulfilled" ? devicesResult.value : []}
+        users={usersResult.status === "fulfilled" ? usersResult.value : []}
+        crops={cropsResult.status === "fulfilled" ? cropsResult.value : []}
+        loadErrors={loadErrors}
+      />
     </Box>
   );
 }

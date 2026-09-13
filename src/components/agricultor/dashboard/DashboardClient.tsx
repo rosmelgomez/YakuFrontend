@@ -84,6 +84,8 @@ type CultivoData = {
   historialSensores: HistorialData;
   dispositivos: DispositivoData[];
   tanque: TanqueData;
+  fuenteAgua?: { id?: number; nombre?: string; tipo?: string } | null;
+  esConexionDirecta?: boolean;
   consumoSemanal: ConsumoData[];
   limiteConsumo: number | null;
   resumenDia: ResumenDiaData;
@@ -310,13 +312,21 @@ export default function DashboardClient({
 
   const buildLocalCultivo = (res: any, payload: { nombre_planta: string; etapa_crecimiento?: string }) => {
     const selectedPlant = localCatalogPlantas.find((planta: any) => planta.id?.toString() === newCropIdPlanta);
+    const selectedSource = localFuentesAgua.find((f: any) => f.id?.toString() === newCropIdFuenteAgua);
     const idCultivo = getCreatedCropId(res);
+    const isDirect = selectedSource?.tipo === 'conexion_directa';
 
     return {
       idCultivo,
       nombreCultivo: res.nombreCultivo ?? res.nombre_planta ?? payload.nombre_planta,
       conceptoPlanta: res.conceptoPlanta ?? res.planta?.nombre ?? selectedPlant?.nombre ?? "Cultivo",
       etapaCrecimiento: res.etapaCrecimiento ?? res.etapa_crecimiento ?? payload.etapa_crecimiento ?? null,
+      fuenteAgua: selectedSource ? {
+        id: selectedSource.id,
+        nombre: selectedSource.nombre,
+        tipo: selectedSource.tipo,
+      } : null,
+      esConexionDirecta: isDirect,
       sensores: {
         humedadSuelo: null,
         humedadAmbiente: null,
@@ -800,69 +810,86 @@ export default function DashboardClient({
         </Flex>
       ) : (
         cultivoActivo && (
-          <Flex direction="column" gap="5">
-            {/* HEADER: Título y Selector alineado a la estética del Dashboard */}
-            <Flex justify="between" align="center" mb="6" wrap="wrap" gap="3">
+          <Flex direction="column" gap="5" style={{ width: '100%' }}>
+            {/* HEADER: Título, Selector de Cultivo y Acciones */}
+            <Flex
+              direction={{ initial: 'column', md: 'row' }}
+              justify="between"
+              align={{ initial: 'stretch', md: 'end' }}
+              mb="5"
+              gap="4"
+              wrap="wrap"
+              style={{ width: '100%' }}
+            >
               <Box>
-                <Text size="6" weight="bold" color="indigo" as="div" mb="1">Dashboard</Text>
+                <Flex align="center" gap="3" mb="2" wrap="wrap">
+                  <Text size={{ initial: "5", sm: "6" }} weight="bold" color="indigo" as="div">
+                    Dashboard
+                  </Text>
+                  <SearchableSelect
+                    value={selectedId}
+                    onValueChange={setSelectedId}
+                    placeholder="Seleccionar cultivo"
+                    searchPlaceholder="Buscar cultivo..."
+                    style={{
+                      width: 240,
+                      height: '38px',
+                      background: '#111827',
+                      borderColor: '#1f2937'
+                    }}
+                    options={localCultivos.map((c) => ({ value: c.idCultivo.toString(), label: c.nombreCultivo }))}
+                  />
+                </Flex>
                 <Text size="2" color="gray" style={{ fontFamily: 'monospace' }}>
-                  {cultivoActivo.nombreCultivo} · {cultivoActivo.conceptoPlanta} {cultivoActivo.etapaCrecimiento ? `· Fase ${cultivoActivo.etapaCrecimiento.toLowerCase()}` : ''}
+                  {cultivoActivo.conceptoPlanta} {cultivoActivo.etapaCrecimiento ? `· Fase ${cultivoActivo.etapaCrecimiento.toLowerCase()}` : ''}
                 </Text>
               </Box>
-              <Flex direction="column" gap="2" align="end">
-                <Flex gap="3" align="center" wrap="wrap">
-                  {/* Live indicator badge */}
-                  <Flex align="center" gap="2" style={{
-                    background: recolectorActivo ? 'var(--greenbg)' : 'rgba(107, 114, 128, 0.12)',
-                    color: recolectorActivo ? 'var(--green)' : '#9ca3af',
-                    border: `1px solid ${recolectorActivo ? 'var(--greenbrd)' : 'rgba(156, 163, 175, 0.25)'}`,
-                    padding: '4px 10px',
-                    borderRadius: '6px',
-                    fontSize: '10px',
-                    fontFamily: 'var(--font-mono)',
-                    fontWeight: 500,
-                  }}>
-                    <div style={{
-                      width: '6px',
-                      height: '6px',
-                      borderRadius: '50%',
-                      background: recolectorActivo ? 'var(--green)' : '#6b7280',
-                      animation: recolectorActivo ? 'pulse 2s infinite' : 'none'
-                    }} />
-                    {recolectorActivo ? 'En vivo' : 'Recolector inactivo'}
-                  </Flex>
-                  <div style={{
-                    background: 'rgba(56,189,248,0.1)',
-                    color: '#38bdf8',
-                    border: '1px solid rgba(56,189,248,0.25)',
-                    padding: '4px 10px',
-                    borderRadius: '6px',
-                    fontSize: '10px',
-                    fontFamily: 'var(--font-mono)',
-                    fontWeight: 500,
-                  }}>
-                     <CountdownTimer recolectorActivo={recolectorActivo} onRefresh={() => router.refresh()} />
-                  </div>
 
-                  <Button color="blue" onClick={openRegisterWaterSource} style={{ cursor: 'pointer' }}>
-                    Registrar Fuente
-                  </Button>
-                  <Button color="green" onClick={openRegisterCrop} style={{ cursor: 'pointer' }}>Registrar Cultivo
-                  </Button>
+              <Flex gap="2" align="center" wrap="wrap">
+                {/* Live indicator badge */}
+                <Flex align="center" gap="2" style={{
+                  background: recolectorActivo ? 'var(--greenbg)' : 'rgba(107, 114, 128, 0.12)',
+                  color: recolectorActivo ? 'var(--green)' : '#9ca3af',
+                  border: `1px solid ${recolectorActivo ? 'var(--greenbrd)' : 'rgba(156, 163, 175, 0.25)'}`,
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontFamily: 'var(--font-mono)',
+                  fontWeight: 600,
+                }}>
+                  <div style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: recolectorActivo ? 'var(--green)' : '#6b7280',
+                    animation: recolectorActivo ? 'pulse 2s infinite' : 'none'
+                  }} />
+                  {recolectorActivo ? 'En vivo' : 'Recolector inactivo'}
                 </Flex>
-                <SearchableSelect
-                  value={selectedId}
-                  onValueChange={setSelectedId}
-                  placeholder="Seleccionar cultivo"
-                  searchPlaceholder="Buscar cultivo..."
-                  style={{ width: '100%', height: '32px', background: '#111827', borderColor: '#1f2937' }}
-                  options={localCultivos.map((c) => ({ value: c.idCultivo.toString(), label: c.nombreCultivo }))}
-                />
+                <div style={{
+                  background: 'rgba(56,189,248,0.1)',
+                  color: '#38bdf8',
+                  border: '1px solid rgba(56,189,248,0.25)',
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontFamily: 'var(--font-mono)',
+                  fontWeight: 600,
+                }}>
+                   <CountdownTimer recolectorActivo={recolectorActivo} />
+                </div>
+
+                <Button color="blue" size="2" onClick={openRegisterWaterSource} style={{ cursor: 'pointer', minHeight: '38px' }}>
+                  Registrar Fuente
+                </Button>
+                <Button color="green" size="2" onClick={openRegisterCrop} style={{ cursor: 'pointer', minHeight: '38px' }}>
+                  Registrar Cultivo
+                </Button>
               </Flex>
             </Flex>
 
             {/* FILTROS GLOBALES DE CALENDARIO */}
-            <Flex gap="3" wrap="wrap" mb="2" style={{ background: '#111827', padding: '12px 16px', borderRadius: '12px', border: '1px solid #1f2937' }} align="center">
+            <Flex gap="3" wrap="wrap" mb="2" style={{ background: '#111827', padding: '12px 16px', borderRadius: '12px', border: '1px solid #1f2937', width: '100%', boxSizing: 'border-box' }} align="center">
               <Text size="2" color="gray" weight="medium">Modo de tiempo:</Text>
 
               <Flex gap="2" style={{ background: '#0f172a', padding: '4px', borderRadius: '8px', border: '1px solid #1f2937' }}>
@@ -934,7 +961,7 @@ export default function DashboardClient({
             </Flex>
 
             {/* ROW 1: Cuadrícula de Sensores Principales */}
-            <Grid columns={{ initial: '1', sm: '2', lg: '4' }} gap="4">
+            <Grid columns={{ initial: '1', sm: '2', lg: '4' }} gap="4" style={{ width: '100%' }}>
               <SensorCard sensor={getFilteredSensor(cultivoActivo.sensores.humedadSuelo, cultivoActivo.historialSensores.humedadSuelo, 'soil_moisture')} type="soil_moisture" />
               <SensorCard sensor={getFilteredSensor(cultivoActivo.sensores.humedadAmbiente, cultivoActivo.historialSensores.humedadAmbiente, 'env_humidity')} type="env_humidity" />
               <SensorCard sensor={getFilteredSensor(cultivoActivo.sensores.temperaturaAmbiente, cultivoActivo.historialSensores.temperaturaAmbiente, 'env_temp')} type="env_temp" />
@@ -942,7 +969,7 @@ export default function DashboardClient({
             </Grid>
 
             {/* ROW 2: Gráfico Histórico (2/3) + Estado y Tanque (1/3) */}
-            <Flex direction={{ initial: 'column', lg: 'row' }} gap="4">
+            <Flex direction={{ initial: 'column', lg: 'row' }} gap="4" style={{ width: '100%' }}>
               <Box style={{ flex: 2, minWidth: 0 }}>
                 <HistoricoSensoresCard 
                   historial={cultivoActivo.historialSensores} 
@@ -955,12 +982,16 @@ export default function DashboardClient({
               </Box>
               <Flex direction="column" gap="4" style={{ flex: 1, minWidth: 0 }}>
                 <EstadoSistemaCard dispositivos={cultivoActivo.dispositivos} />
-                {cultivoActivo.tanque && <TanqueCard tanque={cultivoActivo.tanque} />}
+                {cultivoActivo.esConexionDirecta || cultivoActivo.fuenteAgua?.tipo === 'conexion_directa' ? (
+                  <ConexionDirectaCard fuenteAgua={cultivoActivo.fuenteAgua} />
+                ) : (
+                  cultivoActivo.tanque && <TanqueCard tanque={cultivoActivo.tanque} />
+                )}
               </Flex>
             </Flex>
 
             {/* ROW 3: Gráfico Consumo Semanal (2/3) + Resumen Diario (1/3) */}
-            <Flex direction={{ initial: 'column', lg: 'row' }} gap="4">
+            <Flex direction={{ initial: 'column', lg: 'row' }} gap="4" style={{ width: '100%' }}>
               <Box style={{ flex: 2, minWidth: 0 }}>
                 {cultivoActivo.consumoSemanal && (
                   <ConsumoChartCard 
@@ -1227,6 +1258,58 @@ const EstadoSistemaCard = ({ dispositivos }: { dispositivos: DispositivoData[] }
   );
 };
 
+// --- SUB-COMPONENTE: TARJETA DE CONEXIÓN DIRECTA ---
+const ConexionDirectaCard = ({ fuenteAgua }: { fuenteAgua?: { id?: number; nombre?: string; tipo?: string } | null }) => {
+  return (
+    <Card size="3" style={{ background: '#111827', borderColor: '#1f2937', borderRadius: '16px' }}>
+      <Flex direction="column" gap="3">
+        <Flex justify="between" align="center">
+          <Text size="3" weight="bold" color="indigo">
+            {fuenteAgua?.nombre || 'Fuente de Agua'}
+          </Text>
+          <Badge color="cyan" variant="soft" style={{ borderRadius: '6px' }}>
+            Conexión directa
+          </Badge>
+        </Flex>
+
+        <Flex align="center" gap="3">
+          <div style={{
+            width: '42px',
+            height: '42px',
+            borderRadius: '12px',
+            background: 'rgba(56, 189, 248, 0.12)',
+            border: '1px solid rgba(56, 189, 248, 0.25)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '1.4rem',
+            flexShrink: 0
+          }}>
+            🚰
+          </div>
+          <Box>
+            <Text size="2" weight="bold" style={{ color: '#f3f4f6' }} as="div">
+              Suministro de Red Continua
+            </Text>
+            <Text size="1" color="gray" as="div">
+              Medición de consumo con flujómetro YF-S201
+            </Text>
+          </Box>
+        </Flex>
+
+        <Flex justify="between" align="center" style={{ borderTop: '1px solid #1f2937', paddingTop: '8px' }}>
+          <Text size="1" color="gray" style={{ fontFamily: 'monospace' }}>
+            Apertura por electroválvula
+          </Text>
+          <Badge color="green" variant="surface" size="1" style={{ borderRadius: '4px' }}>
+            Red Disponible
+          </Badge>
+        </Flex>
+      </Flex>
+    </Card>
+  );
+};
+
 // --- SUB-COMPONENTE: TARJETA DEL TANQUE ---
 const TanqueCard = ({ tanque }: { tanque: TanqueData }) => {
   const [bombaActiva, setBombaActiva] = useState(tanque?.bombaEncendida || false);
@@ -1291,27 +1374,20 @@ const ConsumoChartCard = ({
   data: ConsumoData[]; 
   limite: number | null; 
   isClientMounted: boolean;
-  timeRange: HistoryRange;
+  timeRange?: HistoryRange;
   calendarFilters: CalendarFilters;
   cultivoTimezone?: string;
 }) => {
   const chartTimeZone = cultivoTimezone || DEFAULT_DASHBOARD_TIME_ZONE;
   const calendarFilteredData = data.filter((item) => {
-    if (!item.fecha) return false;
+    if (!item.fecha) return true;
     const date = new Date(item.fecha);
     return dateMatchesCalendarFilters(date, calendarFilters);
-  }).filter((item) => {
-    if (calendarFilters.month !== 'all' || calendarFilters.year !== 'all') return true;
-    if (!item.fecha) return false;
-    const date = new Date(item.fecha).getTime();
-    const now = new Date().getTime();
-    const limits = { '6h': 6 * 60 * 60 * 1000, '24h': 24 * 60 * 60 * 1000, '7d': 7 * 24 * 60 * 60 * 1000 };
-    return date >= now - limits[timeRange];
   });
 
   const chartData = calendarFilteredData.map(d => {
     const dateObj = d.fecha ? new Date(d.fecha) : new Date();
-    const xLabel = d.label === 'Hoy' ? 'Hoy' : dateObj.toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', timeZone: chartTimeZone });
+    const xLabel = d.label === 'Hoy' ? 'Hoy' : (d.label || dateObj.toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', timeZone: chartTimeZone }));
     return { ...d, xLabel, valorReal: d.valor };
   });
 

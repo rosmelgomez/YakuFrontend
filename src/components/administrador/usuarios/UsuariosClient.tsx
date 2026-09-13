@@ -14,6 +14,10 @@ export default function UsuariosClient({ initialUsers = [], initialDevices = [],
   const [newUserApellido, setNewUserApellido] = useState("");
   const [newUserCorreo, setNewUserCorreo] = useState("");
   const [newUserTelefono, setNewUserTelefono] = useState("");
+  const [newUserZonaHoraria, setNewUserZonaHoraria] = useState("America/Lima");
+  const [newUserDni, setNewUserDni] = useState("");
+  const [newUserFechaNacimiento, setNewUserFechaNacimiento] = useState("");
+  const [newUserDireccion, setNewUserDireccion] = useState("");
   const [newUserContrasena, setNewUserContrasena] = useState("");
   const [newUserRolId, setNewUserRolId] = useState("2");
   const pageSize = 8;
@@ -79,6 +83,10 @@ export default function UsuariosClient({ initialUsers = [], initialDevices = [],
           correo: newUserCorreo.trim().toLowerCase(),
           contrasena: newUserContrasena,
           telefono: newUserTelefono.trim() || undefined,
+          zona_horaria: newUserZonaHoraria || "America/Lima",
+          dni: newUserDni.trim() || undefined,
+          fecha_nacimiento: newUserFechaNacimiento || undefined,
+          direccion: newUserDireccion.trim() || undefined,
           id_rol: parseInt(newUserRolId, 10),
         });
 
@@ -88,6 +96,10 @@ export default function UsuariosClient({ initialUsers = [], initialDevices = [],
           setNewUserApellido("");
           setNewUserCorreo("");
           setNewUserTelefono("");
+          setNewUserZonaHoraria("America/Lima");
+          setNewUserDni("");
+          setNewUserFechaNacimiento("");
+          setNewUserDireccion("");
           setNewUserContrasena("");
           setNewUserRolId("2");
           window.location.reload();
@@ -108,10 +120,23 @@ export default function UsuariosClient({ initialUsers = [], initialDevices = [],
       </Flex>
 
       <Card size="3" style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
-        <Flex justify="between" align="center" mb="4">
-          <Text size="4" weight="bold" color="indigo" as="div">Usuarios del Sistema</Text>
-          <Button color="indigo" onClick={() => setIsOpenRegisterUser(true)} style={{ cursor: "pointer" }}>
-            <Plus size={16} style={{ marginRight: "4px" }} /> Registrar Usuario
+        <Flex
+          direction={{ initial: "column", sm: "row" }}
+          justify="between"
+          align={{ initial: "stretch", sm: "center" }}
+          gap="3"
+          mb="4"
+        >
+          <Text size={{ initial: "4", sm: "5" }} weight="bold" color="indigo" as="div">
+            Usuarios del Sistema
+          </Text>
+          <Button
+            color="indigo"
+            size="2"
+            onClick={() => setIsOpenRegisterUser(true)}
+            style={{ cursor: "pointer", minHeight: "44px" }}
+          >
+            <Plus size={18} style={{ marginRight: "6px" }} /> Registrar Usuario
           </Button>
         </Flex>
 
@@ -148,6 +173,12 @@ export default function UsuariosClient({ initialUsers = [], initialDevices = [],
                       <Flex direction="column" gap="1">
                         <Text size="1" color="gray" style={{ fontFamily: "monospace" }}>{u.correo}</Text>
                         <Text size="1" style={{ color: "#94a3b8" }}>{u.telefono || "Sin telefono"}</Text>
+                        {u.dni && <Text size="1" color="cyan">DNI: {u.dni}</Text>}
+                        {u.direccion && (
+                          <Text size="1" color="gray" style={{ maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={u.direccion}>
+                            📍 {u.direccion}
+                          </Text>
+                        )}
                       </Flex>
                     </Table.Cell>
                     <Table.Cell><Badge color={isAdmin ? "purple" : "blue"} variant="soft">{u.rol?.nombre?.toUpperCase()}</Badge></Table.Cell>
@@ -195,31 +226,93 @@ export default function UsuariosClient({ initialUsers = [], initialDevices = [],
       </Card>
 
       <Dialog.Root open={isOpenRegisterUser} onOpenChange={setIsOpenRegisterUser}>
-        <Dialog.Content aria-describedby={undefined} style={{ maxWidth: 450, background: "var(--surface-mockup)", border: "1px solid var(--border-mockup)" }}>
+        <Dialog.Content aria-describedby={undefined} style={{ maxWidth: 520, background: "var(--surface-mockup)", border: "1px solid var(--border-mockup)" }}>
           <Dialog.Title style={{ color: "white" }}>Registrar Nuevo Usuario</Dialog.Title>
           <form onSubmit={handleRegisterUserSubmit}>
             <Flex direction="column" gap="3" mt="3">
               <Grid columns="2" gap="3">
-                <TextField.Root placeholder="Nombres" value={newUserNombre} onChange={(e) => setNewUserNombre(e.target.value)} required />
-                <TextField.Root placeholder="Apellidos" value={newUserApellido} onChange={(e) => setNewUserApellido(e.target.value)} />
+                <Box>
+                  <Text size="1" color="gray" mb="1" as="div">Nombres *</Text>
+                  <TextField.Root placeholder="Nombres" value={newUserNombre} onChange={(e) => setNewUserNombre(e.target.value)} required />
+                </Box>
+                <Box>
+                  <Text size="1" color="gray" mb="1" as="div">Apellidos</Text>
+                  <TextField.Root placeholder="Apellidos" value={newUserApellido} onChange={(e) => setNewUserApellido(e.target.value)} />
+                </Box>
               </Grid>
+
               <Grid columns="2" gap="3">
-                <TextField.Root type="email" placeholder="Correo" value={newUserCorreo} onChange={(e) => setNewUserCorreo(e.target.value)} required />
-                <TextField.Root placeholder="Telefono" value={newUserTelefono} onChange={(e) => setNewUserTelefono(e.target.value)} />
+                <Box>
+                  <Text size="1" color="gray" mb="1" as="div">Correo Electrónico *</Text>
+                  <TextField.Root type="email" placeholder="Correo" value={newUserCorreo} onChange={(e) => setNewUserCorreo(e.target.value)} required />
+                </Box>
+                <Box>
+                  <Text size="1" color="gray" mb="1" as="div">Teléfono</Text>
+                  <TextField.Root placeholder="Teléfono" value={newUserTelefono} onChange={(e) => setNewUserTelefono(e.target.value)} />
+                </Box>
               </Grid>
-              <Box>
-                <TextField.Root type="password" placeholder="Contraseña" value={newUserContrasena} onChange={(e) => setNewUserContrasena(e.target.value)} required />
-                <Text size="1" color="gray" mt="1" as="div">
-                  Mínimo 10 caracteres, con mayúsculas, minúsculas y números.
-                </Text>
-              </Box>
-              <Select.Root value={newUserRolId} onValueChange={setNewUserRolId}>
-                <Select.Trigger />
-                <Select.Content>
-                  <Select.Item value="1">Administrador</Select.Item>
-                  <Select.Item value="2">Agricultor</Select.Item>
-                </Select.Content>
-              </Select.Root>
+
+              <Grid columns="2" gap="3">
+                <Box>
+                  <Text size="1" color="gray" mb="1" as="div">DNI / Documento</Text>
+                  <TextField.Root placeholder="8 dígitos" maxLength={20} value={newUserDni} onChange={(e) => setNewUserDni(e.target.value)} />
+                </Box>
+                <Box>
+                  <Text size="1" color="gray" mb="1" as="div">Fecha de Nacimiento</Text>
+                  <TextField.Root type="date" value={newUserFechaNacimiento} onChange={(e) => setNewUserFechaNacimiento(e.target.value)} />
+                </Box>
+              </Grid>
+
+              <Grid columns="2" gap="3">
+                <Box>
+                  <Text size="1" color="gray" mb="1" as="div">Dirección</Text>
+                  <TextField.Root placeholder="Dirección personal" value={newUserDireccion} onChange={(e) => setNewUserDireccion(e.target.value)} />
+                </Box>
+                <Box>
+                  <Text size="1" color="gray" mb="1" as="div">Zona Horaria</Text>
+                  <select
+                    value={newUserZonaHoraria}
+                    onChange={(e) => setNewUserZonaHoraria(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "6px 10px",
+                      borderRadius: "6px",
+                      background: "#1e293b",
+                      color: "white",
+                      border: "1px solid #334155",
+                      fontSize: "0.85rem",
+                      height: "32px",
+                    }}
+                  >
+                    <option value="America/Lima">America/Lima (UTC-5)</option>
+                    <option value="America/Bogota">America/Bogota (UTC-5)</option>
+                    <option value="America/Santiago">America/Santiago (UTC-3)</option>
+                    <option value="America/Argentina/Buenos_Aires">America/Buenos_Aires (UTC-3)</option>
+                    <option value="America/Mexico_City">America/Mexico_City (UTC-6)</option>
+                    <option value="UTC">UTC</option>
+                  </select>
+                </Box>
+              </Grid>
+
+              <Grid columns="2" gap="3">
+                <Box>
+                  <Text size="1" color="gray" mb="1" as="div">Rol del Sistema</Text>
+                  <Select.Root value={newUserRolId} onValueChange={setNewUserRolId}>
+                    <Select.Trigger style={{ width: "100%" }} />
+                    <Select.Content>
+                      <Select.Item value="1">Administrador</Select.Item>
+                      <Select.Item value="2">Agricultor</Select.Item>
+                    </Select.Content>
+                  </Select.Root>
+                </Box>
+                <Box>
+                  <Text size="1" color="gray" mb="1" as="div">Contraseña *</Text>
+                  <TextField.Root type="password" placeholder="Mínimo 10 caracteres" value={newUserContrasena} onChange={(e) => setNewUserContrasena(e.target.value)} required />
+                </Box>
+              </Grid>
+              <Text size="1" color="gray" mt="1" as="div">
+                La contraseña debe tener al menos 10 caracteres, incluir mayúsculas, minúsculas y números.
+              </Text>
             </Flex>
             <Flex gap="3" mt="6" justify="end">
               <Dialog.Close><Button variant="soft" color="gray">Cancelar</Button></Dialog.Close>

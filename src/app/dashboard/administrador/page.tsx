@@ -38,23 +38,27 @@ export default async function AdminDashboardPage() {
 
   if (!summary) {
     return (
-      <Box className="page-content" style={{ padding: '2rem 0' }}>
-        <Box style={{ width: '100%', maxWidth: '100%', paddingLeft: '16px', paddingRight: '16px' }}>
-          <Card size="3" style={{ background: '#111827', borderColor: '#ef4444' }}>
-            <Text color="red" weight="bold" size="3">
-              Error al conectar con el backend de FastAPI. Asegúrese de que el servidor esté activo.
-            </Text>
-          </Card>
-        </Box>
+      <Box
+        className="page-content"
+        px={{ initial: "4", sm: "5", md: "6" }}
+        py={{ initial: "4", sm: "5", md: "6" }}
+      >
+        <Card size="3" style={{ background: '#111827', borderColor: '#ef4444' }}>
+          <Text color="red" weight="bold" size="3">
+            Error al conectar con el backend de FastAPI. Asegúrese de que el servidor esté activo.
+          </Text>
+        </Card>
       </Box>
     );
   }
 
   return (
-    <Box className="page-content" style={{ padding: '2rem 0' }}>
-      <Box style={{ width: '100%', maxWidth: '100%', paddingLeft: '16px', paddingRight: '16px' }}>
-        <AdminDashboardClient data={summary} />
-      </Box>
+    <Box
+      className="page-content"
+      px={{ initial: "4", sm: "5", md: "6" }}
+      py={{ initial: "4", sm: "5", md: "6" }}
+    >
+      <AdminDashboardClient data={summary} />
     </Box>
   );
 }

@@ -40,10 +40,12 @@ export default async function MLPage({ searchParams }: { searchParams: Promise<{
   const isAdmin = (session.user as any).rol === 'administrador';
 
   return (
-    <Box className="page-content" style={{ padding: '2rem 0' }}>
-      <Box style={{ width: '100%', maxWidth: '100%', paddingLeft: '16px', paddingRight: '16px' }}>
-         <MLClient data={mlData} cultivos={cultivosBase} idCultivo={selectedCultivoId} isAdmin={isAdmin} />
-      </Box>
+    <Box
+      className="page-content"
+      px={{ initial: "4", sm: "5", md: "6" }}
+      py={{ initial: "4", sm: "5", md: "6" }}
+    >
+      <MLClient data={mlData} cultivos={cultivosBase} idCultivo={selectedCultivoId} isAdmin={isAdmin} />
     </Box>
   );
 }

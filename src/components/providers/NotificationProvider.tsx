@@ -72,10 +72,17 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
         socket.onmessage = (event) => {
           try {
-            const alert: Alerta = JSON.parse(event.data);
-            setActiveAlert(alert);
-            if (autoHideTimeout) clearTimeout(autoHideTimeout);
-            autoHideTimeout = setTimeout(() => setActiveAlert(null), 6000);
+            const payload = JSON.parse(event.data);
+            if (payload.tipo === 'control_update' || payload.event === 'control_update' || payload.tipo === 'telemetria') {
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('yaku:control_update', { detail: payload }));
+              }
+            }
+            if (payload.severidad || payload.titulo) {
+              setActiveAlert(payload as Alerta);
+              if (autoHideTimeout) clearTimeout(autoHideTimeout);
+              autoHideTimeout = setTimeout(() => setActiveAlert(null), 6000);
+            }
           } catch {}
         };
 

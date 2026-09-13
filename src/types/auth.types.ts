@@ -8,7 +8,13 @@ export interface LoginFormInputs {
 
 export interface RegisterFormInputs {
   nombre: string
+  apellido?: string
   correo: string
+  telefono?: string
+  zona_horaria?: string
+  dni?: string
+  fecha_nacimiento?: string
+  direccion?: string
   contrasena: string
   confirmarContrasena: string
   terminos: boolean

@@ -24,10 +24,12 @@ export default async function AdminFeedbackPage() {
   const preguntas = await listarPreguntasFeedback(true).catch(() => []);
 
   return (
-    <Box className="page-content" style={{ padding: "2rem 0" }}>
-      <Box style={{ width: "100%", maxWidth: "100%", paddingLeft: "16px", paddingRight: "16px" }}>
-        <FeedbackAdminClient initialPreguntas={preguntas} />
-      </Box>
+    <Box
+      className="page-content"
+      px={{ initial: "4", sm: "5", md: "6" }}
+      py={{ initial: "4", sm: "5", md: "6" }}
+    >
+      <FeedbackAdminClient initialPreguntas={preguntas} />
     </Box>
   );
 }

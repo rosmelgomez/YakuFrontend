@@ -28,35 +28,21 @@ export default async function DashboardPage() {
   const cultivosData = await getDashboardData();
 
   return (
-    <Box className="page-content" style={{ padding: '2rem 0' }}>
-      <Box style={{ width: '100%', maxWidth: '100%', paddingLeft: '16px', paddingRight: '16px' }}>
-        <Box mb="6" px="4">
-          <Flex align="center" gap="3" mb="2">
-            <div style={{
-              width: '40px',
-              height: '40px',
-              background: 'white',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '1.2rem',
-            }}>
-              Y
-            </div>
-            <Heading size="8" style={{ color: 'white' }}>
-              Hola, {session.user.name || 'Agricultor'}!
-            </Heading>
-          </Flex>
-          <Text size="3" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-            Aqui tienes el resumen en tiempo real de las condiciones de tus cultivos.
-          </Text>
-        </Box>
-
-        <Box px="4">
-          <DashboardClient cultivos={cultivosData as any} />
-        </Box>
+    <Box
+      className="page-content"
+      px={{ initial: "4", sm: "5", md: "6" }}
+      py={{ initial: "4", sm: "5", md: "6" }}
+    >
+      <Box mb="5">
+        <Heading size={{ initial: "6", sm: "7", md: "8" }} style={{ color: 'white', wordBreak: 'break-word' }} mb="1">
+          Hola, {session.user.name || 'Agricultor'}! 👋
+        </Heading>
+        <Text size={{ initial: "2", sm: "3" }} style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+          Aquí tienes el resumen en tiempo real de las condiciones de tus cultivos.
+        </Text>
       </Box>
+
+      <DashboardClient cultivos={cultivosData as any} />
     </Box>
   );
 }

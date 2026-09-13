@@ -35,9 +35,16 @@ export default function LoginForm() {
       })
 
       if (result?.error) {
+        if (
+          result.error.toLowerCase().includes('verific') ||
+          result.error.toLowerCase().includes('no verificada')
+        ) {
+          window.location.href = `/auth/verificar-correo?correo=${encodeURIComponent(data.correo.trim().toLowerCase())}`
+          return
+        }
         setError(result.error)
       } else if (result?.ok) {
-        router.push('/dashboard/agricultor')
+        window.location.href = '/dashboard/agricultor'
       }
     } catch {
       setError('Error al iniciar sesión. Intenta de nuevo.')
@@ -111,7 +118,7 @@ export default function LoginForm() {
             <Checkbox {...register('recuerdame')} />
             <Text size="2">Recuérdame</Text>
           </label>
-          <Link href="#">
+          <Link href="/auth/recuperar-contrasena">
             ¿Olvidaste la contraseña?
           </Link>
         </Box>

@@ -249,6 +249,10 @@ export async function registrarUsuario(payload: {
   correo: string;
   contrasena: string;
   telefono?: string;
+  zona_horaria?: string;
+  dni?: string;
+  fecha_nacimiento?: string;
+  direccion?: string;
   id_rol: number;
 }) {
   const res = await fetchFromFastAPI("/admin/usuarios", {

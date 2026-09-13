@@ -30,7 +30,7 @@ type CatalogoClientProps = {
 const getErrorMessage = (error: unknown) => error instanceof Error ? error.message : "Ocurrió un error inesperado";
 
 export default function CatalogoClient({ catalogPlantas = [], regiones = [], provincias = [], distritos = [], metricas = [] }: CatalogoClientProps) {
-  const metricasPlanta = metricas.filter((metrica) => !["NIVEL_AGUA", "BAT_PCT"].includes(metrica.codigo ?? ""));
+  const metricasPlanta = metricas.filter((metrica) => !["NIVEL_AGUA", "BAT_PCT", "CAUDAL"].includes(metrica.codigo ?? ""));
   const idsMetricasPlanta = new Set(metricasPlanta.map((metrica) => metrica.id));
   const [isPending, startTransition] = useTransition();
   const [isOpenRegisterPlant, setIsOpenRegisterPlant] = useState(false);

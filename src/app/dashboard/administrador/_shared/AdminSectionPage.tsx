@@ -148,25 +148,27 @@ export default async function AdminSectionPage({ activeTab }: { activeTab: Admin
   const AdminSectionClient = adminSectionClients[activeTab];
 
   return (
-    <Box className="page-content" style={{ padding: '2rem 0' }}>
-      <Box style={{ width: '100%', maxWidth: '100%', paddingLeft: '16px', paddingRight: '16px' }}>
-        <AdminSectionClient
-          initialUsers={data.users}
-          initialDevices={data.devices}
-          initialCrops={data.crops}
-          tiposDispositivo={data.tiposDispositivo}
-          tiposComponente={data.tiposComponente}
-          catalogPlantas={data.catalogPlantas}
-          regiones={data.regiones}
-          provincias={data.provincias}
-          distritos={data.distritos}
-          initialAlmacenes={data.almacenes}
-          initialComponents={data.components}
-          fuentesAgua={data.fuentesAgua}
-          metricas={data.metricas}
-          activeTab={activeTab}
-        />
-      </Box>
+    <Box
+      className="page-content"
+      px={{ initial: "4", sm: "5", md: "6" }}
+      py={{ initial: "4", sm: "5", md: "6" }}
+    >
+      <AdminSectionClient
+        initialUsers={data.users}
+        initialDevices={data.devices}
+        initialCrops={data.crops}
+        tiposDispositivo={data.tiposDispositivo}
+        tiposComponente={data.tiposComponente}
+        catalogPlantas={data.catalogPlantas}
+        regiones={data.regiones}
+        provincias={data.provincias}
+        distritos={data.distritos}
+        initialAlmacenes={data.almacenes}
+        initialComponents={data.components}
+        fuentesAgua={data.fuentesAgua}
+        metricas={data.metricas}
+        activeTab={activeTab}
+      />
     </Box>
   );
 }

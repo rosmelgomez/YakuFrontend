@@ -47,16 +47,18 @@ export default async function HistoricoPage() {
   const historicoData = await getHistoricoData(userId, selectedCultivoId, rangoDias);
 
   return (
-    <Box className="page-content" style={{ padding: '2rem 0' }}>
-      <Box style={{ width: '100%', maxWidth: '100%', paddingLeft: '16px', paddingRight: '16px' }}>
-        <HistoricoMultiChart
-          userId={userId}
-          cultivos={cultivosBase}
-          initialData={historicoData}
-          initialCultivo={selectedCultivoId.toString()}
-          initialRango={rangoDias}
-        />
-      </Box>
+    <Box
+      className="page-content"
+      px={{ initial: "4", sm: "5", md: "6" }}
+      py={{ initial: "4", sm: "5", md: "6" }}
+    >
+      <HistoricoMultiChart
+        userId={userId}
+        cultivos={cultivosBase}
+        initialData={historicoData}
+        initialCultivo={selectedCultivoId.toString()}
+        initialRango={rangoDias}
+      />
     </Box>
   );
 }

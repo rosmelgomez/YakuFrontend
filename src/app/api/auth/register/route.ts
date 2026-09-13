@@ -5,7 +5,17 @@ import { fetchPublicFastAPI } from '@/lib/api/client';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { nombre, correo, contrasena } = body;
+    const {
+      nombre,
+      apellido,
+      correo,
+      contrasena,
+      telefono,
+      zona_horaria,
+      dni,
+      fecha_nacimiento,
+      direccion,
+    } = body;
 
     if (!nombre || !correo || !contrasena) {
       return NextResponse.json(
@@ -19,7 +29,17 @@ export async function POST(req: Request) {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ nombre, correo, contrasena }),
+      body: JSON.stringify({
+        nombre,
+        apellido: apellido || undefined,
+        correo,
+        contrasena,
+        telefono: telefono || undefined,
+        zona_horaria: zona_horaria || 'America/Lima',
+        dni: dni || undefined,
+        fecha_nacimiento: fecha_nacimiento || undefined,
+        direccion: direccion || undefined,
+      }),
     });
 
     if (!res.ok) {

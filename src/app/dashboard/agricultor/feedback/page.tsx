@@ -38,10 +38,12 @@ export default async function FeedbackPage() {
   }
 
   return (
-    <Box className="page-content" style={{ padding: "2rem 0" }}>
-      <Box style={{ width: "100%", maxWidth: "100%", paddingLeft: "16px", paddingRight: "16px" }}>
-        <FeedbackClient cultivos={cultivosBase} preguntas={preguntas} initialFeedback={feedback} />
-      </Box>
+    <Box
+      className="page-content"
+      px={{ initial: "4", sm: "5", md: "6" }}
+      py={{ initial: "4", sm: "5", md: "6" }}
+    >
+      <FeedbackClient cultivos={cultivosBase} preguntas={preguntas} initialFeedback={feedback} />
     </Box>
   );
 }

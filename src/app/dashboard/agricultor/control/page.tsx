@@ -6,6 +6,7 @@ import { authOptions } from '@/lib/auth';
 import { Box } from '@radix-ui/themes';
 import DashboardSkeleton from '@/components/layout/DashboardSkeleton';
 import { getControlData } from '@/services/control';
+import { getAlertasData } from '@/services/alertas';
 import { getCultivosBase } from '@/services/cultivos-base';
 import type { CultivoBase } from '@/services/cultivos-base';
 import { listarModelosML } from '@/actions/ml';
@@ -32,21 +33,26 @@ export default async function ControlPage() {
   }
   
   if (cultivosBase.length === 0) {
-    return <NoCropsEmptyState title="No tienes control de riego activo" description="Para administrar los modos de riego (manual, programado o inteligente por IA) y conmutar tus bombas de agua, primero debes registrar tu cultivo." />;
+    return <NoCropsEmptyState title="No tienes control de riego activo" description="Para administrar el riego inteligente por IA y supervisar tus bombas y actuadores, primero debes registrar tu cultivo." />;
   }
 
   const selectedCultivoId = cultivosBase[0].id;
 
   let controlData;
   let modelosML = [];
+  let initialUmbrales = [];
   try {
-    const [cData, mlRes] = await Promise.all([
+    const [cData, mlRes, alertasRes] = await Promise.all([
       getControlData(userId, selectedCultivoId),
-      listarModelosML(selectedCultivoId).catch(() => ({ success: false, data: [] }))
+      listarModelosML(selectedCultivoId).catch(() => ({ success: false, data: [] })),
+      getAlertasData(userId, selectedCultivoId).catch(() => ({ umbrales: [] })),
     ]);
     controlData = cData;
     if (mlRes.success && mlRes.data) {
       modelosML = mlRes.data;
+    }
+    if (alertasRes?.umbrales) {
+      initialUmbrales = alertasRes.umbrales;
     }
   } catch {
     return (
@@ -57,17 +63,19 @@ export default async function ControlPage() {
   }
   
   return (
-    <Box className="page-content" style={{ padding: '2rem 0' }}>
-      <Box style={{ width: '100%', maxWidth: '100%', paddingLeft: '16px', paddingRight: '16px' }}>
-         <ControlClient 
-           userId={userId} 
-           cultivos={cultivosBase} 
-           data={controlData} 
-           idCultivo={selectedCultivoId} 
-           modelosML={modelosML} 
-           initialUmbrales={[]}
-         />
-      </Box>
+    <Box
+      className="page-content"
+      px={{ initial: "4", sm: "5", md: "6" }}
+      py={{ initial: "4", sm: "5", md: "6" }}
+    >
+      <ControlClient 
+        userId={userId} 
+        cultivos={cultivosBase} 
+        data={controlData} 
+        idCultivo={selectedCultivoId} 
+        modelosML={modelosML} 
+        initialUmbrales={initialUmbrales}
+      />
     </Box>
   );
 }

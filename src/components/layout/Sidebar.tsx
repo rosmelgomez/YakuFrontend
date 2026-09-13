@@ -10,6 +10,7 @@ import {
   BarChart3,
   Bell,
   Settings,
+  SlidersHorizontal,
   Brain,
   LogOut,
   Users,
@@ -19,14 +20,17 @@ import {
   User,
   Warehouse,
   HardDriveUpload,
-  MessageSquareText
+  MessageSquareText,
+  MoreHorizontal,
 } from 'lucide-react';
 
 export default function Sidebar({ initials = "JR" }: { initials?: string }) {
   const pathname = usePathname();
   const router = useRouter();
   const [openProfile, setOpenProfile] = useState(false);
+  const [openMore, setOpenMore] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
+  const moreRef = useRef<HTMLDivElement>(null);
   const { data: session } = useSession();
   const userRole = session?.user?.rol;
   const isAdmin = userRole === 'administrador';
@@ -37,10 +41,24 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
       if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
         setOpenProfile(false);
       }
+      if (moreRef.current && !moreRef.current.contains(event.target as Node)) {
+        setOpenMore(false);
+      }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const isFarmerMoreActive = Boolean(
+    pathname?.includes('/ml') || pathname?.includes('/feedback')
+  );
+
+  const isAdminMoreActive = Boolean(
+    pathname?.includes('/catalogo') ||
+    pathname?.includes('/feedback') ||
+    pathname?.includes('/respaldo') ||
+    pathname?.includes('/almacenes')
+  );
 
   return (
     <>
@@ -61,18 +79,30 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
             bottom: 0;
             left: 0;
             width: 100%;
-            height: 72px;
+            height: calc(64px + env(safe-area-inset-bottom, 0px));
             flex-direction: row;
-            justify-content: space-evenly;
-            padding: 0 8px;
-            border-radius: 24px 24px 0 0;
+            justify-content: space-around;
+            padding: 0 6px env(safe-area-inset-bottom, 0px) 6px;
+            border-radius: 20px 20px 0 0;
             border-bottom: none;
+            box-sizing: border-box;
           }
           .sidebar-logo { display: none !important; }
           .sidebar-menu {
             display: contents !important;
           }
-          .profile-wrapper { 
+          .desktop-only {
+            display: none !important;
+          }
+          .mobile-only {
+            display: flex !important;
+          }
+          .nav-item {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+          }
+          .profile-wrapper, .more-wrapper { 
             margin-top: 0 !important;
             display: flex;
             align-items: center;
@@ -80,18 +110,33 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
             position: relative;
           }
           .dropdown-menu {
-            bottom: 72px;
-            right: 0;
+            bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+            right: 8px;
             left: auto !important;
+          }
+          .more-menu {
+            position: absolute;
+            bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+            right: 48px;
+            width: 230px;
+            background: #081420;
+            border: 1px solid #1e293b;
+            border-radius: 16px;
+            padding: 8px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            z-index: 120;
           }
           /* Indicador activo abajo en móvil */
           .nav-item.active::before {
             content: '';
             position: absolute;
-            bottom: 6px;
+            bottom: 4px;
             left: 50%;
             transform: translateX(-50%);
-            width: 16px;
+            width: 14px;
             height: 3px;
             background-color: #22c55e;
             border-radius: 2px;
@@ -100,6 +145,12 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
 
         /* --- DESKTOP (Barra Lateral Izquierda) --- */
         @media (min-width: 1000px) {
+          .mobile-only {
+            display: none !important;
+          }
+          .desktop-only {
+            display: flex !important;
+          }
           .sidebar-container {
             top: 12px;
             left: 16px;
@@ -178,24 +229,151 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
         <div className="sidebar-menu" style={{ display: 'flex' }}>
           {isFarmer && (
             <>
-              <SidebarButton href="/dashboard/agricultor" active={pathname === '/dashboard/agricultor'} icon={<LayoutDashboard size={22} />} onPrefetch={router.prefetch} />
-              <SidebarButton href="/dashboard/agricultor/historico" active={pathname?.includes('/historico')} icon={<BarChart3 size={22} />} onPrefetch={router.prefetch} />
-              <SidebarButton href="/dashboard/agricultor/alertas" active={pathname?.includes('/alertas')} icon={<Bell size={22} />} onPrefetch={router.prefetch} />
-              <SidebarButton href="/dashboard/agricultor/control" active={pathname?.includes('/control')} icon={<Settings size={22} />} onPrefetch={router.prefetch} />
-              <SidebarButton href="/dashboard/agricultor/ml" active={pathname?.includes('/ml')} icon={<Brain size={22} />} onPrefetch={router.prefetch} />
-              <SidebarButton href="/dashboard/agricultor/feedback" active={pathname?.includes('/feedback')} icon={<MessageSquareText size={22} />} onPrefetch={router.prefetch} />
+              {/* Acciones principales en móvil y escritorio */}
+              <SidebarButton title="Dashboard" href="/dashboard/agricultor" active={pathname === '/dashboard/agricultor'} icon={<LayoutDashboard size={22} />} onPrefetch={router.prefetch} />
+              <SidebarButton title="Histórico" href="/dashboard/agricultor/historico" active={pathname?.includes('/historico')} icon={<BarChart3 size={22} />} onPrefetch={router.prefetch} />
+              <SidebarButton title="Alertas" href="/dashboard/agricultor/alertas" active={pathname?.includes('/alertas')} icon={<Bell size={22} />} onPrefetch={router.prefetch} />
+              <SidebarButton title="Control" href="/dashboard/agricultor/control" active={pathname?.includes('/control')} icon={<SlidersHorizontal size={22} />} onPrefetch={router.prefetch} />
+
+              {/* Acciones secundarias: visibles directas en PC */}
+              <SidebarButton className="desktop-only" title="Inteligencia ML" href="/dashboard/agricultor/ml" active={pathname?.includes('/ml')} icon={<Brain size={22} />} onPrefetch={router.prefetch} />
+              <SidebarButton className="desktop-only" title="Feedback" href="/dashboard/agricultor/feedback" active={pathname?.includes('/feedback')} icon={<MessageSquareText size={22} />} onPrefetch={router.prefetch} />
+
+              {/* Botón «Más» para móvil */}
+              <div ref={moreRef} className="more-wrapper mobile-only">
+                <button
+                  type="button"
+                  title="Más secciones"
+                  onClick={() => setOpenMore(!openMore)}
+                  className={`nav-item ${isFarmerMoreActive ? 'active' : ''}`}
+                  style={{ border: 'none', background: isFarmerMoreActive ? 'rgba(34,197,94,0.12)' : 'transparent' }}
+                >
+                  <MoreHorizontal size={22} />
+                </button>
+
+                {openMore && (
+                  <div className="more-menu">
+                    <div style={{ padding: '6px 10px 4px', fontSize: '11px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Más opciones
+                    </div>
+                    <Link
+                      href="/dashboard/agricultor/ml"
+                      onClick={() => setOpenMore(false)}
+                      style={{
+                        padding: '10px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '10px',
+                        textDecoration: 'none', color: pathname?.includes('/ml') ? '#22c55e' : '#cbd5e1',
+                        background: pathname?.includes('/ml') ? 'rgba(34,197,94,0.12)' : 'transparent',
+                        fontSize: '0.9rem'
+                      }}
+                    >
+                      <Brain size={18} />
+                      Inteligencia ML
+                    </Link>
+                    <Link
+                      href="/dashboard/agricultor/feedback"
+                      onClick={() => setOpenMore(false)}
+                      style={{
+                        padding: '10px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '10px',
+                        textDecoration: 'none', color: pathname?.includes('/feedback') ? '#22c55e' : '#cbd5e1',
+                        background: pathname?.includes('/feedback') ? 'rgba(34,197,94,0.12)' : 'transparent',
+                        fontSize: '0.9rem'
+                      }}
+                    >
+                      <MessageSquareText size={18} />
+                      Enviar Feedback
+                    </Link>
+                  </div>
+                )}
+              </div>
             </>
           )}
+
           {isAdmin && (
             <>
-              <SidebarButton href="/dashboard/administrador" active={pathname === '/dashboard/administrador'} icon={<LayoutDashboard size={22} />} onPrefetch={router.prefetch} />
-              <SidebarButton href="/dashboard/administrador/usuarios" active={pathname === '/dashboard/administrador/usuarios'} icon={<Users size={22} />} onPrefetch={router.prefetch} />
-              <SidebarButton href="/dashboard/administrador/dispositivos" active={pathname === '/dashboard/administrador/dispositivos'} icon={<Cpu size={22} />} onPrefetch={router.prefetch} />
-              <SidebarButton href="/dashboard/administrador/firmware" active={pathname === '/dashboard/administrador/firmware'} icon={<HardDriveUpload size={22} />} onPrefetch={router.prefetch} />
-              <SidebarButton href="/dashboard/administrador/catalogo" active={pathname === '/dashboard/administrador/catalogo'} icon={<MapPin size={22} />} onPrefetch={router.prefetch} />
-              <SidebarButton href="/dashboard/administrador/feedback" active={pathname === '/dashboard/administrador/feedback'} icon={<MessageSquareText size={22} />} onPrefetch={router.prefetch} />
-              <SidebarButton href="/dashboard/administrador/respaldo" active={pathname === '/dashboard/administrador/respaldo'} icon={<Database size={22} />} onPrefetch={router.prefetch} />
-              <SidebarButton href="/dashboard/administrador/almacenes" active={pathname === '/dashboard/administrador/almacenes'} icon={<Warehouse size={22} />} onPrefetch={router.prefetch} />
+              {/* 4 Acciones principales para Administrador */}
+              <SidebarButton title="Dashboard" href="/dashboard/administrador" active={pathname === '/dashboard/administrador'} icon={<LayoutDashboard size={22} />} onPrefetch={router.prefetch} />
+              <SidebarButton title="Usuarios" href="/dashboard/administrador/usuarios" active={pathname === '/dashboard/administrador/usuarios'} icon={<Users size={22} />} onPrefetch={router.prefetch} />
+              <SidebarButton title="Dispositivos" href="/dashboard/administrador/dispositivos" active={pathname === '/dashboard/administrador/dispositivos'} icon={<Cpu size={22} />} onPrefetch={router.prefetch} />
+              <SidebarButton title="Firmware" href="/dashboard/administrador/firmware" active={pathname === '/dashboard/administrador/firmware'} icon={<HardDriveUpload size={22} />} onPrefetch={router.prefetch} />
+
+              {/* Acciones secundarias en PC */}
+              <SidebarButton className="desktop-only" title="Catálogo" href="/dashboard/administrador/catalogo" active={pathname === '/dashboard/administrador/catalogo'} icon={<MapPin size={22} />} onPrefetch={router.prefetch} />
+              <SidebarButton className="desktop-only" title="Feedback" href="/dashboard/administrador/feedback" active={pathname === '/dashboard/administrador/feedback'} icon={<MessageSquareText size={22} />} onPrefetch={router.prefetch} />
+              <SidebarButton className="desktop-only" title="Respaldo" href="/dashboard/administrador/respaldo" active={pathname === '/dashboard/administrador/respaldo'} icon={<Database size={22} />} onPrefetch={router.prefetch} />
+              <SidebarButton className="desktop-only" title="Almacenes" href="/dashboard/administrador/almacenes" active={pathname === '/dashboard/administrador/almacenes'} icon={<Warehouse size={22} />} onPrefetch={router.prefetch} />
+
+              {/* Botón «Más» para móvil Administrador */}
+              <div ref={moreRef} className="more-wrapper mobile-only">
+                <button
+                  type="button"
+                  title="Más herramientas"
+                  onClick={() => setOpenMore(!openMore)}
+                  className={`nav-item ${isAdminMoreActive ? 'active' : ''}`}
+                  style={{ border: 'none', background: isAdminMoreActive ? 'rgba(34,197,94,0.12)' : 'transparent' }}
+                >
+                  <MoreHorizontal size={22} />
+                </button>
+
+                {openMore && (
+                  <div className="more-menu">
+                    <div style={{ padding: '6px 10px 4px', fontSize: '11px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Administración
+                    </div>
+                    <Link
+                      href="/dashboard/administrador/catalogo"
+                      onClick={() => setOpenMore(false)}
+                      style={{
+                        padding: '10px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '10px',
+                        textDecoration: 'none', color: pathname === '/dashboard/administrador/catalogo' ? '#22c55e' : '#cbd5e1',
+                        background: pathname === '/dashboard/administrador/catalogo' ? 'rgba(34,197,94,0.12)' : 'transparent',
+                        fontSize: '0.9rem'
+                      }}
+                    >
+                      <MapPin size={18} />
+                      Catálogo de Plantas
+                    </Link>
+                    <Link
+                      href="/dashboard/administrador/feedback"
+                      onClick={() => setOpenMore(false)}
+                      style={{
+                        padding: '10px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '10px',
+                        textDecoration: 'none', color: pathname === '/dashboard/administrador/feedback' ? '#22c55e' : '#cbd5e1',
+                        background: pathname === '/dashboard/administrador/feedback' ? 'rgba(34,197,94,0.12)' : 'transparent',
+                        fontSize: '0.9rem'
+                      }}
+                    >
+                      <MessageSquareText size={18} />
+                      Feedback Usuarios
+                    </Link>
+                    <Link
+                      href="/dashboard/administrador/respaldo"
+                      onClick={() => setOpenMore(false)}
+                      style={{
+                        padding: '10px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '10px',
+                        textDecoration: 'none', color: pathname === '/dashboard/administrador/respaldo' ? '#22c55e' : '#cbd5e1',
+                        background: pathname === '/dashboard/administrador/respaldo' ? 'rgba(34,197,94,0.12)' : 'transparent',
+                        fontSize: '0.9rem'
+                      }}
+                    >
+                      <Database size={18} />
+                      Respaldo Base Datos
+                    </Link>
+                    <Link
+                      href="/dashboard/administrador/almacenes"
+                      onClick={() => setOpenMore(false)}
+                      style={{
+                        padding: '10px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '10px',
+                        textDecoration: 'none', color: pathname === '/dashboard/administrador/almacenes' ? '#22c55e' : '#cbd5e1',
+                        background: pathname === '/dashboard/administrador/almacenes' ? 'rgba(34,197,94,0.12)' : 'transparent',
+                        fontSize: '0.9rem'
+                      }}
+                    >
+                      <Warehouse size={18} />
+                      Almacenes Firmware
+                    </Link>
+                  </div>
+                )}
+              </div>
             </>
           )}
         </div>
@@ -204,8 +382,9 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
         <div ref={profileRef} className="profile-wrapper" style={{ position: 'relative' }}>
           <button
             onClick={() => setOpenProfile(!openProfile)}
+            title="Mi cuenta"
             style={{
-              width: '46px', height: '46px', borderRadius: '50%', background: '#1e293b',
+              width: '44px', height: '44px', borderRadius: '50%', background: '#1e293b',
               border: '1px solid #334155', display: 'flex', alignItems: 'center',
               justifyContent: 'center', color: '#94a3b8', cursor: 'pointer',
               fontWeight: 'bold', fontSize: '14px'
@@ -237,7 +416,10 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
                 Mi Perfil
               </Link>
               <button
-                onClick={() => signOut({ callbackUrl: '/auth/login' })}
+                onClick={async () => {
+                  await signOut({ redirect: false });
+                  window.location.href = '/auth/login';
+                }}
                 style={{
                   width: '100%', background: 'transparent', border: 'none', color: '#ef4444',
                   padding: '12px 14px', borderRadius: '10px', display: 'flex', alignItems: 'center',
@@ -261,18 +443,23 @@ function SidebarButton({
   icon,
   active = false,
   href,
+  title,
+  className = '',
   onPrefetch,
 }: {
   icon: React.ReactNode;
   active?: boolean;
   href: string;
+  title?: string;
+  className?: string;
   onPrefetch?: (href: string) => void;
 }) {
   return (
     <Link
       href={href}
       prefetch
-      className={`nav-item ${active ? 'active' : ''}`}
+      title={title}
+      className={`nav-item ${active ? 'active' : ''} ${className}`}
       onMouseEnter={() => onPrefetch?.(href)}
       onFocus={() => onPrefetch?.(href)}
     >

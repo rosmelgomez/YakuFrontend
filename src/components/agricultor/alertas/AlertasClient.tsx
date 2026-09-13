@@ -28,14 +28,55 @@ function urlBase64ToUint8Array(base64String: string) {
   }
   return outputArray;
 }
-
-const categorias = [
-  { titulo: "Humedad de suelo", bajoId: 1, altoId: 2 },
-  { titulo: "Temperatura de suelo", bajoId: 3, altoId: 4 },
-  { titulo: "Temperatura ambiente", bajoId: 5, altoId: 6 },
-  { titulo: "Humedad ambiente", bajoId: 7, altoId: 8 },
-  { titulo: "Nivel de tanque", bajoId: 9, altoId: 10 }
+const TIPOS_NOTIFICACION = [
+  {
+    id_tipo_alerta: 11,
+    codigo: "RIEGO_ML",
+    titulo: "Riego activado por IA",
+    descripcion: "Avisos del ciclo de riego: inicio con las lecturas de las 4 variables de la IA, y finalización con los litros de agua consumidos durante el riego.",
+    badgeColor: "indigo",
+  },
+  {
+    id_tipo_alerta: 12,
+    codigo: "PROBLEMA_RIEGO",
+    titulo: "Incidencias y problemas de riego",
+    descripcion: "Avisos inmediatos en el instante que ocurre un problema: riego fallido, interrupción, parada sin confirmar o desconexión durante el ciclo.",
+    badgeColor: "red",
+  },
 ];
+
+function ensureValidConfigs(configs: any[]) {
+  const clean = (configs || []).filter((c: any) => {
+    const name = (c.nombre || '').toLowerCase();
+    return (
+      c.id_tipo_alerta >= 11 &&
+      !name.includes('humedad') &&
+      !name.includes('temperatura') &&
+      !name.includes('tanque')
+    );
+  });
+
+  return TIPOS_NOTIFICACION.map((tipo) => {
+    const existing = clean.find((c: any) => c.id_tipo_alerta === tipo.id_tipo_alerta);
+    if (existing) {
+      return {
+        ...existing,
+        nombre: tipo.titulo,
+        recordatorio_minutos: existing.recordatorio_minutos || 15,
+      };
+    }
+    return {
+      id_tipo_alerta: tipo.id_tipo_alerta,
+      nombre: tipo.titulo,
+      canal_email: false,
+      canal_push: false,
+      canal_dashboard: true,
+      recordatorio_minutos: 15,
+    };
+  });
+}
+
+
 
 export default function AlertasClient({ 
   userId, 
@@ -53,12 +94,8 @@ export default function AlertasClient({
   const [isLoadingCropData, setIsLoadingCropData] = useState(false);
 
   const [notifConfigs, setNotifConfigs] = useState(initialNotifConfig || []);
-  const [isSavingNotif, setIsSavingNotif] = useState(false);
-
-  // Edit/Lock Mode States
-  const [isEditingPreferencias, setIsEditingPreferencias] = useState(false);
-  const [originalNotifConfigs, setOriginalNotifConfigs] = useState(initialNotifConfig || []);
   const [hasConfigState, setHasConfigState] = useState(initialHasNotifConfig);
+
 
   // Pagination State for Alerts
   const [currentPage, setCurrentPage] = useState(1);
@@ -79,20 +116,26 @@ export default function AlertasClient({
   useEffect(() => {
     let cancelled = false;
     if (initialNotifConfig && initialNotifConfig.length > 0) {
-      setNotifConfigs(initialNotifConfig);
-      setOriginalNotifConfigs(initialNotifConfig);
+      const valid = ensureValidConfigs(initialNotifConfig);
+      setNotifConfigs(valid);
       setIsLoadingNotifConfig(false);
-      setIsEditingPreferencias(false);
       return;
     }
 
     setIsLoadingNotifConfig(true);
     obtenerNotifConfig()
       .then((res: any) => {
-        if (!cancelled && res.success && res.data) {
-          setNotifConfigs(res.data.configs || []);
-          setOriginalNotifConfigs(res.data.configs || []);
-          setHasConfigState(res.data.has_config || false);
+        if (!cancelled) {
+          const raw = (res?.success && res?.data?.configs) ? res.data.configs : [];
+          const valid = ensureValidConfigs(raw);
+          setNotifConfigs(valid);
+          setHasConfigState(res?.data?.has_config || false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          const defaults = ensureValidConfigs([]);
+          setNotifConfigs(defaults);
         }
       })
       .finally(() => {
@@ -222,46 +265,29 @@ export default function AlertasClient({
 
 
 
-  const handleNotifToggle = (id_tipo_alerta: number, channel: 'canal_email' | 'canal_dashboard') => {
-    setNotifConfigs(notifConfigs.map((c: any) => 
+  const handlePushToggle = async (id_tipo_alerta: number) => {
+    const updated = notifConfigs.map((c: any) => 
       c.id_tipo_alerta === id_tipo_alerta 
-        ? { ...c, [channel]: !c[channel] } 
+        ? { ...c, canal_push: !c.canal_push } 
         : c
-    ));
-  };
+    );
+    setNotifConfigs(updated);
 
-  const handleReminderChange = (id_tipo_alerta: number, value: number) => {
-    const minutes = Math.max(5, Math.min(1440, value || 5));
-    setNotifConfigs(notifConfigs.map((config: any) =>
-      config.id_tipo_alerta === id_tipo_alerta
-        ? { ...config, recordatorio_minutos: minutes }
-        : config
-    ));
-  };
-
-  const handleSaveNotif = async () => {
-    setIsSavingNotif(true);
     try {
-      const updates = notifConfigs.map((c: any) => ({
+      const updates = updated.map((c: any) => ({
         id_tipo_alerta: c.id_tipo_alerta,
-        canal_email: c.canal_email,
-        canal_dashboard: c.canal_dashboard,
-        recordatorio_minutos: c.recordatorio_minutos || 30
+        canal_email: false,
+        canal_push: Boolean(c.canal_push),
+        canal_dashboard: true,
+        recordatorio_minutos: c.recordatorio_minutos || 15,
       }));
       await guardarNotifConfig(updates);
-      setOriginalNotifConfigs(notifConfigs);
-      setIsEditingPreferencias(false);
       setHasConfigState(true);
-    } catch {
-    } finally {
-      setIsSavingNotif(false);
+    } catch (err) {
+      console.error("Error al guardar preferencia de notificación:", err);
     }
   };
 
-  const handleCancelPreferencias = () => {
-    setNotifConfigs(originalNotifConfigs);
-    setIsEditingPreferencias(false);
-  };
 
   const handleCultivoChange = async (newIdStr: string) => {
     const newId = parseInt(newIdStr, 10);
@@ -332,390 +358,125 @@ export default function AlertasClient({
         `
       }} />
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 mb-4">
-        {/* Columna Izquierda: Panel de Configuración (toma 6 columnas de 12 en xl) */}
-        <div className="col-span-1 xl:col-span-6">
-          {/* Card 1: Notificaciones del navegador */}
-          <Card size="2" mb="4" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)' }}>
-            <Flex justify="between" align={{ initial: 'start', sm: 'center' }} gap="3" wrap="wrap">
-              <Box>
-                <Text size="3" weight="bold" color="indigo" as="div">Notificaciones del navegador</Text>
-                <Text size="2" color="gray" as="div">
-                  {pushStatus === 'granted' && 'Activadas y sincronizadas con Yaku.'}
-                  {pushStatus === 'default' && 'Actívalas para recibir alertas aunque el panel no esté abierto.'}
-                  {pushStatus === 'denied' && 'Bloqueadas por el navegador. Debes habilitarlas desde los permisos del sitio.'}
-                  {pushStatus === 'not-supported' && 'Este navegador no admite notificaciones Push.'}
-                  {pushStatus === 'checking' && 'Comprobando compatibilidad…'}
-                  {!isSecure && ' Se requiere HTTPS o localhost.'}
-                </Text>
-              </Box>
-              <Flex gap="2">
-                {pushStatus === 'default' && isSecure && (
-                  <Button onClick={handleRequestPush} disabled={isSubscribing}>
-                    {isSubscribing ? 'Activando…' : 'Activar notificaciones'}
-                  </Button>
-                )}
-                {pushStatus === 'granted' && (
-                  <Button variant="soft" onClick={handleTestNotification}>Probar notificación</Button>
-                )}
-              </Flex>
+      <Box mb="4">
+        {/* Card 1: Notificaciones del navegador */}
+        <Card size="2" mb="4" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)' }}>
+          <Flex justify="between" align={{ initial: 'start', sm: 'center' }} gap="3" wrap="wrap">
+            <Box>
+              <Text size="3" weight="bold" color="indigo" as="div">Notificaciones del navegador</Text>
+              <Text size="2" color="gray" as="div">
+                {pushStatus === 'granted' && 'Activadas y sincronizadas con Yaku.'}
+                {pushStatus === 'default' && 'Actívalas para recibir alertas aunque el panel no esté abierto.'}
+                {pushStatus === 'denied' && 'Bloqueadas por el navegador. Debes habilitarlas desde los permisos del sitio.'}
+                {pushStatus === 'not-supported' && 'Este navegador no admite notificaciones Push.'}
+                {pushStatus === 'checking' && 'Comprobando compatibilidad…'}
+                {!isSecure && ' Se requiere HTTPS o localhost.'}
+              </Text>
+            </Box>
+            <Flex gap="2">
+              {pushStatus === 'default' && isSecure && (
+                <Button onClick={handleRequestPush} disabled={isSubscribing}>
+                  {isSubscribing ? 'Activando…' : 'Activar notificaciones'}
+                </Button>
+              )}
+              {pushStatus === 'granted' && (
+                <Button variant="soft" onClick={handleTestNotification}>Probar notificación</Button>
+              )}
             </Flex>
-          </Card>
+          </Flex>
+        </Card>
 
-          {/* Card 2: Preferencias de Canales */}
-          <Card size="3" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', display: 'flex', flexDirection: 'column', height: 'auto' }}>
-          <Text size="4" weight="bold" color="indigo" mb="5" as="div">Preferencias de canales</Text>
+        {/* Card 2: Preferencias de Notificaciones */}
+        <Card size="3" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', display: 'flex', flexDirection: 'column', height: 'auto' }}>
+          <Text size="4" weight="bold" color="indigo" mb="4" as="div">Preferencias de notificaciones</Text>
           <Flex direction="column" gap="4" style={{ flexGrow: 1 }}>
             
-            {/* Lista agrupada en pequeños cards en un grid de 2 columnas */}
-            <Box style={{ flexGrow: 1, paddingRight: '6px' }}>
+            <Box style={{ flexGrow: 1 }}>
               {isLoadingNotifConfig ? (
-                <Flex direction="column" align="center" justify="center" p="5" style={{ minHeight: '220px' }}>
+                <Flex direction="column" align="center" justify="center" p="5" style={{ minHeight: '160px' }}>
                   <Text size="2" color="gray">Cargando preferencias...</Text>
                 </Flex>
-              ) : !hasConfigState && !isEditingPreferencias ? (
-                <Flex 
-                  direction="column" 
-                  align="center" 
-                  justify="center" 
-                  p="5" 
-                  style={{ 
-                    background: 'rgba(30, 41, 59, 0.2)', 
-                    border: '1px dashed var(--border-mockup)', 
-                    borderRadius: '8px',
-                    minHeight: '220px',
-                    textAlign: 'center'
-                  }}
-                >
-                  <Text size="5" mb="2" style={{ display: 'block' }}>🔔</Text>
-                  <Text size="3" weight="bold" color="indigo" mb="2" as="div">
-                    Realiza la configuración
-                  </Text>
-                  <Text size="2" color="gray" style={{ maxWidth: '320px' }}>
-                    No tienes preferencias de canales guardadas aún. Presiona "Actualizar" para activar correo o panel de alertas.
-                  </Text>
-                </Flex>
               ) : (
-                <Grid columns={{ initial: '2', sm: '2', md: '3' }} gap="3" mb="3">
-                  {categorias.map((cat) => {
-                    const bajo = notifConfigs.find((c: any) => c.id_tipo_alerta === cat.bajoId);
-                    const alto = notifConfigs.find((c: any) => c.id_tipo_alerta === cat.altoId);
-                    const standardOptions = [5, 15, 30, 60, 240, 720, 1440];
-                    
+                <Grid columns={{ initial: '1', sm: '2' }} gap="3">
+                  {TIPOS_NOTIFICACION.map((tipo) => {
+                    const config = notifConfigs.find((c: any) => c.id_tipo_alerta === tipo.id_tipo_alerta) || {
+                      id_tipo_alerta: tipo.id_tipo_alerta,
+                      canal_dashboard: true,
+                      canal_push: false,
+                      recordatorio_minutos: 15,
+                    };
                     return (
-                      <Card key={cat.titulo} size="1" style={{ background: 'rgba(30, 41, 59, 0.45)', borderColor: 'var(--border-mockup)', padding: '10px 12px', borderRadius: '8px' }}>
-                        <Text size="2" weight="bold" color="indigo" mb="1" as="div">{cat.titulo}</Text>
+                      <Card key={tipo.codigo} size="1" style={{ background: 'rgba(30, 41, 59, 0.45)', borderColor: 'var(--border-mockup)', padding: '14px 16px', borderRadius: '10px' }}>
+                        <Flex justify="between" align="center" mb="1">
+                          <Text size="2" weight="bold" color={tipo.badgeColor as any} as="div">{tipo.titulo}</Text>
+                          <Badge color={tipo.badgeColor as any} size="1">
+                            {tipo.codigo === 'RIEGO_ML' ? 'IA / Sensores' : 'Crítica'}
+                          </Badge>
+                        </Flex>
+                        <Text size="1" color="gray" mb="3" as="div" style={{ lineHeight: '1.4', minHeight: '38px' }}>
+                          {tipo.descripcion}
+                        </Text>
                         
-                        {/* Límite Bajo */}
-                        {bajo && (
-                          <Box mb="2" pb="1.5" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                            <Text size="1" color="gray" weight="bold" mb="1" as="div">Si baja del mínimo (Bajo)</Text>
-                            {isEditingPreferencias ? (
-                              <>
-                                <Flex justify="between" align="center">
-                                  <Flex align="center" gap="2">
-                                    <Text size="1" color="gray">Correo</Text>
-                                    <Switch 
-                                      checked={bajo.canal_email} 
-                                      onCheckedChange={() => handleNotifToggle(cat.bajoId, 'canal_email')}
-                                      size="1"
-                                      color="indigo"
-                                      style={{ 
-                                        pointerEvents: isEditingPreferencias ? 'auto' : 'none',
-                                        cursor: isEditingPreferencias ? 'pointer' : 'default' 
-                                      }}
-                                    />
-                                  </Flex>
-                                  <Flex align="center" gap="2">
-                                    <Text size="1" color="gray">Panel Yaku</Text>
-                                    <Switch 
-                                      checked={bajo.canal_dashboard} 
-                                      onCheckedChange={() => handleNotifToggle(cat.bajoId, 'canal_dashboard')}
-                                      size="1"
-                                      color="indigo"
-                                      style={{ 
-                                        pointerEvents: isEditingPreferencias ? 'auto' : 'none',
-                                        cursor: isEditingPreferencias ? 'pointer' : 'default' 
-                                      }}
-                                    />
-                                  </Flex>
-                                </Flex>
-                                <Flex justify="between" align="center" mt="2" gap="1">
-                                  <Text size="1" color="gray">Recordar cada</Text>
-                                  <select
-                                    aria-label={`Intervalo bajo de ${cat.titulo}`}
-                                    value={bajo.recordatorio_minutos || 30}
-                                    disabled={!isEditingPreferencias}
-                                    onChange={(event) => handleReminderChange(cat.bajoId, Number(event.target.value))}
-                                    style={{
-                                      background: 'rgba(30, 41, 59, 0.9)',
-                                      border: '1px solid var(--border-mockup)',
-                                      borderRadius: '4px',
-                                      color: 'white',
-                                      padding: '3px 6px',
-                                      fontSize: '12px',
-                                      cursor: isEditingPreferencias ? 'pointer' : 'not-allowed',
-                                      outline: 'none',
-                                      opacity: isEditingPreferencias ? 1 : 0.7
-                                    }}
-                                  >
-                                    {!standardOptions.includes(bajo.recordatorio_minutos || 30) && (
-                                      <option value={bajo.recordatorio_minutos || 30}>
-                                        {(bajo.recordatorio_minutos || 30)} min (personalizado)
-                                      </option>
-                                    )}
-                                    <option value={5}>5 min</option>
-                                    <option value={15}>15 min</option>
-                                    <option value={30}>30 min</option>
-                                    <option value={60}>1 hora</option>
-                                    <option value={240}>4 horas</option>
-                                    <option value={720}>12 horas</option>
-                                    <option value={1440}>Diario (24h)</option>
-                                  </select>
-                                </Flex>
-                              </>
-                            ) : (
-                              <>
-                                <Flex gap="2" mt="1.5" mb="1.5" wrap="wrap">
-                                  {bajo.canal_email && <Badge color="green">Correo</Badge>}
-                                  {bajo.canal_dashboard && <Badge color="indigo">Panel Yaku</Badge>}
-                                  {!bajo.canal_email && !bajo.canal_dashboard && <Badge color="red">Desactivado</Badge>}
-                                </Flex>
-                                {(bajo.canal_email || bajo.canal_dashboard) && (
-                                  <Text size="1" color="gray" as="div">
-                                    Recordatorio: <span style={{ color: 'var(--indigo-11)', fontWeight: 'bold' }}>
-                                      {bajo.recordatorio_minutos === 60 ? '1 hora' : 
-                                       bajo.recordatorio_minutos === 240 ? '4 horas' :
-                                       bajo.recordatorio_minutos === 720 ? '12 horas' :
-                                       bajo.recordatorio_minutos === 1440 ? 'Diario (24h)' : 
-                                       `${bajo.recordatorio_minutos || 30} min`}
-                                    </span>
-                                  </Text>
-                                )}
-                              </>
-                            )}
-                          </Box>
-                        )}
-
-                        {/* Límite Alto */}
-                        {alto && (
-                          <Box>
-                            <Text size="1" color="gray" weight="bold" mb="1" as="div">Si supera el máximo (Alto)</Text>
-                            {isEditingPreferencias ? (
-                              <>
-                                <Flex justify="between" align="center">
-                                  <Flex align="center" gap="2">
-                                    <Text size="1" color="gray">Correo</Text>
-                                    <Switch 
-                                      checked={alto.canal_email} 
-                                      onCheckedChange={() => handleNotifToggle(cat.altoId, 'canal_email')}
-                                      size="1"
-                                      color="indigo"
-                                      style={{ 
-                                        pointerEvents: isEditingPreferencias ? 'auto' : 'none',
-                                        cursor: isEditingPreferencias ? 'pointer' : 'default' 
-                                      }}
-                                    />
-                                  </Flex>
-                                  <Flex align="center" gap="2">
-                                    <Text size="1" color="gray">Panel Yaku</Text>
-                                    <Switch 
-                                      checked={alto.canal_dashboard} 
-                                      onCheckedChange={() => handleNotifToggle(cat.altoId, 'canal_dashboard')}
-                                      size="1"
-                                      color="indigo"
-                                      style={{ 
-                                        pointerEvents: isEditingPreferencias ? 'auto' : 'none',
-                                        cursor: isEditingPreferencias ? 'pointer' : 'default' 
-                                      }}
-                                    />
-                                  </Flex>
-                                </Flex>
-                                <Flex justify="between" align="center" mt="2" gap="1">
-                                  <Text size="1" color="gray">Recordar cada</Text>
-                                  <select
-                                    aria-label={`Intervalo alto de ${cat.titulo}`}
-                                    value={alto.recordatorio_minutos || 30}
-                                    disabled={!isEditingPreferencias}
-                                    onChange={(event) => handleReminderChange(cat.altoId, Number(event.target.value))}
-                                    style={{
-                                      background: 'rgba(30, 41, 59, 0.9)',
-                                      border: '1px solid var(--border-mockup)',
-                                      borderRadius: '4px',
-                                      color: 'white',
-                                      padding: '3px 6px',
-                                      fontSize: '12px',
-                                      cursor: isEditingPreferencias ? 'pointer' : 'not-allowed',
-                                      outline: 'none',
-                                      opacity: isEditingPreferencias ? 1 : 0.7
-                                    }}
-                                  >
-                                    {!standardOptions.includes(alto.recordatorio_minutos || 30) && (
-                                      <option value={alto.recordatorio_minutos || 30}>
-                                        {(alto.recordatorio_minutos || 30)} min (personalizado)
-                                      </option>
-                                    )}
-                                    <option value={5}>5 min</option>
-                                    <option value={15}>15 min</option>
-                                    <option value={30}>30 min</option>
-                                    <option value={60}>1 hora</option>
-                                    <option value={240}>4 horas</option>
-                                    <option value={720}>12 horas</option>
-                                    <option value={1440}>Diario (24h)</option>
-                                  </select>
-                                </Flex>
-                              </>
-                            ) : (
-                              <>
-                                <Flex gap="2" mt="1.5" mb="1.5" wrap="wrap">
-                                  {alto.canal_email && <Badge color="green">Correo</Badge>}
-                                  {alto.canal_dashboard && <Badge color="indigo">Panel Yaku</Badge>}
-                                  {!alto.canal_email && !alto.canal_dashboard && <Badge color="red">Desactivado</Badge>}
-                                </Flex>
-                                {(alto.canal_email || alto.canal_dashboard) && (
-                                  <Text size="1" color="gray" as="div">
-                                    Recordatorio: <span style={{ color: 'var(--indigo-11)', fontWeight: 'bold' }}>
-                                      {alto.recordatorio_minutos === 60 ? '1 hora' : 
-                                       alto.recordatorio_minutos === 240 ? '4 horas' :
-                                       alto.recordatorio_minutos === 720 ? '12 horas' :
-                                       alto.recordatorio_minutos === 1440 ? 'Diario (24h)' : 
-                                       `${alto.recordatorio_minutos || 30} min`}
-                                    </span>
-                                  </Text>
-                                )}
-                              </>
-                            )}
-                          </Box>
-                        )}
+                        <Box pt="2" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                          <Flex justify="between" align="center">
+                            <Flex align="center" gap="2">
+                              <Text size="1" color="gray">Notificaciones Push</Text>
+                              {config.canal_push ? (
+                                <Badge color="blue" size="1">Activo</Badge>
+                              ) : (
+                                <Badge color="gray" size="1">Desactivado</Badge>
+                              )}
+                            </Flex>
+                            <Switch 
+                              checked={Boolean(config.canal_push)} 
+                              onCheckedChange={() => handlePushToggle(tipo.id_tipo_alerta)}
+                              size="1"
+                              color="blue"
+                              style={{ cursor: 'pointer' }}
+                            />
+                          </Flex>
+                        </Box>
                       </Card>
                     );
                   })}
                 </Grid>
               )}
             </Box>
-
-            {!isEditingPreferencias ? (
-              <Button 
-                onClick={() => setIsEditingPreferencias(true)} 
-                style={{ marginTop: 'auto', cursor: 'pointer' }}
-              >
-                Actualizar
-              </Button>
-            ) : (
-              <Flex gap="3" style={{ marginTop: 'auto' }}>
-                <Button 
-                  onClick={handleSaveNotif} 
-                  disabled={isSavingNotif} 
-                  style={{ flex: 1, cursor: 'pointer' }}
-                >
-                  {isSavingNotif ? 'Guardando...' : 'Guardar'}
-                </Button>
-                <Button 
-                  onClick={handleCancelPreferencias} 
-                  variant="soft" 
-                  color="gray" 
-                  disabled={isSavingNotif} 
-                  style={{ flex: 1, cursor: 'pointer' }}
-                >
-                  Cancelar
-                </Button>
-              </Flex>
-            )}
           </Flex>
         </Card>
-      </div>
-
-      {/* Columna Derecha: Guía Explicativa Simple (toma 6 columnas de 12 en xl) */}
-      <div className="col-span-1 xl:col-span-6">
-        <Card size="3" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '16px', height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <Text size="4" weight="bold" color="indigo" mb="2" as="div">
-            ¿Cómo funcionan las alertas?
-          </Text>
-          <Text size="2" color="gray" mb="4" as="div">
-            Una guía sencilla para personalizar cómo y cuándo te avisa Yaku sobre el estado de tus plantas:
-          </Text>
-          
-          <Flex direction="column" gap="3" style={{ flexGrow: 1 }}>
-            <Box style={{ background: 'rgba(30, 41, 59, 0.15)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-mockup)' }}>
-              <Flex gap="2" align="center" mb="1">
-                <Badge color="indigo">Activar notificaciones</Badge>
-                <Text size="2" weight="bold">Avisos directos en tu pantalla</Text>
-              </Flex>
-              <Text size="2" color="gray" as="div" style={{ lineHeight: '1.4' }}>
-                Da permiso a tu navegador para recibir alertas. Te avisará de inmediato en tu celular o computadora, incluso si tienes la aplicación cerrada.
-              </Text>
-            </Box>
-
-            <Box style={{ background: 'rgba(30, 41, 59, 0.15)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-mockup)' }}>
-              <Flex gap="2" align="center" mb="1">
-                <Badge color="indigo">Probar notificación</Badge>
-                <Text size="2" weight="bold">Mensaje de prueba</Text>
-              </Flex>
-              <Text size="2" color="gray" as="div" style={{ lineHeight: '1.4' }}>
-                Envía un mensaje instantáneo de prueba para comprobar que tu dispositivo está bien configurado y listo para recibir las alertas.
-              </Text>
-            </Box>
-
-            <Box style={{ background: 'rgba(30, 41, 59, 0.15)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-mockup)' }}>
-              <Flex gap="2" align="center" mb="1">
-                <Badge color="blue">Switch Panel</Badge>
-                <Text size="2" weight="bold">Mostrar alertas en Yaku</Text>
-              </Flex>
-              <Text size="2" color="gray" as="div" style={{ lineHeight: '1.4' }}>
-                Habilita los avisos dentro del panel. Si ocurre un problema, se registrará en la tabla inferior y disparará notificaciones push en tu pantalla.
-              </Text>
-            </Box>
-
-            <Box style={{ background: 'rgba(30, 41, 59, 0.15)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-mockup)' }}>
-              <Flex gap="2" align="center" mb="1">
-                <Badge color="purple">Switch Correo</Badge>
-                <Text size="2" weight="bold">Enviar por correo</Text>
-              </Flex>
-              <Text size="2" color="gray" as="div" style={{ lineHeight: '1.4' }}>
-                Envía un correo electrónico automático con el detalle del problema (ej. falta de agua) directamente al correo con el que te registraste.
-              </Text>
-            </Box>
-
-            <Box style={{ background: 'rgba(30, 41, 59, 0.15)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-mockup)' }}>
-              <Flex gap="2" align="center" mb="1">
-                <Badge color="amber">Frecuencia / Recordatorio</Badge>
-                <Text size="2" weight="bold">Repetir aviso</Text>
-              </Flex>
-              <Text size="2" color="gray" as="div" style={{ lineHeight: '1.4' }}>
-                Elige cada cuánto tiempo quieres que Yaku te vuelva a avisar si la anomalía continúa, repitiéndose en ese intervalo hasta que el problema se solucione.
-              </Text>
-            </Box>
-
-            <Box style={{ background: 'rgba(30, 41, 59, 0.15)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-mockup)' }}>
-              <Flex gap="2" align="center" mb="1">
-                <Badge color="green">Umbrales (Pág. Control)</Badge>
-                <Text size="2" weight="bold">Límites de tu planta</Text>
-              </Flex>
-              <Text size="2" color="gray" as="div" style={{ lineHeight: '1.4' }}>
-                Son los límites mínimos y máximos tolerables (ej. mínimo 40% de humedad). Si el sensor mide algo fuera de este rango, se activarán tus alertas.
-              </Text>
-            </Box>
-          </Flex>
-        </Card>
-      </div>
-    </div>
+      </Box>
 
       {/* Card 3: Historial y Alertas Activas (a lo ancho completo debajo) */}
       <Card size="3" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)' }}>
         <Text size="4" weight="bold" color="indigo" mb="5" as="div">Historial y estado de alertas</Text>
-        {(!alertasActivas || alertasActivas.length === 0) && (!historial || historial.length === 0) ? (
-          <Text size="2" color="gray">No hay registro de alertas activas ni resueltas.</Text>
-        ) : (
-          (() => {
+        {(() => {
+            const isVariableAlert = (alert: any) => {
+              const t = (alert.titulo || alert.tipo || '').toLowerCase();
+              const m = (alert.mensaje || '').toLowerCase();
+              return (
+                t.includes('humedad') ||
+                t.includes('temperatura') ||
+                t.includes('tanque') ||
+                m.includes('higrómetro') ||
+                m.includes('termómetro') ||
+                m.includes('umbral') ||
+                m.includes('nivel del tanque')
+              ) && !t.includes('riego') && !m.includes('riego');
+            };
+
             const combinedAlerts = [
-              ...(alertasActivas || []).map((a: any) => ({ ...a, itemType: 'active' })),
-              ...(historial || []).map((h: any) => ({ ...h, itemType: 'resolved' }))
+              ...(alertasActivas || []).filter((a: any) => !isVariableAlert(a)).map((a: any) => ({ ...a, itemType: 'active' })),
+              ...(historial || []).filter((h: any) => !isVariableAlert(h)).map((h: any) => ({ ...h, itemType: 'resolved' }))
             ];
             const totalItems = combinedAlerts.length;
             const totalPages = Math.ceil(totalItems / itemsPerPage);
             const indexOfLastItem = currentPage * itemsPerPage;
             const indexOfFirstItem = indexOfLastItem - itemsPerPage;
             const currentItems = combinedAlerts.slice(indexOfFirstItem, indexOfLastItem);
+
+            if (totalItems === 0) {
+              return <Text size="2" color="gray">No hay registro de alertas activas ni resueltas.</Text>;
+            }
 
             return (
               <>
@@ -732,11 +493,12 @@ export default function AlertasClient({
                     <Table.Body>
                       {currentItems.map((item: any) => {
                         if (item.itemType === 'active') {
-                          const isWarning = item.titulo?.toLowerCase().includes('advertencia') || item.mensaje?.toLowerCase().includes('alto') || item.mensaje?.toLowerCase().includes('baja');
-                          const textCol = isWarning ? 'var(--amber)' : 'var(--red)';
-                          const badgeCol = isWarning ? 'orange' : 'red';
+                          const isWarning = item.titulo?.toLowerCase().includes('advertencia') || item.severidad === 'advertencia';
+                          const isInfo = item.severidad === 'info' || item.titulo?.toLowerCase().includes('ia') || item.titulo?.toLowerCase().includes('iniciado');
+                          const textCol = isInfo ? 'var(--indigo-11)' : (isWarning ? 'var(--amber)' : 'var(--red)');
+                          const badgeCol = isInfo ? 'indigo' : (isWarning ? 'orange' : 'red');
                           return (
-                            <Table.Row key={`act-${item.id}`} style={{ background: 'rgba(239, 68, 68, 0.04)', borderColor: 'var(--border-mockup)' }}>
+                            <Table.Row key={`act-${item.id}`} style={{ background: isInfo ? 'rgba(99, 102, 241, 0.04)' : 'rgba(239, 68, 68, 0.04)', borderColor: 'var(--border-mockup)' }}>
                               <Table.Cell>
                                 <Badge color={badgeCol as any} size="1">Activa</Badge>
                               </Table.Cell>
@@ -744,7 +506,9 @@ export default function AlertasClient({
                                 <Text size="2" style={{ color: textCol, fontWeight: 'bold' }}>{item.titulo}</Text>
                               </Table.Cell>
                               <Table.Cell>
-                                <Text color="gray" size="2">{item.sensor}: {item.valor}{item.unidad} - {item.mensaje}</Text>
+                                <Text color="gray" size="2">
+                                  {item.mensaje}
+                                </Text>
                               </Table.Cell>
                               <Table.Cell>
                                 <Text size="2" color="gray">{item.fecha || 'Reciente'}</Text>
@@ -761,7 +525,7 @@ export default function AlertasClient({
                                 <Text size="2" color="blue" weight="medium">{item.tipo}</Text>
                               </Table.Cell>
                               <Table.Cell>
-                                <Text color="gray" size="2">Historial de alerta resuelta / control normalizado</Text>
+                                <Text color="gray" size="2">{item.mensaje || 'Historial de alerta resuelta / control normalizado'}</Text>
                               </Table.Cell>
                               <Table.Cell>
                                 <Text size="2" color="gray">{item.fecha}</Text>
@@ -802,8 +566,7 @@ export default function AlertasClient({
                 )}
               </>
             );
-          })()
-        )}
+          })()}
       </Card>
     </Box>
   );

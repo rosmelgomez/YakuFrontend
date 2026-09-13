@@ -25,7 +25,7 @@ export default function DashboardConsumptionChart({ chartData, config, limite }:
               label={{ position: 'insideBottomLeft', value: `Límite ${limite}L`, fill: '#ef4444', fontSize: 12 }} 
             />
           )}
-          <Line type="monotone" dataKey="valorReal" stroke={config.color} strokeWidth={3} dot={false} activeDot={{ r: 6, fill: config.color, stroke: '#111827', strokeWidth: 2 }} />
+          <Line type="monotone" dataKey="valorReal" stroke={config.color} strokeWidth={3} dot={{ r: 4, fill: config.color }} activeDot={{ r: 6, fill: config.color, stroke: '#111827', strokeWidth: 2 }} />
         </LineChart>
       </ResponsiveContainer>
     </Box>

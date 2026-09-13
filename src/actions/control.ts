@@ -4,59 +4,6 @@
 import { revalidatePath } from "next/cache";
 import { fetchFromFastAPI } from "@/lib/bff";
 
-export async function setModoOperacion(userId: number, idCultivo: number, idBomba: number, modo: 'manual' | 'predictivo' | 'programado') {
-  try {
-    const res = await fetchFromFastAPI("/control/modo", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idCultivo, idBomba, modo })
-    });
-    if (!res.ok) {
-      const errorMsg = await parseErrorText(res);
-      return { success: false, error: errorMsg };
-    }
-    revalidatePath('/dashboard/agricultor/control');
-    revalidatePath('/dashboard/agricultor');
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message || "Error al establecer modo de operación" };
-  }
-}
-
-export async function toggleHorario(idHorario: number, activo: boolean) {
-  const res = await fetchFromFastAPI(`/control/horario/${idHorario}/toggle`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ activo })
-  });
-  if (!res.ok) {
-    throw new Error(await res.text() || "Error al cambiar estado del horario");
-  }
-  revalidatePath('/dashboard/agricultor/control');
-}
-
-export async function eliminarHorario(idHorario: number) {
-  const res = await fetchFromFastAPI(`/control/horario/${idHorario}`, {
-    method: "DELETE"
-  });
-  if (!res.ok) {
-    throw new Error(await res.text() || "Error al eliminar horario");
-  }
-  revalidatePath('/dashboard/agricultor/control');
-}
-
-export async function agregarHorario(userId: number, idBomba: number, hora: string, min: number, dias: boolean[], nombre: string) {
-  const res = await fetchFromFastAPI("/control/horario", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ idBomba, hora, duracionMin: min, dias, nombre })
-  });
-  if (!res.ok) {
-    throw new Error(await res.text() || "Error al agregar horario");
-  }
-  revalidatePath('/dashboard/agricultor/control');
-}
-
 async function parseErrorText(res: any): Promise<string> {
   try {
     const text = await res.text();
@@ -77,55 +24,6 @@ async function parseErrorText(res: any): Promise<string> {
   }
 }
 
-export async function actualizarHorario(idHorario: number, hora: string, min: number, dias: boolean[], nombre: string) {
-  const res = await fetchFromFastAPI(`/control/horario/${idHorario}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ hora, duracionMin: min, dias, nombre })
-  });
-  if (!res.ok) {
-    throw new Error(await res.text() || "Error al actualizar horario");
-  }
-  revalidatePath('/dashboard/agricultor/control');
-}
-
-export async function toggleBombaManual(userId: number, idBomba: number, encender: boolean) {
-  try {
-    const res = await fetchFromFastAPI("/control/bomba/toggle", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idBomba, encender })
-    });
-    if (!res.ok) {
-      const errorMsg = await parseErrorText(res);
-      return { success: false, error: errorMsg };
-    }
-    revalidatePath('/dashboard/agricultor/control');
-    revalidatePath('/dashboard/agricultor'); 
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message || "Error al conmutar bomba" };
-  }
-}
-
-export async function toggleValvulaManual(userId: number, idBomba: number, abrir: boolean) {
-  try {
-    const res = await fetchFromFastAPI("/control/valvula/toggle", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idBomba, abrir })
-    });
-    if (!res.ok) {
-      const errorMsg = await parseErrorText(res);
-      return { success: false, error: errorMsg };
-    }
-    revalidatePath('/dashboard/agricultor/control');
-    revalidatePath('/dashboard/agricultor');
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message || "Error al conmutar valvula" };
-  }
-}
 
 export async function actualizarTiempoMaximoRele(idCultivo: number, duracionMaxMinutos: number) {
   try {
@@ -144,6 +42,26 @@ export async function actualizarTiempoMaximoRele(idCultivo: number, duracionMaxM
     return { success: true, data };
   } catch (error: any) {
     return { success: false, error: error.message || "Error al actualizar el tiempo maximo del rele" };
+  }
+}
+
+export async function actualizarCooldownRiego(idCultivo: number, cooldownMinutos: number) {
+  try {
+    const res = await fetchFromFastAPI("/control/configuracion/cooldown", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idCultivo, cooldownMinutos })
+    });
+    if (!res.ok) {
+      const errorMsg = await parseErrorText(res);
+      return { success: false, error: errorMsg };
+    }
+    revalidatePath('/dashboard/agricultor/control');
+    revalidatePath('/dashboard/agricultor');
+    const data = await res.json();
+    return { success: true, data };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Error al actualizar el cooldown de riego" };
   }
 }
 
