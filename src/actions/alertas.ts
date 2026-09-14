@@ -1,5 +1,5 @@
 // src/actions/alertas.ts
-"use server";
+
 
 import { revalidatePath } from "next/cache";
 import { fetchFromFastAPI } from "@/lib/bff";

@@ -80,17 +80,17 @@ function ensureValidConfigs(configs: any[]) {
 
 export default function AlertasClient({ 
   userId, 
-  cultivos, 
-  initialData, 
-  initialCultivo, 
-  initialNotifConfig, 
+  cultivos = [], 
+  initialData = { alertasActivas: [], historial: [] }, 
+  initialCultivo = "", 
+  initialNotifConfig = [], 
   initialHasNotifConfig = false, 
   initialPushRegistered = false 
 }: any) {
   const router = useRouter();
   const [selectedCultivoId, setSelectedCultivoId] = useState(initialCultivo);
-  const [alertasActivas, setAlertasActivas] = useState(initialData.alertasActivas || []);
-  const [historial, setHistorial] = useState(initialData.historial || []);
+  const [alertasActivas, setAlertasActivas] = useState(initialData?.alertasActivas || []);
+  const [historial, setHistorial] = useState(initialData?.historial || []);
   const [isLoadingCropData, setIsLoadingCropData] = useState(false);
 
   const [notifConfigs, setNotifConfigs] = useState(initialNotifConfig || []);
@@ -103,14 +103,14 @@ export default function AlertasClient({
 
   // Sync state if props change (e.g. cultivation switch from parent page)
   useEffect(() => {
-    setAlertasActivas(initialData.alertasActivas || []);
-    setHistorial(initialData.historial || []);
+    setAlertasActivas(initialData?.alertasActivas || []);
+    setHistorial(initialData?.historial || []);
     setSelectedCultivoId(initialCultivo);
     setCurrentPage(1);
   }, [initialData, initialCultivo]);
 
   const [isLoadingNotifConfig, setIsLoadingNotifConfig] = useState(
-    initialNotifConfig.length === 0
+    !initialNotifConfig || initialNotifConfig.length === 0
   );
 
   useEffect(() => {

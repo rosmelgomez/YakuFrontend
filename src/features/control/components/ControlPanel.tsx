@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition, useMemo, useEffect } from "react";
+import React, { useState, useTransition, useMemo, useEffect, useRef } from "react";
 import {
   Box,
   Text,
@@ -18,7 +18,6 @@ import { SensoresPanel } from "./SensoresPanel";
 import { ActuadoresPanel } from "./ActuadoresPanel";
 import { useControlData } from "../hooks/useControlData";
 import { useControlEvents } from "../hooks/useControlEvents";
-import { useUmbralesForm } from "../hooks/useUmbralesForm";
 import {
   getDispositivosSensores,
   getDispositivosActuadores,
@@ -40,7 +39,6 @@ export function ControlPanel({
   data,
   idCultivo: initialIdCultivo,
   modelosML: initialModelosML,
-  initialUmbrales = [],
 }: ControlPanelProps) {
   const [isPending, startTransition] = useTransition();
   const [activeTab, setActiveTab] = useState<string>("sensores");
@@ -63,13 +61,6 @@ export function ControlPanel({
   useControlEvents({
     activeCropId: idCultivo,
     onControlUpdate: refresh,
-  });
-
-  // Hook para gestión aislada del formulario de umbrales
-  const umbralesForm = useUmbralesForm({
-    userId,
-    idCultivo,
-    initialUmbrales,
   });
 
   // Estados locales para actuadores y ML
@@ -131,6 +122,51 @@ export function ControlPanel({
     (controlData.bomba?.encendida || controlData.riegoActivo) && isActuatorActive
   );
 
+  const sesionPausada = (controlData as any).sesionPausada;
+  const prevRiegoRef = useRef<boolean>(isRiegoEnCurso);
+  const prevPausadoRef = useRef<boolean>(Boolean(sesionPausada));
+  const isInitialMount = useRef(true);
+
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    const currentCrop = cultivos.find((c: any) => c.id === idCultivo);
+    const currentCropName = (currentCrop as any)?.nombre || (currentCrop as any)?.nombre_personalizado || "Parcela Principal";
+
+    // 1. Detección de inicio de riego
+    if (!prevRiegoRef.current && isRiegoEnCurso) {
+      window.dispatchEvent(
+        new CustomEvent("yaku:riego_evento", {
+          detail: { tipo: "inicio", parcela: currentCropName },
+        })
+      );
+    }
+    // 2. Detección de finalización de riego
+    else if (prevRiegoRef.current && !isRiegoEnCurso && !sesionPausada) {
+      window.dispatchEvent(
+        new CustomEvent("yaku:riego_evento", {
+          detail: { tipo: "fin", parcela: currentCropName, volumen: 180 },
+        })
+      );
+    }
+
+    // 3. Detección de problemas o pausas durante el riego
+    if (!prevPausadoRef.current && sesionPausada) {
+      const motivo = sesionPausada.motivo || "Caudal o presión anómala en la tubería";
+      window.dispatchEvent(
+        new CustomEvent("yaku:riego_evento", {
+          detail: { tipo: "problema", parcela: currentCropName, motivo },
+        })
+      );
+    }
+
+    prevRiegoRef.current = isRiegoEnCurso;
+    prevPausadoRef.current = Boolean(sesionPausada);
+  }, [isRiegoEnCurso, sesionPausada, idCultivo, cultivos]);
+
   const { badgeColor, badgeText, badgeDotColor } = getSystemStatusBadge(
     isSensorsActivos,
     isActuadoresActivos
@@ -167,10 +203,7 @@ export function ControlPanel({
     const newId = parseInt(newIdStr, 10);
     if (isNaN(newId)) return;
     setModelosML(null);
-    await Promise.all([
-      selectCrop(newId),
-      umbralesForm.loadUmbralesForCrop(newId),
-    ]);
+    await selectCrop(newId);
   };
 
   // Guardar duración de relé
@@ -490,21 +523,6 @@ export function ControlPanel({
               dispositivosSensores={dispositivosSensores}
               onToggleCaptura={handleToggleCaptura}
               onCalibrarSensor={handleCalibrarSensor}
-              umbralesProps={{
-                umbrales: umbralesForm.umbrales,
-                isEditing: umbralesForm.isEditing,
-                setIsEditing: umbralesForm.setIsEditing,
-                isSaving: umbralesForm.isSaving,
-                isLoading: umbralesForm.isLoading,
-                showRecommendBanner: umbralesForm.showRecommendBanner,
-                onConfirmDefault: umbralesForm.confirmDefault,
-                onSliderChange: umbralesForm.onSliderChange,
-                onMinChange: umbralesForm.onMinChange,
-                onMaxChange: umbralesForm.onMaxChange,
-                onInputBlur: umbralesForm.onInputBlur,
-                onSave: umbralesForm.saveUmbrales,
-                onCancel: umbralesForm.cancelEditing,
-              }}
             />
           </Tabs.Content>
 

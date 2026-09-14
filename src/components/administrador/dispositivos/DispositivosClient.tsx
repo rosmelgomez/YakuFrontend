@@ -24,6 +24,7 @@ import {
 } from "@/actions/admin";
 import { listarFuentesAgua, listarTodosCultivos } from "@/actions/crops";
 import { listarAlmacenes } from "@/actions/almacenes";
+import { emitirNotificacion } from "@/lib/notifications";
 
 export default function DispositivosClient({
   initialUsers = [],
@@ -35,6 +36,7 @@ export default function DispositivosClient({
   initialComponents = [],
   fuentesAgua: initialFuentesAgua = [],
   metricas: initialMetricas = [],
+  activeTab = "all",
 }: any) {
   type AssignComponentDraft = {
     id: string;
@@ -428,6 +430,30 @@ export default function DispositivosClient({
               id_fuente_agua: showAssignWaterSource && assignWaterSources.some((f: any) => f.id?.toString() === row.fuenteAguaId) ? parseInt(row.fuenteAguaId, 10) : undefined,
             });
           }
+
+          const targetDev = devices.find((d: any) => d.id?.toString() === assignDeviceId);
+          const targetUsr = localUsers.find((u: any) => u.id?.toString() === assignUserId);
+          const targetCrp = localCrops.find((c: any) => c.id?.toString() === assignCropId);
+
+          emitirNotificacion({
+            titulo: "Nuevo dispositivo asignado",
+            mensaje: `El administrador ha vinculado el dispositivo '${targetDev?.nombre || "Nodo IoT"}' a tu parcela '${targetCrp?.nombre || "Cultivo"}'.`,
+            severidad: "info",
+            rolDestino: "agricultor",
+            link: "/dashboard/agricultor/control",
+            origen: "Administración IoT",
+          });
+
+          window.dispatchEvent(
+            new CustomEvent("yaku:device_assigned", {
+              detail: {
+                deviceNombre: targetDev?.nombre,
+                userNombre: targetUsr?.nombre,
+                cropNombre: targetCrp?.nombre,
+              },
+            })
+          );
+
           window.location.reload();
         }
       } catch (err: any) {
@@ -546,66 +572,108 @@ export default function DispositivosClient({
     });
   };
 
+  const showDevices = activeTab === "all" || activeTab === "dispositivos";
+  const showComponents = activeTab === "all" || activeTab === "componentes";
+  const showAssigned = activeTab === "all" || activeTab === "asignar";
+
+  const renderDispositivosStockCard = () => (
+    <Card size="3" style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
+      <Flex align="center" gap="2" mb="4"><Cpu size={20} color="#34d399" /><Text size="4" weight="bold" color="indigo">Dispositivos en Stock</Text></Flex>
+      <Grid columns={{ initial: "1", md: showComponents ? "2" : "3" }} gap="3">
+        {devices.filter((d: any) => d.en_almacen === true && ["disponible", "reparacion"].includes(d.estado)).map((d: any) => (
+          <Card key={d.id} style={{ background: "var(--surface2-mockup)", borderColor: "var(--border-mockup)" }}>
+            <Text size="2" weight="bold" style={{ color: "white" }} as="div">{d.nombre}</Text>
+            <Text size="1" color="gray" style={{ fontFamily: "monospace" }}>MAC: {d.mac_address || "Sin MAC"}</Text>
+            <Flex gap="1" mt="1" align="center" wrap="wrap">
+              <Badge color="green" size="1" variant="outline">{d.tipo?.nombre}</Badge>
+              {d.metodo_medicion && <Badge color="blue" size="1">{d.metodo_medicion === "flujometro" ? "Volumen por pulsos" : "Volumen por nivel"}</Badge>}
+              {d.almacen && <Badge color="blue" size="1" variant="soft">{d.almacen.nombre}</Badge>}
+              <Badge color={d.estado === "reparacion" ? "amber" : "green"} size="1" variant="soft">{d.estado}</Badge>
+            </Flex>
+            <Flex justify="end" gap="2" mt="3">
+              <Button size="1" color="amber" variant="soft" onClick={() => handleCambiarEstadoDispositivo(d.id, d.estado === "reparacion" ? "disponible" : "reparacion")}>{d.estado === "reparacion" ? "Disponible" : "Reparacion"}</Button>
+              <Button size="1" color="red" variant="soft" onClick={() => handleCambiarEstadoDispositivo(d.id, "Retirado")}>Retirar</Button>
+            </Flex>
+          </Card>
+        ))}
+      </Grid>
+    </Card>
+  );
+
+  const renderComponentesStockCard = () => (
+    <Card size="3" style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
+      <Flex align="center" gap="2" mb="4"><Layers size={20} color="#a78bfa" /><Text size="4" weight="bold" color="indigo">Componentes en Stock</Text></Flex>
+      <Grid columns={{ initial: "1", md: showDevices ? "2" : "3" }} gap="3">
+        {components.filter((c: any) => c.en_almacen === true).map((c: any) => (
+          <Card key={c.id} style={{ background: "var(--surface2-mockup)", borderColor: "var(--border-mockup)" }}>
+            <Text size="2" weight="bold" style={{ color: "white" }} as="div">{c.modelo?.nombre_modelo || "Componente"}</Text>
+            <Text size="1" color="gray" style={{ fontFamily: "monospace" }}>S/N: {c.numero_serie || "Sin S/N"}</Text>
+            <Flex gap="1" mt="1" wrap="wrap">
+              <Badge color="indigo" size="1" variant="outline">{c.modelo?.categoria || "desconocido"}</Badge>
+              <Badge color={c.estado === "reparacion" ? "amber" : "green"} size="1" variant="soft">{c.estado}</Badge>
+            </Flex>
+            <Flex justify="end" gap="2" mt="3">
+              <Button size="1" color="amber" variant="soft" onClick={() => handleCambiarEstadoComponente(c.id, c.estado === "reparacion" ? "disponible" : "reparacion")}>{c.estado === "reparacion" ? "Disponible" : "Reparacion"}</Button>
+              <Button size="1" color="red" variant="soft" onClick={() => handleCambiarEstadoComponente(c.id, "Retirado")}>Retirar</Button>
+            </Flex>
+          </Card>
+        ))}
+      </Grid>
+    </Card>
+  );
+
   return (
     <Box style={{ opacity: isPending ? 0.6 : 1, transition: "opacity 0.2s" }}>
       <Flex direction="column" gap="4" mb="6">
         <Box>
-          <Text size="6" weight="bold" color="indigo" as="div">Dispositivos</Text>
-          <Text size="2" color="gray" style={{ fontFamily: "monospace" }}>Gestiona stock IoT, componentes y asignaciones.</Text>
+          <Text size="6" weight="bold" color="indigo" as="div">
+            {activeTab === "componentes"
+              ? "Componentes IoT"
+              : activeTab === "asignar"
+              ? "Asignar Dispositivo"
+              : "Dispositivos IoT"}
+          </Text>
+          <Text size="2" color="gray" style={{ fontFamily: "monospace" }}>
+            {activeTab === "componentes"
+              ? "Gestiona el inventario y stock de sensores, actuadores y componentes."
+              : activeTab === "asignar"
+              ? "Gestiona la vinculación y asignación de dispositivos a agricultores y parcelas."
+              : "Gestiona el parque de dispositivos IoT, stock y nodos conectados."}
+          </Text>
         </Box>
       </Flex>
 
       <Flex gap="3" mb="4" wrap="wrap">
-        <Button color="indigo" onClick={() => setIsOpenRegisterDevice(true)}><Plus size={16} style={{ marginRight: "4px" }} /> Registrar Dispositivo</Button>
-        <Button color="teal" onClick={() => setIsOpenRegisterComponent(true)}><Plus size={16} style={{ marginRight: "4px" }} /> Registrar Componente</Button>
-        <Button color="green" onClick={() => setIsOpenAssignDevice(true)}><Plus size={16} style={{ marginRight: "4px" }} /> Asignar Dispositivo</Button>
+        {showDevices && (
+          <Button color="indigo" onClick={() => setIsOpenRegisterDevice(true)}>
+            <Plus size={16} style={{ marginRight: "4px" }} /> Registrar Dispositivo
+          </Button>
+        )}
+        {showComponents && (
+          <Button color="teal" onClick={() => setIsOpenRegisterComponent(true)}>
+            <Plus size={16} style={{ marginRight: "4px" }} /> Registrar Componente
+          </Button>
+        )}
+        {showAssigned && (
+          <Button color="green" onClick={() => setIsOpenAssignDevice(true)}>
+            <Plus size={16} style={{ marginRight: "4px" }} /> Asignar Dispositivo
+          </Button>
+        )}
       </Flex>
 
-      <Grid columns={{ initial: "1", lg: "2" }} gap="5" mb="5">
-        <Card size="3" style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
-          <Flex align="center" gap="2" mb="4"><Cpu size={20} color="#34d399" /><Text size="4" weight="bold" color="indigo">Dispositivos en Stock</Text></Flex>
-          <Grid columns={{ initial: "1", md: "2" }} gap="3">
-            {devices.filter((d: any) => d.en_almacen === true && ["disponible", "reparacion"].includes(d.estado)).map((d: any) => (
-              <Card key={d.id} style={{ background: "var(--surface2-mockup)", borderColor: "var(--border-mockup)" }}>
-                <Text size="2" weight="bold" style={{ color: "white" }} as="div">{d.nombre}</Text>
-                <Text size="1" color="gray" style={{ fontFamily: "monospace" }}>MAC: {d.mac_address || "Sin MAC"}</Text>
-                <Flex gap="1" mt="1" align="center" wrap="wrap">
-                  <Badge color="green" size="1" variant="outline">{d.tipo?.nombre}</Badge>
-                  {d.metodo_medicion && <Badge color="blue" size="1">{d.metodo_medicion === "flujometro" ? "Volumen por pulsos" : "Volumen por nivel"}</Badge>}
-                  {d.almacen && <Badge color="blue" size="1" variant="soft">{d.almacen.nombre}</Badge>}
-                  <Badge color={d.estado === "reparacion" ? "amber" : "green"} size="1" variant="soft">{d.estado}</Badge>
-                </Flex>
-                <Flex justify="end" gap="2" mt="3">
-                  <Button size="1" color="amber" variant="soft" onClick={() => handleCambiarEstadoDispositivo(d.id, d.estado === "reparacion" ? "disponible" : "reparacion")}>{d.estado === "reparacion" ? "Disponible" : "Reparacion"}</Button>
-                  <Button size="1" color="red" variant="soft" onClick={() => handleCambiarEstadoDispositivo(d.id, "Retirado")}>Retirar</Button>
-                </Flex>
-              </Card>
-            ))}
-          </Grid>
-        </Card>
+      {showDevices && showComponents ? (
+        <Grid columns={{ initial: "1", lg: "2" }} gap="5" mb="5">
+          {renderDispositivosStockCard()}
+          {renderComponentesStockCard()}
+        </Grid>
+      ) : showDevices ? (
+        <Box mb="5">{renderDispositivosStockCard()}</Box>
+      ) : showComponents ? (
+        <Box mb="5">{renderComponentesStockCard()}</Box>
+      ) : null}
 
+      {showAssigned && (
         <Card size="3" style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
-          <Flex align="center" gap="2" mb="4"><Layers size={20} color="#a78bfa" /><Text size="4" weight="bold" color="indigo">Componentes en Stock</Text></Flex>
-          <Grid columns={{ initial: "1", md: "2" }} gap="3">
-            {components.filter((c: any) => c.en_almacen === true).map((c: any) => (
-              <Card key={c.id} style={{ background: "var(--surface2-mockup)", borderColor: "var(--border-mockup)" }}>
-                <Text size="2" weight="bold" style={{ color: "white" }} as="div">{c.modelo?.nombre_modelo || "Componente"}</Text>
-                <Text size="1" color="gray" style={{ fontFamily: "monospace" }}>S/N: {c.numero_serie || "Sin S/N"}</Text>
-                <Flex gap="1" mt="1" wrap="wrap">
-                  <Badge color="indigo" size="1" variant="outline">{c.modelo?.categoria || "desconocido"}</Badge>
-                  <Badge color={c.estado === "reparacion" ? "amber" : "green"} size="1" variant="soft">{c.estado}</Badge>
-                </Flex>
-                <Flex justify="end" gap="2" mt="3">
-                  <Button size="1" color="amber" variant="soft" onClick={() => handleCambiarEstadoComponente(c.id, c.estado === "reparacion" ? "disponible" : "reparacion")}>{c.estado === "reparacion" ? "Disponible" : "Reparacion"}</Button>
-                  <Button size="1" color="red" variant="soft" onClick={() => handleCambiarEstadoComponente(c.id, "Retirado")}>Retirar</Button>
-                </Flex>
-              </Card>
-            ))}
-          </Grid>
-        </Card>
-      </Grid>
-
-      <Card size="3" style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
         <Flex align="center" gap="2" mb="4"><Layers size={20} color="#60a5fa" /><Text size="4" weight="bold" color="indigo">Nodos en Campo</Text></Flex>
         <Grid columns={{ initial: "1", md: "2", lg: "3", xl: "4" }} gap="4">
           {assignedDevices.map((d: any) => {
@@ -653,6 +721,7 @@ export default function DispositivosClient({
           })}
         </Grid>
       </Card>
+      )}
 
       <Dialog.Root open={isOpenRegisterDevice} onOpenChange={setIsOpenRegisterDevice}>
         <Dialog.Content aria-describedby={undefined} style={{ maxWidth: 520, background: "var(--surface-mockup)", border: "1px solid var(--border-mockup)" }}>

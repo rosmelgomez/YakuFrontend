@@ -1,299 +1,648 @@
+// src/components/agricultor/feedback/FeedbackClient.tsx
 "use client";
 
-import React, { useMemo, useState, useTransition } from "react";
-import { Box, Button, Card, Flex, Grid, Text } from "@radix-ui/themes";
-import { AlertCircle, CheckCircle, MessageSquareText, Send, Star } from "lucide-react";
+import React, { useState } from "react";
+import { Icons } from "@/components/ui/Icons";
 import { crearFeedback } from "@/actions/feedback";
-import type { CultivoBase } from "@/services/cultivos-base";
+import type { FeedbackPregunta, FeedbackItem } from "@/actions/feedback";
 
-type FeedbackItem = {
-  id: number;
-  id_cultivo?: number | null;
-  cultivo_nombre?: string | null;
-  modulo: string;
-  tipo: string;
-  calificacion: number;
-  mensaje: string;
-  estado: string;
-  fecha: string;
-  respuestas?: Array<{
-    id: number;
-    id_pregunta: number;
-    pregunta: string;
-    calificacion: number;
-  }>;
+interface FeedbackQuestionItem {
+  id: number | string;
+  question: string;
+  type: "rating" | "text" | "select";
+  options?: string[];
+  required: boolean;
+}
+
+const fallbackQuestions: FeedbackQuestionItem[] = [
+  { id: 1, question: "¿Con qué frecuencia utilizas la plataforma Yaku?", type: "select", options: ["Varias veces al día", "Una vez al día", "Varios días a la semana", "Una vez a la semana", "Menos de una vez a la semana"], required: true },
+  { id: 2, question: "¿Cómo valorarías la utilidad del sistema de alertas?", type: "rating", required: true },
+  { id: 3, question: "¿Las recomendaciones de riego se han ajustado a las necesidades reales de tu cultivo?", type: "rating", required: true },
+  { id: 4, question: "¿Qué aspecto mejorarías de la plataforma?", type: "text", required: false },
+  { id: 5, question: "¿Recomendarías Yaku a otros agricultores?", type: "rating", required: true },
+];
+
+const ratingLabels: Record<number, string> = {
+  1: "Muy bajo",
+  2: "Bajo",
+  3: "Regular",
+  4: "Bueno",
+  5: "Excelente",
 };
 
-type FeedbackPregunta = {
-  id: number;
-  pregunta: string;
-  descripcion?: string | null;
-  orden: number;
-  activo: boolean;
-};
+function StarRating({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [hover, setHover] = useState(0);
+  return (
+    <div className="flex gap-1.5 items-center">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button
+          key={n}
+          type="button"
+          onMouseEnter={() => setHover(n)}
+          onMouseLeave={() => setHover(0)}
+          onClick={() => onChange(n)}
+          className={`w-10 h-10 rounded-xl transition-all flex items-center justify-center cursor-pointer ${
+            (hover || value) >= n
+              ? "text-amber-400 bg-amber-500/20 shadow-sm shadow-amber-500/10 scale-105"
+              : "text-slate-500 bg-slate-800/90 hover:bg-slate-700/80 hover:text-slate-300"
+          }`}
+        >
+          <svg
+            className="w-5 h-5 transition-transform"
+            viewBox="0 0 24 24"
+            fill={(hover || value) >= n ? "currentColor" : "none"}
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+          </svg>
+        </button>
+      ))}
+      {value > 0 && (
+        <span className="text-xs font-semibold text-amber-400 ml-2 bg-amber-950/40 px-2.5 py-1 rounded-full border border-amber-800/50">
+          {ratingLabels[value] || `${value}/5`}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function StarDisplay({ value, max = 5 }: { value: number; max?: number }) {
+  return (
+    <div className="flex gap-0.5 items-center">
+      {Array.from({ length: max }, (_, i) => i + 1).map((n) => (
+        <svg
+          key={n}
+          className={`w-4 h-4 ${n <= value ? "text-amber-400 fill-amber-400" : "text-slate-600"}`}
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={1.5}
+        >
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+        </svg>
+      ))}
+    </div>
+  );
+}
 
 export default function FeedbackClient({
-  cultivos,
-  preguntas,
-  initialFeedback,
+  preguntas = [],
+  cultivos = [],
+  initialFeedback = [],
 }: {
-  cultivos: CultivoBase[];
-  preguntas: FeedbackPregunta[];
-  initialFeedback: FeedbackItem[];
+  preguntas?: FeedbackPregunta[];
+  cultivos?: any[];
+  initialFeedback?: FeedbackItem[] | any[];
 }) {
-  const [idCultivo, setIdCultivo] = useState<string>("general");
-  const [respuestas, setRespuestas] = useState<Record<number, number>>({});
-  const [comentario, setComentario] = useState("");
-  const [feedback, setFeedback] = useState(initialFeedback);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [activeTab, setActiveTab] = useState<"form" | "history">("form");
+  const [history, setHistory] = useState<FeedbackItem[]>(initialFeedback || []);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
-  const selectedCropName = useMemo(() => {
-    if (idCultivo === "general") return "Sistema completo";
-    return cultivos.find((cultivo) => String(cultivo.id) === idCultivo)?.nombre_planta || "Cultivo seleccionado";
-  }, [cultivos, idCultivo]);
+  const formattedQuestions: FeedbackQuestionItem[] =
+    preguntas.length > 0
+      ? preguntas
+          .filter((q) => q.activo)
+          .sort((a, b) => a.orden - b.orden)
+          .map((q) => ({
+            id: q.id,
+            question: q.pregunta,
+            type: q.tipo || "rating",
+            options: q.opciones || [],
+            required: q.obligatoria !== false,
+          }))
+      : fallbackQuestions;
 
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    setSuccessMsg(null);
-    setErrorMsg(null);
+  const [answers, setAnswers] = useState<Record<string | number, string | number>>({});
+  const [selectedCultivo, setSelectedCultivo] = useState<number | undefined>(undefined);
+  const [generalComment, setGeneralComment] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-    if (preguntas.length === 0) {
-      setErrorMsg("Aun no hay preguntas configuradas por el administrador.");
-      return;
-    }
+  function setAnswer(id: string | number, value: string | number) {
+    setAnswers((a) => ({ ...a, [id]: value }));
+  }
 
-    const missingQuestion = preguntas.find((pregunta) => !respuestas[pregunta.id]);
-    if (missingQuestion) {
-      setErrorMsg("Responde todas las preguntas antes de enviar el feedback.");
-      return;
-    }
+  const allRequired = formattedQuestions
+    .filter((q) => q.required)
+    .every((q) => answers[q.id] !== undefined && answers[q.id] !== "");
 
-    startTransition(async () => {
+  async function handleSubmit(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    if (!allRequired || loading) return;
+
+    setLoading(true);
+    setError(null);
+
+    const respuestasPayload = formattedQuestions
+      .filter((q) => answers[q.id] !== undefined && answers[q.id] !== "")
+      .map((q) => {
+        const val = answers[q.id];
+        return {
+          id_pregunta: Number(q.id),
+          calificacion: q.type === "rating" ? Number(val) : undefined,
+          respuesta_texto: q.type !== "rating" ? String(val) : undefined,
+        };
+      });
+
+    try {
       const res = await crearFeedback({
-        id_cultivo: idCultivo === "general" ? undefined : Number(idCultivo),
-        comentario: comentario.trim() || undefined,
-        respuestas: preguntas.map((pregunta) => ({
-          id_pregunta: pregunta.id,
-          calificacion: respuestas[pregunta.id],
-        })),
+        id_cultivo: selectedCultivo,
+        comentario: generalComment.trim() || undefined,
+        respuestas: respuestasPayload,
       });
 
       if (!res.success) {
-        setErrorMsg(res.error || "No se pudo guardar la retroalimentacion.");
-        return;
+        throw new Error(res.error || "No se pudo registrar la valoración.");
       }
 
-      setFeedback((current) => [res.data, ...current].slice(0, 20));
-      setRespuestas({});
-      setComentario("");
-      setSuccessMsg("Retroalimentacion guardada correctamente en la base de datos.");
-    });
-  };
+      if (res.data) {
+        setHistory((prev) => [res.data, ...prev]);
+      }
+
+      setSubmitted(true);
+    } catch (err: any) {
+      console.error("Error al enviar feedback:", err);
+      setError(err?.message || "Ocurrió un error al enviar la valoración. Inténtelo nuevamente.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Estadísticas del historial personal
+  const totalSubmissions = history.length;
+  const avgSatisfaction =
+    totalSubmissions > 0
+      ? (history.reduce((acc, curr) => acc + (curr.calificacion || 0), 0) / totalSubmissions).toFixed(1)
+      : "0.0";
+  const lastSubmission = history.length > 0 ? history[0] : null;
 
   return (
-    <Box style={{ width: "100%" }}>
-      <Flex direction="column" gap="1" mb="6">
-        <Flex align="center" gap="3">
-          <Box style={{
-            width: "42px",
-            height: "42px",
-            borderRadius: "10px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "rgba(45, 212, 191, 0.12)",
-            border: "1px solid rgba(45, 212, 191, 0.25)",
-            color: "#2dd4bf",
-          }}>
-            <MessageSquareText size={22} />
-          </Box>
-          <Box>
-            <Text size="6" weight="bold" color="indigo" as="div">
-              Feedback del Agricultor
-            </Text>
-            <Text size="2" color="gray" style={{ fontFamily: "monospace" }}>
-              Califica las preguntas configuradas por administracion para mejorar monitoreo, alertas, riego e IA.
-            </Text>
-          </Box>
-        </Flex>
-      </Flex>
+    <div className="w-full max-w-full space-y-6 fade-in">
+      {/* Navegación por pestañas (Tabs) de ancho completo */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+        <div>
+          <h1 className="font-display font-bold text-2xl text-white tracking-tight">
+            Retroalimentación y Encuestas
+          </h1>
+          <p className="text-sm text-slate-400 mt-1">
+            Comparte tu experiencia para ayudarnos a optimizar el riego y monitoreo de tus cultivos.
+          </p>
+        </div>
 
-      <Grid columns={{ initial: "1", lg: "3" }} gap="6" width="100%">
-        <Box style={{ gridColumn: "span 2" }}>
-          <Card size="3" style={{ background: "#111827", borderColor: "#1f2937", borderRadius: "16px" }}>
-            <form onSubmit={handleSubmit}>
-              <Flex direction="column" gap="4">
-                {successMsg && (
-                  <Box p="3" style={{ background: "rgba(34, 197, 94, 0.1)", border: "1px solid rgba(34, 197, 94, 0.2)", borderRadius: "8px" }}>
-                    <Flex gap="2" align="center">
-                      <CheckCircle size={16} color="#22c55e" />
-                      <Text color="green" size="2">{successMsg}</Text>
-                    </Flex>
-                  </Box>
-                )}
+        <div className="flex items-center gap-2 bg-slate-900/90 p-1.5 rounded-xl border border-slate-800 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => setActiveTab("form")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+              activeTab === "form"
+                ? "bg-emerald-600 text-white shadow-md shadow-emerald-950/40"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+            }`}
+          >
+            {Icons.message("w-4 h-4")}
+            <span>Nueva Valoración</span>
+          </button>
 
-                {errorMsg && (
-                  <Box p="3" style={{ background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.2)", borderRadius: "8px" }}>
-                    <Flex gap="2" align="center">
-                      <AlertCircle size={16} color="#ef4444" />
-                      <Text color="red" size="2">{errorMsg}</Text>
-                    </Flex>
-                  </Box>
-                )}
+          <button
+            type="button"
+            onClick={() => setActiveTab("history")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+              activeTab === "history"
+                ? "bg-emerald-600 text-white shadow-md shadow-emerald-950/40"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+            }`}
+          >
+            {Icons.clock("w-4 h-4")}
+            <span>Historial de Respuestas</span>
+            {totalSubmissions > 0 && (
+              <span
+                className={`text-xs px-2 py-0.5 rounded-full font-bold transition-colors ${
+                  activeTab === "history"
+                    ? "bg-emerald-800 text-emerald-100"
+                    : "bg-slate-800 text-slate-300"
+                }`}
+              >
+                {totalSubmissions}
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
 
-                <Grid columns={{ initial: "1", sm: "2" }} gap="4">
-                  <Field label="Cultivo relacionado">
-                    <select value={idCultivo} onChange={(e) => setIdCultivo(e.target.value)} style={selectStyle}>
-                      <option value="general">Sistema completo</option>
-                      {cultivos.map((cultivo) => (
-                        <option key={cultivo.id} value={cultivo.id}>{cultivo.nombre_planta}</option>
-                      ))}
-                    </select>
-                  </Field>
+      {/* PESTAÑA 1: NUEVA VALORACIÓN */}
+      {activeTab === "form" && (
+        <div className="space-y-6">
+          {submitted ? (
+            <div className="metric-card p-8 sm:p-12 text-center max-w-xl mx-auto space-y-6 shadow-xl border-emerald-800/50">
+              <div className="w-20 h-20 rounded-3xl bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-400 shadow-lg shadow-emerald-600/20">
+                {Icons.check("w-10 h-10 text-emerald-400")}
+              </div>
+              <div>
+                <h3 className="font-display font-bold text-2xl text-white mb-2">
+                  ¡Muchas gracias por tu valoración!
+                </h3>
+                <p className="text-slate-400 text-sm leading-relaxed max-w-md mx-auto">
+                  Tus respuestas han sido registradas y añadidas a tu historial. Nos ayudan enormemente a calibrar los algoritmos y mejorar la experiencia de Yaku.
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab("history");
+                    setSubmitted(false);
+                    setAnswers({});
+                    setGeneralComment("");
+                  }}
+                  className="btn-primary w-full sm:w-auto px-6 py-2.5 flex items-center justify-center gap-2"
+                >
+                  {Icons.clock("w-4 h-4")}
+                  Ver en mi historial
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSubmitted(false);
+                    setAnswers({});
+                    setGeneralComment("");
+                  }}
+                  className="btn-secondary w-full sm:w-auto px-6 py-2.5"
+                >
+                  Enviar otra valoración
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Banner Informativo */}
+              <div className="bg-emerald-950/40 border border-emerald-800/60 rounded-2xl p-5 flex items-start gap-4 shadow-sm">
+                <div className="text-emerald-400 shrink-0 mt-0.5 bg-emerald-900/50 p-2 rounded-xl">
+                  {Icons.message("w-5 h-5")}
+                </div>
+                <div className="text-sm text-emerald-300 leading-relaxed space-y-1">
+                  <p className="font-semibold text-emerald-200">
+                    Tu opinión hace la diferencia en el campo
+                  </p>
+                  <p className="text-emerald-300/90 text-xs sm:text-sm">
+                    Tus respuestas son confidenciales y se procesan para optimizar la precisión de los modelos de riego por IA y mejorar las notificaciones de alerta.
+                  </p>
+                </div>
+              </div>
 
-                  <Box p="3" style={{ background: "#1e293b", border: "1px solid #334155", borderRadius: "10px" }}>
-                    <Text size="2" weight="bold" style={{ color: "#e5e7eb" }} as="div">
-                      Escala de calificacion
-                    </Text>
-                    <Text size="1" color="gray">1 es el nivel mas bajo y 5 el mas alto.</Text>
-                  </Box>
-                </Grid>
-
-                {preguntas.length === 0 ? (
-                  <Box p="4" style={{ background: "rgba(245, 158, 11, 0.1)", border: "1px solid rgba(245, 158, 11, 0.25)", borderRadius: "10px" }}>
-                    <Text size="2" style={{ color: "#fbbf24" }}>
-                      No hay preguntas activas. Pide al administrador configurar la encuesta de feedback.
-                    </Text>
-                  </Box>
-                ) : (
-                  <Grid columns={{ initial: "1", md: "2" }} gap="4">
-                    {preguntas.map((pregunta) => (
-                      <Box key={pregunta.id} p="3" style={{ background: "#1e293b", border: "1px solid #334155", borderRadius: "10px" }}>
-                        <Text size="2" weight="bold" style={{ color: "#e5e7eb", display: "block", minHeight: "40px" }}>
-                          {pregunta.pregunta}
-                        </Text>
-                        {pregunta.descripcion && (
-                          <Text size="1" color="gray" style={{ display: "block", marginTop: "4px" }}>{pregunta.descripcion}</Text>
-                        )}
-                        <Flex gap="3" wrap="wrap" mt="3">
-                          {[1, 2, 3, 4, 5].map((score) => (
-                            <label key={score} style={{ display: "flex", alignItems: "center", gap: "6px", color: "#cbd5e1", cursor: "pointer" }}>
-                              <input
-                                type="radio"
-                                name={`pregunta-${pregunta.id}`}
-                                value={score}
-                                checked={respuestas[pregunta.id] === score}
-                                onChange={() => setRespuestas((current) => ({ ...current, [pregunta.id]: score }))}
-                              />
-                              <Text size="2">{score}</Text>
-                            </label>
-                          ))}
-                        </Flex>
-                      </Box>
-                    ))}
-                  </Grid>
-                )}
-
-                <Field label={`Comentario para ${selectedCropName}`}>
-                  <textarea
-                    value={comentario}
-                    onChange={(e) => setComentario(e.target.value)}
-                    placeholder="Cuentanos que te gusto o que podriamos mejorar."
-                    rows={7}
-                    maxLength={1200}
-                    style={{
-                      width: "100%",
-                      resize: "vertical",
-                      minHeight: "156px",
-                      borderRadius: "10px",
-                      border: "1px solid #334155",
-                      background: "#1e293b",
-                      color: "white",
-                      padding: "12px",
-                      outline: "none",
-                      lineHeight: 1.5,
-                    }}
-                  />
-                  <Text size="1" color="gray" style={{ display: "block", textAlign: "right", marginTop: "4px" }}>
-                    {comentario.length}/1200
-                  </Text>
-                </Field>
-
-                <Flex justify="end">
-                  <Button type="submit" color="green" size="3" disabled={isPending} style={{ cursor: "pointer", borderRadius: "8px", fontWeight: "bold" }}>
-                    <Send size={16} />
-                    {isPending ? "Guardando..." : "Enviar feedback"}
-                  </Button>
-                </Flex>
-              </Flex>
-            </form>
-          </Card>
-        </Box>
-
-        <Box>
-          <Card size="3" style={{ background: "#111827", borderColor: "#1f2937", borderRadius: "16px", height: "100%" }}>
-            <Text size="4" weight="bold" style={{ color: "white" }} as="div" mb="4">
-              Historial reciente
-            </Text>
-            <Flex direction="column" gap="3">
-              {feedback.length === 0 ? (
-                <Text size="2" color="gray">Aun no hay retroalimentacion registrada.</Text>
-              ) : (
-                feedback.map((item) => (
-                  <Box key={item.id} p="3" style={{ background: "#1e293b", border: "1px solid #334155", borderRadius: "10px" }}>
-                    <Flex justify="between" align="center" mb="2" gap="2">
-                      <Text size="2" weight="bold" style={{ color: "#e5e7eb" }}>{item.modulo}</Text>
-                      <Flex gap="1" align="center" style={{ color: "#fbbf24" }}>
-                        <Star size={14} fill="currentColor" />
-                        <Text size="1">{item.calificacion}/5</Text>
-                      </Flex>
-                    </Flex>
-                    <Text size="1" color="gray" style={{ display: "block", marginBottom: "6px" }}>
-                      {item.cultivo_nombre || "Sistema completo"} · {new Date(item.fecha).toLocaleDateString()}
-                    </Text>
-                    {item.respuestas && item.respuestas.length > 0 && (
-                      <Flex direction="column" gap="1" mb="2">
-                        {item.respuestas.slice(0, 3).map((respuesta) => (
-                          <Text key={respuesta.id} size="1" color="gray">
-                            {respuesta.pregunta}: <span style={{ color: "#fbbf24" }}>{respuesta.calificacion}/5</span>
-                          </Text>
-                        ))}
-                      </Flex>
-                    )}
-                    <Text size="2" style={{ color: "#cbd5e1", lineHeight: 1.45 }}>
-                      {item.mensaje}
-                    </Text>
-                  </Box>
-                ))
+              {error && (
+                <div className="bg-rose-950/40 border border-rose-800/60 rounded-xl p-4 flex gap-3 text-rose-300 text-sm">
+                  <div className="text-rose-400 shrink-0 mt-0.5">
+                    {Icons.alertTriangle("w-5 h-5")}
+                  </div>
+                  <p>{error}</p>
+                </div>
               )}
-            </Flex>
-          </Card>
-        </Box>
-      </Grid>
-    </Box>
+
+              {/* Selector de Cultivo Asociado (Opcional) */}
+              {cultivos && cultivos.length > 0 && (
+                <div className="metric-card p-5">
+                  <label className="block text-sm font-medium text-slate-200 mb-2">
+                    ¿Esta valoración está relacionada a un cultivo específico? (Opcional)
+                  </label>
+                  <select
+                    className="select-field text-sm w-full md:w-96"
+                    value={selectedCultivo || ""}
+                    onChange={(e) => setSelectedCultivo(e.target.value ? Number(e.target.value) : undefined)}
+                  >
+                    <option value="">Evaluación general de la plataforma</option>
+                    {cultivos.map((c: any) => (
+                      <option key={c.id_cultivo || c.id} value={c.id_cultivo || c.id}>
+                        {c.nombre_planta || c.nombre || `Cultivo #${c.id_cultivo || c.id}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Preguntas en Grid de Ancho Completo */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                {formattedQuestions.map((q, i) => {
+                  const isWide = q.type === "text";
+                  return (
+                    <div
+                      key={q.id}
+                      className={`metric-card p-5 sm:p-6 flex flex-col justify-between transition-all hover:border-slate-700/80 ${
+                        isWide ? "lg:col-span-2" : ""
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-start justify-between gap-3 mb-4">
+                          <div className="flex items-start gap-3">
+                            <span className="w-7 h-7 rounded-xl bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                              {i + 1}
+                            </span>
+                            <div>
+                              <p className="font-semibold text-slate-100 text-base leading-snug">
+                                {q.question}
+                              </p>
+                              {q.required ? (
+                                <span className="text-xs text-rose-400/90 font-medium inline-block mt-1">
+                                  * Obligatoria
+                                </span>
+                              ) : (
+                                <span className="text-xs text-slate-400 font-medium inline-block mt-1">
+                                  Opcional
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <span className="chip status-water text-xs shrink-0 hidden sm:inline-block">
+                            {q.type === "rating" ? "Valoración" : q.type === "select" ? "Selección" : "Texto"}
+                          </span>
+                        </div>
+
+                        {/* Input por tipo */}
+                        <div className="pt-2">
+                          {q.type === "rating" && (
+                            <div className="space-y-2">
+                              <StarRating
+                                value={(answers[q.id] as number) || 0}
+                                onChange={(v) => setAnswer(q.id, v)}
+                              />
+                            </div>
+                          )}
+
+                          {q.type === "select" && (
+                            <div>
+                              <select
+                                className="select-field text-sm w-full"
+                                value={(answers[q.id] as string) || ""}
+                                onChange={(e) => setAnswer(q.id, e.target.value)}
+                              >
+                                <option value="">Selecciona una opción…</option>
+                                {q.options?.map((opt) => (
+                                  <option key={opt} value={opt}>
+                                    {opt}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+
+                          {q.type === "text" && (
+                            <div>
+                              <textarea
+                                className="input-field resize-none text-sm w-full"
+                                rows={4}
+                                placeholder="Escribe tus comentarios o sugerencias con total libertad…"
+                                maxLength={500}
+                                value={(answers[q.id] as string) || ""}
+                                onChange={(e) => setAnswer(q.id, e.target.value)}
+                              />
+                              <div className="flex justify-between items-center text-xs text-slate-400 mt-1">
+                                <span>Sé tan específico como desees</span>
+                                <span>{((answers[q.id] as string) || "").length}/500</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Barra de Envío */}
+              <div className="metric-card p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="text-xs text-slate-400 text-center sm:text-left">
+                  <p className="text-slate-300 font-medium mb-0.5">
+                    {allRequired ? "✓ Todas las preguntas obligatorias completadas" : "Faltan preguntas obligatorias por responder"}
+                  </p>
+                  <p>Asegúrate de revisar tus respuestas antes de enviar.</p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleSubmit()}
+                  disabled={!allRequired || loading}
+                  className="btn-primary w-full sm:w-auto flex items-center justify-center gap-2 py-3 px-8 text-base shadow-lg shadow-emerald-950/40 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading && (
+                    <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  )}
+                  {loading ? "Enviando valoración…" : "Enviar valoración"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* PESTAÑA 2: HISTORIAL DE RESPUESTAS */}
+      {activeTab === "history" && (
+        <div className="space-y-6">
+          {/* Métricas Resumen del Historial Personal (Ancho Completo) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="metric-card p-5 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                {Icons.message("w-6 h-6")}
+              </div>
+              <div>
+                <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
+                  Total Valoraciones
+                </p>
+                <p className="text-2xl font-bold font-display text-white mt-0.5">
+                  {totalSubmissions}
+                </p>
+              </div>
+            </div>
+
+            <div className="metric-card p-5 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
+                  Promedio de Satisfacción
+                </p>
+                <div className="flex items-baseline gap-2 mt-0.5">
+                  <p className="text-2xl font-bold font-display text-white">
+                    {avgSatisfaction}
+                  </p>
+                  <span className="text-xs text-slate-400">/ 5.0</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="metric-card p-5 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                {Icons.calendar("w-6 h-6")}
+              </div>
+              <div>
+                <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
+                  Último Envío
+                </p>
+                <p className="text-sm font-semibold text-white mt-1 truncate max-w-[200px]">
+                  {lastSubmission
+                    ? new Date(lastSubmission.fecha).toLocaleDateString("es-PE", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })
+                    : "Sin registros"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Listado de Envíos Anteriores */}
+          {history.length === 0 ? (
+            <div className="metric-card p-12 text-center space-y-4 max-w-lg mx-auto">
+              <div className="w-16 h-16 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center mx-auto text-slate-400">
+                {Icons.message("w-8 h-8")}
+              </div>
+              <h3 className="font-display font-bold text-xl text-white">
+                Aún no has enviado valoraciones
+              </h3>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                Tus comentarios ayudan a calibrar el sistema para tus necesidades de riego y cultivo.
+              </p>
+              <button
+                type="button"
+                onClick={() => setActiveTab("form")}
+                className="btn-primary px-6 py-2.5 text-sm"
+              >
+                Completar mi primera encuesta
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {history.map((item, idx) => {
+                const isExpanded = expandedId === item.id;
+                const formattedDate = new Date(item.fecha).toLocaleString("es-PE", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                });
+
+                return (
+                  <div
+                    key={item.id || idx}
+                    className="metric-card p-5 sm:p-6 transition-all space-y-4"
+                  >
+                    {/* Fila Principal del Historial */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold shrink-0">
+                          #{history.length - idx}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <h4 className="font-semibold text-white text-base">
+                              Valoración del {formattedDate}
+                            </h4>
+                            {item.cultivo_nombre && (
+                              <span className="chip status-water text-xs">
+                                🌱 {item.cultivo_nombre}
+                              </span>
+                            )}
+                            <span className="chip status-active text-xs">
+                              Enviada
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <StarDisplay value={item.calificacion} />
+                            <span className="text-xs font-semibold text-amber-400">
+                              {ratingLabels[item.calificacion] || `${item.calificacion}/5 estrellas`}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setExpandedId(isExpanded ? null : item.id)}
+                        className="btn-secondary text-xs px-3.5 py-2 flex items-center justify-center gap-2 self-start sm:self-auto cursor-pointer"
+                      >
+                        <span>
+                          {isExpanded ? "Ocultar respuestas" : `Ver preguntas respondidas (${item.respuestas?.length || 0})`}
+                        </span>
+                        <svg
+                          className={`w-3.5 h-3.5 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                        >
+                          <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                      </button>
+                    </div>
+
+                    {/* Mensaje global si existe */}
+                    {item.mensaje && item.mensaje !== "Valoración registrada" && (
+                      <p className="text-sm text-slate-300 bg-slate-900/50 p-3 rounded-xl border border-slate-800/80 italic">
+                        "{item.mensaje}"
+                      </p>
+                    )}
+
+                    {/* Acordeón de Preguntas y Respuestas Específicas */}
+                    {isExpanded && (
+                      <div className="pt-3 border-t border-slate-800/80 space-y-3 fade-in">
+                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                          Detalle de preguntas respondidas:
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {item.respuestas && item.respuestas.length > 0 ? (
+                            item.respuestas.map((resp, rIdx) => (
+                              <div
+                                key={resp.id || rIdx}
+                                className="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-2"
+                              >
+                                <p className="text-xs font-medium text-slate-300 leading-snug">
+                                  {rIdx + 1}. {resp.pregunta}
+                                </p>
+
+                                {resp.calificacion !== null && resp.calificacion !== undefined && (
+                                  <div className="flex items-center gap-2 pt-1">
+                                    <StarDisplay value={resp.calificacion} />
+                                    <span className="text-xs font-bold text-amber-400">
+                                      {ratingLabels[resp.calificacion] || `${resp.calificacion}/5`}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {resp.respuesta_texto && (
+                                  <div className="pt-1">
+                                    {resp.tipo === "select" ? (
+                                      <span className="chip status-water text-xs font-medium inline-block">
+                                        ✓ {resp.respuesta_texto}
+                                      </span>
+                                    ) : (
+                                      <div className="bg-slate-950/60 border-l-2 border-emerald-500 pl-3 py-1.5 rounded-r text-xs text-slate-200">
+                                        "{resp.respuesta_texto}"
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-xs text-slate-500 italic">
+                              No hay desglose específico de preguntas guardado para este registro.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <Box>
-      <label style={{ display: "block", fontSize: "0.85rem", color: "#9ca3af", marginBottom: "6px", fontWeight: 600 }}>
-        {label}
-      </label>
-      {children}
-    </Box>
-  );
-}
-
-const selectStyle: React.CSSProperties = {
-  width: "100%",
-  minHeight: "40px",
-  borderRadius: "8px",
-  border: "1px solid #334155",
-  background: "#1e293b",
-  color: "white",
-  padding: "0 10px",
-  outline: "none",
-};

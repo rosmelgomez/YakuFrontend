@@ -12,21 +12,18 @@ import {
   Dialog,
   TextField,
 } from "@radix-ui/themes";
-import { UmbralesForm } from "./UmbralesForm";
 import type { DispositivoItem } from "../types";
 
 interface SensoresPanelProps {
   dispositivosSensores: DispositivoItem[];
   onToggleCaptura: (devId: number, active: boolean) => void;
   onCalibrarSensor: (devId: number, pin: number, offset: number) => Promise<void>;
-  umbralesProps: React.ComponentProps<typeof UmbralesForm>;
 }
 
 export function SensoresPanel({
   dispositivosSensores,
   onToggleCaptura,
   onCalibrarSensor,
-  umbralesProps,
 }: SensoresPanelProps) {
   const [calibDevId, setCalibDevId] = useState<number | null>(null);
   const [calibPin, setCalibPin] = useState<number | null>(null);
@@ -151,9 +148,6 @@ export function SensoresPanel({
           </Text>
         )}
       </Card>
-
-      {/* Umbrales */}
-      <UmbralesForm {...umbralesProps} />
 
       {/* MODAL DE CALIBRACIÓN REMOTA */}
       <Dialog.Root

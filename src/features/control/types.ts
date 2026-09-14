@@ -77,5 +77,4 @@ export interface ControlPanelProps {
   data: ControlData;
   idCultivo: number;
   modelosML?: any[];
-  initialUmbrales?: any[];
 }

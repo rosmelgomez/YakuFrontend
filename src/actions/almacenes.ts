@@ -1,12 +1,10 @@
-"use server";
+
 
 import { revalidatePath, revalidateTag } from "next/cache";
 import { fetchFromFastAPI } from "@/lib/bff";
 
 export async function listarAlmacenes() {
-  const res = await fetchFromFastAPI("/almacenes", {
-    next: { revalidate: 300, tags: ['admin:almacenes'] },
-  });
+  const res = await fetchFromFastAPI("/almacenes");
   if (!res.ok) {
     throw new Error(await res.text() || "Error al listar almacenes");
   }

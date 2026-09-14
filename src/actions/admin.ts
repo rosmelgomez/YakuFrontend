@@ -1,5 +1,5 @@
 // src/actions/admin.ts
-"use server";
+
 
 import { revalidatePath, revalidateTag } from "next/cache";
 import { fetchFromFastAPI } from "@/lib/bff";
@@ -226,9 +226,7 @@ export async function listarComponentes() {
 }
 
 export async function listarPlantas() {
-  const res = await fetchFromFastAPI("/plantas", {
-    next: { revalidate: CATALOG_CACHE_SECONDS, tags: ['catalogo:plantas'] },
-  });
+  const res = await fetchFromFastAPI("/plantas");
   if (!res.ok) {
     throw new Error("Error al listar plantas");
   }

@@ -1,14 +1,14 @@
 'use client';
 
 import React from 'react';
-import { AlertTriangle, X, Droplet } from 'lucide-react';
+import { AlertTriangle, X, Droplet, CheckCircle2 } from 'lucide-react';
 
 interface FloatingToastProps {
   alerta: {
     id: string;
     titulo: string;
     mensaje: string;
-    severidad: 'info' | 'advertencia' | 'critica';
+    severidad: 'info' | 'advertencia' | 'critica' | 'exito';
     valor?: number;
   };
   onClose: () => void;
@@ -37,6 +37,13 @@ export default function FloatingToast({ alerta, onClose }: FloatingToastProps) {
       shadow: 'shadow-red-500/5',
       text: 'text-red-400',
       icon: <AlertTriangle className="w-5 h-5 text-red-400 animate-bounce" />
+    },
+    exito: {
+      gradient: 'from-emerald-500/10 to-teal-500/10',
+      border: 'border-emerald-500/30 hover:border-emerald-500/50',
+      shadow: 'shadow-emerald-500/5',
+      text: 'text-emerald-400',
+      icon: <CheckCircle2 className="w-5 h-5 text-emerald-400" />
     }
   }[alerta.severidad] || {
     gradient: 'from-slate-500/10 to-slate-500/10',

@@ -14,6 +14,7 @@ import {
 } from "@/actions/firmware";
 import { EspFlasher, FirmwareSegment } from "@/lib/firmware/esp-flasher";
 import { firmwareTypeForDevice } from "@/lib/firmware/compatibility";
+import { emitirNotificacion } from "@/lib/notifications";
 import styles from "./FirmwareClient.module.css";
 
 type FirmwareVersion = {
@@ -324,6 +325,24 @@ export default function FirmwareClient({
         progreso: 100,
         mensaje: "Firmware verificado e instalado",
       });
+      emitirNotificacion({
+        titulo: "Firmware actualizado en tu nodo",
+        mensaje: `Se ha instalado la versión ${selectedVersion.version} en tu dispositivo '${selectedDevice?.nombre || "Nodo IoT"}'.`,
+        severidad: "exito",
+        rolDestino: "agricultor",
+        link: "/dashboard/agricultor/control",
+        origen: "Servicio OTA / Firmware",
+      });
+
+      window.dispatchEvent(
+        new CustomEvent("yaku:firmware_installed", {
+          detail: {
+            deviceNombre: selectedDevice?.nombre,
+            version: selectedVersion.version,
+          },
+        })
+      );
+
       setStatus("Instalacion completada y configuracion anterior borrada. Envia ahora la configuracion de campo.");
       router.refresh();
     } catch (reason) {

@@ -1,5 +1,5 @@
 // src/actions/historico.ts
-"use server";
+
 
 import { getHistoricoData } from "@/services/historico";
 

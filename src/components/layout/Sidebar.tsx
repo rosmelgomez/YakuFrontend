@@ -1,40 +1,129 @@
 // src/components/layout/Sidebar.tsx
 "use client";
 
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useSession, signOut } from 'next-auth/react';
-import { useEffect, useRef, useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import {
   LayoutDashboard,
+  Sprout,
+  Droplets,
+  SlidersHorizontal,
   BarChart3,
   Bell,
-  Settings,
-  SlidersHorizontal,
   Brain,
-  LogOut,
+  MessageSquareText,
+  User,
   Users,
   Cpu,
-  MapPin,
-  Database,
-  User,
-  Warehouse,
+  Layers,
+  Link2,
   HardDriveUpload,
-  MessageSquareText,
+  MapPin,
+  Warehouse,
+  Database,
+  LogOut,
   MoreHorizontal,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
+
+interface NavItem {
+  type: 'item';
+  id: string;
+  label: string;
+  href: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  mobilePrimary?: boolean;
+}
+
+interface NavSection {
+  type: 'section';
+  id: string;
+  title: string;
+}
+
+type NavEntry = NavItem | NavSection;
+
+const farmerNavEntries: NavEntry[] = [
+  { type: 'section', id: 'sec-cultivo', title: 'Cultivo y Campo' },
+  { type: 'item', id: 'farmer-dashboard', label: 'Panel de control', href: '/dashboard/agricultor', icon: LayoutDashboard, mobilePrimary: true },
+  { type: 'item', id: 'farmer-crops', label: 'Mis cultivos', href: '/dashboard/agricultor/cultivos', icon: Sprout, mobilePrimary: true },
+
+  { type: 'section', id: 'sec-agua', title: 'Agua y Riego' },
+  { type: 'item', id: 'farmer-water', label: 'Fuente de agua', href: '/dashboard/agricultor/fuente-agua', icon: Droplets },
+  { type: 'item', id: 'farmer-control', label: 'Control de Riego', href: '/dashboard/agricultor/control', icon: SlidersHorizontal, mobilePrimary: true },
+
+  { type: 'section', id: 'sec-analisis', title: 'Análisis' },
+  { type: 'item', id: 'farmer-historical', label: 'Históricos', href: '/dashboard/agricultor/historico', icon: BarChart3 },
+  { type: 'item', id: 'farmer-notifications', label: 'Historial de notificaciones', href: '/dashboard/agricultor/notificaciones', icon: Bell, mobilePrimary: true },
+  { type: 'item', id: 'farmer-predictive', label: 'Inteligencia IA', href: '/dashboard/agricultor/ml', icon: Brain },
+
+  { type: 'section', id: 'sec-cuenta', title: 'Mi cuenta' },
+  { type: 'item', id: 'farmer-feedback', label: 'Valoraciones', href: '/dashboard/agricultor/feedback', icon: MessageSquareText },
+  { type: 'item', id: 'farmer-profile', label: 'Mi perfil', href: '/dashboard/agricultor/perfil', icon: User },
+];
+
+const adminNavEntries: NavEntry[] = [
+  { type: 'section', id: 'sec-supervision', title: 'Supervisión' },
+  { type: 'item', id: 'admin-dashboard', label: 'Panel global', href: '/dashboard/administrador', icon: LayoutDashboard, mobilePrimary: true },
+  { type: 'item', id: 'admin-users', label: 'Usuarios', href: '/dashboard/administrador/usuarios', icon: Users, mobilePrimary: true },
+
+  { type: 'section', id: 'sec-iot', title: 'Dispositivos IoT' },
+  { type: 'item', id: 'admin-devices', label: 'Dispositivos', href: '/dashboard/administrador/dispositivos', icon: Cpu, mobilePrimary: true },
+  { type: 'item', id: 'admin-components', label: 'Componentes', href: '/dashboard/administrador/componentes', icon: Layers },
+  { type: 'item', id: 'admin-assign-device', label: 'Asignar dispositivo', href: '/dashboard/administrador/asignar-dispositivo', icon: Link2 },
+  { type: 'item', id: 'admin-firmware', label: 'Firmware', href: '/dashboard/administrador/firmware', icon: HardDriveUpload, mobilePrimary: true },
+
+  { type: 'section', id: 'sec-catalogos', title: 'Catálogos' },
+  { type: 'item', id: 'admin-catalogs', label: 'Catálogos', href: '/dashboard/administrador/catalogo', icon: MapPin },
+  { type: 'item', id: 'admin-warehouses', label: 'Almacenes', href: '/dashboard/administrador/almacenes', icon: Warehouse },
+
+  { type: 'section', id: 'sec-config', title: 'Configuración' },
+  { type: 'item', id: 'admin-feedback', label: 'Preguntas feedback', href: '/dashboard/administrador/feedback', icon: MessageSquareText },
+  { type: 'item', id: 'admin-backup', label: 'Respaldo de datos', href: '/dashboard/administrador/respaldo', icon: Database },
+
+  { type: 'section', id: 'sec-admin-cuenta', title: 'Mi cuenta' },
+  { type: 'item', id: 'admin-profile', label: 'Mi perfil', href: '/dashboard/administrador/perfil', icon: User },
+];
 
 export default function Sidebar({ initials = "JR" }: { initials?: string }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { user, logout } = useAuth();
+
   const [openProfile, setOpenProfile] = useState(false);
   const [openMore, setOpenMore] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const moreRef = useRef<HTMLDivElement>(null);
-  const { data: session } = useSession();
-  const userRole = session?.user?.rol;
-  const isAdmin = userRole === 'administrador';
-  const isFarmer = userRole === 'agricultor';
+
+  // Detección responsiva de pantalla grande (>= 1100px)
+  const [isLargeScreen, setIsLargeScreen] = useState<boolean>(true);
+  const [userCollapsed, setUserCollapsed] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mediaQuery = window.matchMedia('(min-width: 1100px)');
+    const updateMatches = (e: MediaQueryList | MediaQueryListEvent) => {
+      setIsLargeScreen(e.matches);
+      setUserCollapsed(null); // Resetea preferencia manual al cambiar de tamaño de pantalla
+    };
+    updateMatches(mediaQuery);
+    mediaQuery.addEventListener('change', updateMatches);
+    return () => mediaQuery.removeEventListener('change', updateMatches);
+  }, []);
+
+  const isExpanded = userCollapsed !== null ? !userCollapsed : isLargeScreen;
+
+  // Sincronizar ancho con la variable CSS para adaptar el layout de la app
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    document.documentElement.style.setProperty(
+      '--sidebar-current-width',
+      isExpanded ? '240px' : '78px'
+    );
+  }, [isExpanded]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -49,16 +138,38 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const isFarmerMoreActive = Boolean(
-    pathname?.includes('/ml') || pathname?.includes('/feedback')
+  const userRole = user?.rol || 'agricultor';
+  const isAdmin = userRole === 'administrador';
+  const roleLabel = isAdmin ? 'Administrador' : 'Agricultor';
+  const userName = user?.name || (isAdmin ? 'Administrador Yaku' : 'Agricultor Yaku');
+  const profileHref = isAdmin ? '/dashboard/administrador/perfil' : '/dashboard/agricultor/perfil';
+
+  const navEntries = isAdmin ? adminNavEntries : farmerNavEntries;
+
+  const isRouteActive = (href: string) => {
+    if (!pathname) return false;
+    if (href === '/dashboard/agricultor' || href === '/dashboard/administrador') {
+      return pathname === href;
+    }
+    if (href === '/dashboard/agricultor/notificaciones' && pathname === '/dashboard/agricultor/alertas') {
+      return true;
+    }
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
+
+  // Saber si alguna opción secundaria de móvil está activa para iluminar el botón «Más»
+  const isMoreActive = navEntries.some(
+    (entry) => entry.type === 'item' && !entry.mobilePrimary && isRouteActive(entry.href)
   );
 
-  const isAdminMoreActive = Boolean(
-    pathname?.includes('/catalogo') ||
-    pathname?.includes('/feedback') ||
-    pathname?.includes('/respaldo') ||
-    pathname?.includes('/almacenes')
-  );
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (err) {
+      console.error(err);
+    }
+    window.location.href = '/auth/login';
+  };
 
   return (
     <>
@@ -69,56 +180,74 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
           border: 1px solid #1e293b;
           z-index: 100;
           display: flex;
-          align-items: center;
           backdrop-filter: blur(12px);
+          transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+          box-sizing: border-box;
         }
 
-        /* --- MOBILE (Barra de Navegación Inferior) --- */
+        /* --- MOBILE (< 1000px) --- */
         @media (max-width: 999px) {
           .sidebar-container {
             bottom: 0;
             left: 0;
-            width: 100%;
+            width: 100% !important;
             height: calc(64px + env(safe-area-inset-bottom, 0px));
             flex-direction: row;
             justify-content: space-around;
+            align-items: center;
             padding: 0 6px env(safe-area-inset-bottom, 0px) 6px;
             border-radius: 20px 20px 0 0;
             border-bottom: none;
-            box-sizing: border-box;
           }
-          .sidebar-logo { display: none !important; }
-          .sidebar-menu {
-            display: contents !important;
-          }
-          .desktop-only {
+          .desktop-sidebar-content {
             display: none !important;
           }
-          .mobile-only {
+          .mobile-sidebar-content {
             display: flex !important;
+            width: 100%;
+            align-items: center;
+            justify-content: space-around;
           }
-          .nav-item {
+          .mobile-nav-item {
             width: 44px;
             height: 44px;
             border-radius: 12px;
-          }
-          .profile-wrapper, .more-wrapper { 
-            margin-top: 0 !important;
             display: flex;
             align-items: center;
             justify-content: center;
+            color: #64748b;
+            text-decoration: none;
             position: relative;
+            transition: all 0.2s ease;
           }
-          .dropdown-menu {
-            bottom: calc(68px + env(safe-area-inset-bottom, 0px));
-            right: 8px;
-            left: auto !important;
+          .mobile-nav-item:hover {
+            color: #cbd5e1;
+            background: rgba(255,255,255,0.05);
+          }
+          .mobile-nav-item.active {
+            color: #22c55e;
+            background: rgba(34,197,94,0.12);
+            border: 1px solid rgba(34,197,94,0.25);
+          }
+          .mobile-nav-item.active::before {
+            content: '';
+            position: absolute;
+            bottom: 3px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 14px;
+            height: 3px;
+            background-color: #22c55e;
+            border-radius: 2px;
           }
           .more-menu {
             position: absolute;
             bottom: calc(68px + env(safe-area-inset-bottom, 0px));
             right: 48px;
             width: 230px;
+            max-height: 70vh;
+            overflow-y: auto;
             background: #081420;
             border: 1px solid #1e293b;
             border-radius: 16px;
@@ -129,341 +258,493 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
             gap: 4px;
             z-index: 120;
           }
-          /* Indicador activo abajo en móvil */
-          .nav-item.active::before {
-            content: '';
-            position: absolute;
-            bottom: 4px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 14px;
-            height: 3px;
-            background-color: #22c55e;
-            border-radius: 2px;
+          .dropdown-menu {
+            bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+            right: 8px;
+            left: auto !important;
           }
         }
 
-        /* --- DESKTOP (Barra Lateral Izquierda) --- */
+        /* --- DESKTOP (>= 1000px) --- */
         @media (min-width: 1000px) {
-          .mobile-only {
+          .mobile-sidebar-content {
             display: none !important;
           }
-          .desktop-only {
+          .desktop-sidebar-content {
             display: flex !important;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
           }
           .sidebar-container {
             top: 12px;
             left: 16px;
-            width: 82px;
             height: calc(100vh - 24px);
-            flex-direction: column;
-            padding: 18px 0;
             border-radius: 24px;
           }
-          .sidebar-menu {
-            flex-direction: column !important;
-            gap: 14px !important;
-          }
-          .profile-wrapper { margin-top: auto !important; }
           .dropdown-menu {
             bottom: 58px;
             left: 60px;
           }
-          /* Indicador activo a la izquierda en PC */
-          .nav-item.active::before {
-            content: '';
-            position: absolute;
-            left: -16px;
-            top: 50%;
-            transform: translateY(-50%);
-            height: 24px;
-            width: 4px;
-            background-color: #22c55e;
-            border-radius: 0 4px 4px 0;
-          }
         }
 
-        /* --- ESTILOS DE LOS BOTONES --- */
-        .nav-item {
-          width: 52px;
-          height: 52px;
-          border-radius: 16px;
+        /* --- ESTILOS DE ELEMENTOS EXPANDIDOS --- */
+        .nav-item-expanded {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          width: 100%;
+          padding: 8px 12px;
+          border-radius: 12px;
+          font-size: 13.5px;
+          font-weight: 500;
+          color: #94a3b8;
+          text-decoration: none;
+          transition: all 0.15s ease;
+          position: relative;
+          box-sizing: border-box;
+        }
+
+        .nav-item-expanded:hover {
+          background: rgba(255, 255, 255, 0.05);
+          color: #f1f5f9;
+        }
+
+        .nav-item-expanded.active {
+          background: rgba(34, 197, 94, 0.12);
+          color: #22c55e;
+          border: 1px solid rgba(34, 197, 94, 0.25);
+          font-weight: 600;
+        }
+
+        .nav-item-expanded.active::before {
+          content: '';
+          position: absolute;
+          left: 0;
+          top: 50%;
+          transform: translateY(-50%);
+          height: 18px;
+          width: 3.5px;
+          background-color: #22c55e;
+          border-radius: 0 3px 3px 0;
+        }
+
+        /* --- ESTILOS DE ELEMENTOS COLAPSADOS --- */
+        .nav-item-collapsed {
+          width: 48px;
+          height: 48px;
+          border-radius: 14px;
           display: flex;
           align-items: center;
           justify-content: center;
-          cursor: pointer;
-          transition: all .2s ease;
-          position: relative;
-          text-decoration: none;
-        }
-
-        .nav-item:not(.active) {
-          border: 1px solid transparent;
-          background: transparent;
           color: #64748b;
+          text-decoration: none;
+          transition: all 0.15s ease;
+          position: relative;
+          margin: 0 auto;
         }
 
-        .nav-item:not(.active):hover {
-          background: rgba(255,255,255,0.05);
+        .nav-item-collapsed:hover {
+          background: rgba(255, 255, 255, 0.05);
           color: #cbd5e1;
         }
 
-        .nav-item.active {
-          border: 1px solid rgba(34,197,94,0.3);
-          background: rgba(34,197,94,0.12);
+        .nav-item-collapsed.active {
+          background: rgba(34, 197, 94, 0.12);
           color: #22c55e;
+          border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .nav-item-collapsed.active::before {
+          content: '';
+          position: absolute;
+          left: -8px;
+          top: 50%;
+          transform: translateY(-50%);
+          height: 20px;
+          width: 3.5px;
+          background-color: #22c55e;
+          border-radius: 0 4px 4px 0;
+        }
+
+        /* Scrollbar personalizado para el menú */
+        .sidebar-scroll {
+          overflow-y: auto;
+          overflow-x: hidden;
+          scrollbar-width: thin;
+          scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+        }
+        .sidebar-scroll::-webkit-scrollbar {
+          width: 4px;
+        }
+        .sidebar-scroll::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.15);
+          border-radius: 4px;
         }
       `}} />
 
-      <aside className="sidebar-container">
-        {/* LOGO (Se oculta en móvil) */}
-        <div className="sidebar-logo" style={{
-          width: '48px', height: '48px', background: 'white', borderRadius: '14px',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          marginBottom: '24px', fontSize: '1.3rem'
-        }}>
-          🌱
-        </div>
-
-        {/* MENÚ DE NAVEGACIÓN */}
-        <div className="sidebar-menu" style={{ display: 'flex' }}>
-          {isFarmer && (
-            <>
-              {/* Acciones principales en móvil y escritorio */}
-              <SidebarButton title="Dashboard" href="/dashboard/agricultor" active={pathname === '/dashboard/agricultor'} icon={<LayoutDashboard size={22} />} onPrefetch={router.prefetch} />
-              <SidebarButton title="Histórico" href="/dashboard/agricultor/historico" active={pathname?.includes('/historico')} icon={<BarChart3 size={22} />} onPrefetch={router.prefetch} />
-              <SidebarButton title="Alertas" href="/dashboard/agricultor/alertas" active={pathname?.includes('/alertas')} icon={<Bell size={22} />} onPrefetch={router.prefetch} />
-              <SidebarButton title="Control" href="/dashboard/agricultor/control" active={pathname?.includes('/control')} icon={<SlidersHorizontal size={22} />} onPrefetch={router.prefetch} />
-
-              {/* Acciones secundarias: visibles directas en PC */}
-              <SidebarButton className="desktop-only" title="Inteligencia ML" href="/dashboard/agricultor/ml" active={pathname?.includes('/ml')} icon={<Brain size={22} />} onPrefetch={router.prefetch} />
-              <SidebarButton className="desktop-only" title="Feedback" href="/dashboard/agricultor/feedback" active={pathname?.includes('/feedback')} icon={<MessageSquareText size={22} />} onPrefetch={router.prefetch} />
-
-              {/* Botón «Más» para móvil */}
-              <div ref={moreRef} className="more-wrapper mobile-only">
-                <button
-                  type="button"
-                  title="Más secciones"
-                  onClick={() => setOpenMore(!openMore)}
-                  className={`nav-item ${isFarmerMoreActive ? 'active' : ''}`}
-                  style={{ border: 'none', background: isFarmerMoreActive ? 'rgba(34,197,94,0.12)' : 'transparent' }}
-                >
-                  <MoreHorizontal size={22} />
-                </button>
-
-                {openMore && (
-                  <div className="more-menu">
-                    <div style={{ padding: '6px 10px 4px', fontSize: '11px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      Más opciones
-                    </div>
-                    <Link
-                      href="/dashboard/agricultor/ml"
-                      onClick={() => setOpenMore(false)}
-                      style={{
-                        padding: '10px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '10px',
-                        textDecoration: 'none', color: pathname?.includes('/ml') ? '#22c55e' : '#cbd5e1',
-                        background: pathname?.includes('/ml') ? 'rgba(34,197,94,0.12)' : 'transparent',
-                        fontSize: '0.9rem'
-                      }}
-                    >
-                      <Brain size={18} />
-                      Inteligencia ML
-                    </Link>
-                    <Link
-                      href="/dashboard/agricultor/feedback"
-                      onClick={() => setOpenMore(false)}
-                      style={{
-                        padding: '10px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '10px',
-                        textDecoration: 'none', color: pathname?.includes('/feedback') ? '#22c55e' : '#cbd5e1',
-                        background: pathname?.includes('/feedback') ? 'rgba(34,197,94,0.12)' : 'transparent',
-                        fontSize: '0.9rem'
-                      }}
-                    >
-                      <MessageSquareText size={18} />
-                      Enviar Feedback
-                    </Link>
-                  </div>
-                )}
+      <aside
+        className="sidebar-container"
+        style={{
+          width: isExpanded ? '240px' : '78px',
+          padding: isExpanded ? '16px 12px' : '16px 8px',
+        }}
+      >
+        {/* =========================================================
+            VISTA DE ESCRITORIO (DINÁMICA: EXPANDIDA O COLAPSADA)
+        ========================================================= */}
+        <div className="desktop-sidebar-content">
+          {/* HEADER DEL SIDEBAR */}
+          {isExpanded ? (
+            <div className="flex items-center justify-between px-2 pb-3 mb-2 border-b border-slate-800/80">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center text-white shadow-md shadow-emerald-950/40 text-base shrink-0">
+                  🌱
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="font-bold text-base text-white tracking-tight leading-tight">Yaku</span>
+                  <span className="text-[11px] text-emerald-400 font-medium truncate opacity-90">{roleLabel}</span>
+                </div>
               </div>
-            </>
-          )}
-
-          {isAdmin && (
-            <>
-              {/* 4 Acciones principales para Administrador */}
-              <SidebarButton title="Dashboard" href="/dashboard/administrador" active={pathname === '/dashboard/administrador'} icon={<LayoutDashboard size={22} />} onPrefetch={router.prefetch} />
-              <SidebarButton title="Usuarios" href="/dashboard/administrador/usuarios" active={pathname === '/dashboard/administrador/usuarios'} icon={<Users size={22} />} onPrefetch={router.prefetch} />
-              <SidebarButton title="Dispositivos" href="/dashboard/administrador/dispositivos" active={pathname === '/dashboard/administrador/dispositivos'} icon={<Cpu size={22} />} onPrefetch={router.prefetch} />
-              <SidebarButton title="Firmware" href="/dashboard/administrador/firmware" active={pathname === '/dashboard/administrador/firmware'} icon={<HardDriveUpload size={22} />} onPrefetch={router.prefetch} />
-
-              {/* Acciones secundarias en PC */}
-              <SidebarButton className="desktop-only" title="Catálogo" href="/dashboard/administrador/catalogo" active={pathname === '/dashboard/administrador/catalogo'} icon={<MapPin size={22} />} onPrefetch={router.prefetch} />
-              <SidebarButton className="desktop-only" title="Feedback" href="/dashboard/administrador/feedback" active={pathname === '/dashboard/administrador/feedback'} icon={<MessageSquareText size={22} />} onPrefetch={router.prefetch} />
-              <SidebarButton className="desktop-only" title="Respaldo" href="/dashboard/administrador/respaldo" active={pathname === '/dashboard/administrador/respaldo'} icon={<Database size={22} />} onPrefetch={router.prefetch} />
-              <SidebarButton className="desktop-only" title="Almacenes" href="/dashboard/administrador/almacenes" active={pathname === '/dashboard/administrador/almacenes'} icon={<Warehouse size={22} />} onPrefetch={router.prefetch} />
-
-              {/* Botón «Más» para móvil Administrador */}
-              <div ref={moreRef} className="more-wrapper mobile-only">
-                <button
-                  type="button"
-                  title="Más herramientas"
-                  onClick={() => setOpenMore(!openMore)}
-                  className={`nav-item ${isAdminMoreActive ? 'active' : ''}`}
-                  style={{ border: 'none', background: isAdminMoreActive ? 'rgba(34,197,94,0.12)' : 'transparent' }}
-                >
-                  <MoreHorizontal size={22} />
-                </button>
-
-                {openMore && (
-                  <div className="more-menu">
-                    <div style={{ padding: '6px 10px 4px', fontSize: '11px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      Administración
-                    </div>
-                    <Link
-                      href="/dashboard/administrador/catalogo"
-                      onClick={() => setOpenMore(false)}
-                      style={{
-                        padding: '10px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '10px',
-                        textDecoration: 'none', color: pathname === '/dashboard/administrador/catalogo' ? '#22c55e' : '#cbd5e1',
-                        background: pathname === '/dashboard/administrador/catalogo' ? 'rgba(34,197,94,0.12)' : 'transparent',
-                        fontSize: '0.9rem'
-                      }}
-                    >
-                      <MapPin size={18} />
-                      Catálogo de Plantas
-                    </Link>
-                    <Link
-                      href="/dashboard/administrador/feedback"
-                      onClick={() => setOpenMore(false)}
-                      style={{
-                        padding: '10px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '10px',
-                        textDecoration: 'none', color: pathname === '/dashboard/administrador/feedback' ? '#22c55e' : '#cbd5e1',
-                        background: pathname === '/dashboard/administrador/feedback' ? 'rgba(34,197,94,0.12)' : 'transparent',
-                        fontSize: '0.9rem'
-                      }}
-                    >
-                      <MessageSquareText size={18} />
-                      Feedback Usuarios
-                    </Link>
-                    <Link
-                      href="/dashboard/administrador/respaldo"
-                      onClick={() => setOpenMore(false)}
-                      style={{
-                        padding: '10px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '10px',
-                        textDecoration: 'none', color: pathname === '/dashboard/administrador/respaldo' ? '#22c55e' : '#cbd5e1',
-                        background: pathname === '/dashboard/administrador/respaldo' ? 'rgba(34,197,94,0.12)' : 'transparent',
-                        fontSize: '0.9rem'
-                      }}
-                    >
-                      <Database size={18} />
-                      Respaldo Base Datos
-                    </Link>
-                    <Link
-                      href="/dashboard/administrador/almacenes"
-                      onClick={() => setOpenMore(false)}
-                      style={{
-                        padding: '10px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '10px',
-                        textDecoration: 'none', color: pathname === '/dashboard/administrador/almacenes' ? '#22c55e' : '#cbd5e1',
-                        background: pathname === '/dashboard/administrador/almacenes' ? 'rgba(34,197,94,0.12)' : 'transparent',
-                        fontSize: '0.9rem'
-                      }}
-                    >
-                      <Warehouse size={18} />
-                      Almacenes Firmware
-                    </Link>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* PERFIL Y CERRAR SESIÓN */}
-        <div ref={profileRef} className="profile-wrapper" style={{ position: 'relative' }}>
-          <button
-            onClick={() => setOpenProfile(!openProfile)}
-            title="Mi cuenta"
-            style={{
-              width: '44px', height: '44px', borderRadius: '50%', background: '#1e293b',
-              border: '1px solid #334155', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', color: '#94a3b8', cursor: 'pointer',
-              fontWeight: 'bold', fontSize: '14px'
-            }}
-          >
-            {initials}
-          </button>
-
-          {/* DROPDOWN FLOTANTE */}
-          {openProfile && (
-            <div className="dropdown-menu" style={{
-              position: 'absolute', width: '210px', background: '#081420',
-              border: '1px solid #1e293b', borderRadius: '16px', padding: '10px',
-              boxShadow: '0 10px 40px rgba(0,0,0,0.45)'
-            }}>
-              <Link
-                href="/dashboard/agricultor/perfil"
-                onClick={() => setOpenProfile(false)}
-                style={{
-                  width: '100%', background: 'transparent', textDecoration: 'none', color: '#cbd5e1',
-                  padding: '12px 14px', borderRadius: '10px', display: 'flex', alignItems: 'center',
-                  gap: '10px', cursor: 'pointer', fontSize: '0.95rem', transition: 'all .2s ease',
-                  marginBottom: '4px'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-              >
-                <User size={18} />
-                Mi Perfil
-              </Link>
               <button
-                onClick={async () => {
-                  await signOut({ redirect: false });
-                  window.location.href = '/auth/login';
-                }}
-                style={{
-                  width: '100%', background: 'transparent', border: 'none', color: '#ef4444',
-                  padding: '12px 14px', borderRadius: '10px', display: 'flex', alignItems: 'center',
-                  gap: '10px', cursor: 'pointer', fontSize: '0.95rem', transition: 'all .2s ease'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                type="button"
+                onClick={() => setUserCollapsed(true)}
+                title="Colapsar barra lateral"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 transition-colors cursor-pointer border-none bg-transparent"
               >
-                <LogOut size={18} />
-                Cerrar sesión
+                <PanelLeftClose size={18} />
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center pb-3 mb-2 border-b border-slate-800/80 gap-2">
+              <button
+                type="button"
+                onClick={() => setUserCollapsed(false)}
+                title="Expandir barra lateral"
+                className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center text-white shadow-md shadow-emerald-950/40 hover:scale-105 transition-all cursor-pointer border-none text-base"
+              >
+                🌱
+              </button>
+              <button
+                type="button"
+                onClick={() => setUserCollapsed(false)}
+                title="Expandir barra lateral"
+                className="p-1 text-slate-500 hover:text-emerald-400 transition-colors border-none bg-transparent cursor-pointer"
+              >
+                <PanelLeftOpen size={15} />
               </button>
             </div>
           )}
+
+          {/* LISTA DE NAVEGACIÓN */}
+          <div className={`sidebar-scroll flex-1 my-1 pr-1 ${isExpanded ? 'flex flex-col gap-0.5' : 'flex flex-col items-center gap-1.5'}`}>
+            {navEntries.map((entry) => {
+              if (entry.type === 'section') {
+                if (isExpanded) {
+                  return (
+                    <div
+                      key={entry.id}
+                      className="px-2 pt-3 pb-1 text-[10.5px] font-bold tracking-wider text-emerald-400/80 uppercase select-none"
+                    >
+                      {entry.title}
+                    </div>
+                  );
+                }
+                return <div key={entry.id} className="w-8 my-1.5 border-t border-slate-800/80" />;
+              }
+
+              const active = isRouteActive(entry.href);
+              const IconComponent = entry.icon;
+
+              if (isExpanded) {
+                return (
+                  <Link
+                    key={entry.id}
+                    href={entry.href}
+                    onMouseEnter={() => router.prefetch(entry.href)}
+                    className={`nav-item-expanded ${active ? 'active' : ''}`}
+                  >
+                    <IconComponent size={19} className="shrink-0" />
+                    <span className="truncate leading-tight">{entry.label}</span>
+                  </Link>
+                );
+              }
+
+              return (
+                <Link
+                  key={entry.id}
+                  href={entry.href}
+                  title={entry.label}
+                  onMouseEnter={() => router.prefetch(entry.href)}
+                  className={`nav-item-collapsed ${active ? 'active' : ''}`}
+                >
+                  <IconComponent size={21} />
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* PERFIL / PIE DE PÁGINA */}
+          {isExpanded ? (
+            <div className="pt-2.5 mt-auto border-t border-slate-800/80">
+              <div className="flex items-center justify-between p-2 rounded-xl bg-slate-900/70 border border-slate-800/60">
+                <Link
+                  href={profileHref}
+                  className="flex items-center gap-2.5 min-w-0 flex-1 hover:opacity-90 transition-opacity text-left text-decoration-none"
+                  title="Ver mi perfil"
+                >
+                  <div className="w-8 h-8 rounded-full bg-emerald-600/25 border border-emerald-500/40 flex items-center justify-center text-xs text-emerald-300 font-bold shrink-0">
+                    {initials}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-white text-xs font-semibold truncate leading-tight">{userName}</p>
+                    <p className="text-emerald-400 text-[11px] truncate capitalize opacity-80 leading-tight mt-0.5">{roleLabel}</p>
+                  </div>
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  title="Cerrar sesión"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0 ml-1 border-none bg-transparent cursor-pointer"
+                >
+                  <LogOut size={16} />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div ref={profileRef} className="pt-2 mt-auto border-t border-slate-800/80 flex flex-col items-center relative">
+              <button
+                type="button"
+                onClick={() => setOpenProfile(!openProfile)}
+                title="Mi cuenta"
+                className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 font-bold text-xs hover:border-emerald-500/50 transition-colors cursor-pointer"
+              >
+                {initials}
+              </button>
+
+              {/* DROPDOWN FLOTANTE CUANDO ESTÁ COLAPSADO */}
+              {openProfile && (
+                <div
+                  className="dropdown-menu"
+                  style={{
+                    position: 'absolute',
+                    width: '210px',
+                    background: '#081420',
+                    border: '1px solid #1e293b',
+                    borderRadius: '16px',
+                    padding: '8px',
+                    boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
+                    zIndex: 150,
+                  }}
+                >
+                  <div style={{ padding: '6px 12px 4px', fontSize: '11px', color: '#94a3b8', fontWeight: 600, borderBottom: '1px solid #1e293b', marginBottom: '4px' }}>
+                    {userName}
+                  </div>
+                  <Link
+                    href={profileHref}
+                    onClick={() => setOpenProfile(false)}
+                    style={{
+                      width: '100%',
+                      background: 'transparent',
+                      textDecoration: 'none',
+                      color: '#cbd5e1',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      cursor: 'pointer',
+                      fontSize: '0.9rem',
+                    }}
+                    onMouseEnter={(e: React.MouseEvent<HTMLAnchorElement>) => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+                    onMouseLeave={(e: React.MouseEvent<HTMLAnchorElement>) => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <User size={18} />
+                    Mi Perfil
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    style={{
+                      width: '100%',
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#ef4444',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      cursor: 'pointer',
+                      fontSize: '0.9rem',
+                    }}
+                    onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.background = 'rgba(239,68,68,0.08)')}
+                    onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <LogOut size={18} />
+                    Cerrar sesión
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* =========================================================
+            VISTA MÓVIL (< 1000px): BARRA DE NAVEGACIÓN INFERIOR
+        ========================================================= */}
+        <div className="mobile-sidebar-content">
+          {navEntries
+            .filter((e): e is NavItem => e.type === 'item' && !!e.mobilePrimary)
+            .map((item) => {
+              const active = isRouteActive(item.href);
+              const IconComp = item.icon;
+              return (
+                <Link
+                  key={item.id}
+                  href={item.href}
+                  title={item.label}
+                  className={`mobile-nav-item ${active ? 'active' : ''}`}
+                >
+                  <IconComp size={22} />
+                </Link>
+              );
+            })}
+
+          {/* BOTÓN «MÁS» PARA MÓVIL */}
+          <div ref={moreRef} style={{ position: 'relative' }}>
+            <button
+              type="button"
+              title="Más opciones"
+              onClick={() => setOpenMore(!openMore)}
+              className={`mobile-nav-item ${isMoreActive ? 'active' : ''}`}
+              style={{ border: 'none', background: isMoreActive ? 'rgba(34,197,94,0.12)' : 'transparent' }}
+            >
+              <MoreHorizontal size={22} />
+            </button>
+
+            {openMore && (
+              <div className="more-menu">
+                <div style={{ padding: '6px 10px 4px', fontSize: '11px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  {isAdmin ? 'Administración' : 'Más opciones'}
+                </div>
+                {navEntries
+                  .filter((e): e is NavItem => e.type === 'item' && !e.mobilePrimary)
+                  .map((item) => {
+                    const active = isRouteActive(item.href);
+                    const IconComp = item.icon;
+                    return (
+                      <Link
+                        key={item.id}
+                        href={item.href}
+                        onClick={() => setOpenMore(false)}
+                        style={{
+                          padding: '10px 12px',
+                          borderRadius: '10px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          textDecoration: 'none',
+                          color: active ? '#22c55e' : '#cbd5e1',
+                          background: active ? 'rgba(34,197,94,0.12)' : 'transparent',
+                          fontSize: '0.9rem',
+                        }}
+                      >
+                        <IconComp size={18} />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+              </div>
+            )}
+          </div>
+
+          {/* PERFIL MÓVIL */}
+          <div ref={profileRef} style={{ position: 'relative' }}>
+            <button
+              type="button"
+              onClick={() => setOpenProfile(!openProfile)}
+              title="Mi cuenta"
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '50%',
+                background: '#1e293b',
+                border: '1px solid #334155',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#94a3b8',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                fontSize: '12px',
+              }}
+            >
+              {initials}
+            </button>
+
+            {openProfile && (
+              <div
+                className="dropdown-menu"
+                style={{
+                  position: 'absolute',
+                  width: '210px',
+                  background: '#081420',
+                  border: '1px solid #1e293b',
+                  borderRadius: '16px',
+                  padding: '8px',
+                  boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
+                  zIndex: 150,
+                }}
+              >
+                <div style={{ padding: '6px 12px 4px', fontSize: '11px', color: '#94a3b8', fontWeight: 600, borderBottom: '1px solid #1e293b', marginBottom: '4px' }}>
+                  {userName}
+                </div>
+                <Link
+                  href={profileHref}
+                  onClick={() => setOpenProfile(false)}
+                  style={{
+                    width: '100%',
+                    background: 'transparent',
+                    textDecoration: 'none',
+                    color: '#cbd5e1',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                  }}
+                >
+                  <User size={18} />
+                  Mi Perfil
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  style={{
+                    width: '100%',
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#ef4444',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                  }}
+                >
+                  <LogOut size={18} />
+                  Cerrar sesión
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </aside>
     </>
-  );
-}
-
-function SidebarButton({
-  icon,
-  active = false,
-  href,
-  title,
-  className = '',
-  onPrefetch,
-}: {
-  icon: React.ReactNode;
-  active?: boolean;
-  href: string;
-  title?: string;
-  className?: string;
-  onPrefetch?: (href: string) => void;
-}) {
-  return (
-    <Link
-      href={href}
-      prefetch
-      title={title}
-      className={`nav-item ${active ? 'active' : ''} ${className}`}
-      onMouseEnter={() => onPrefetch?.(href)}
-      onFocus={() => onPrefetch?.(href)}
-    >
-      {icon}
-    </Link>
   );
 }

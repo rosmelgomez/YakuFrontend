@@ -1,63 +1,55 @@
-import { cache } from "react";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import { createBffToken } from "@/lib/bff-token";
+// src/lib/api/client.ts
 
-const getCachedSession = cache(async () => {
-  return getServerSession(authOptions);
-});
-
-function getFastAPIUrl() {
-  const configuredUrl = process.env.FASTAPI_API_URL?.trim().replace(/\/$/, "");
-  if (configuredUrl) return configuredUrl;
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("FASTAPI_API_URL es obligatoria en produccion");
-  }
-  return "http://127.0.0.1:8000";
-}
+export const FASTAPI_BASE_URL = import.meta.env.VITE_FASTAPI_URL || '/api';
 
 function resolveEndpoint(endpoint: string) {
-  return endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
-}
-
-function requestSignal(signal?: AbortSignal | null) {
-  return signal ?? AbortSignal.timeout(15_000);
+  return endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
 }
 
 export async function fetchPublicFastAPI(endpoint: string, options: RequestInit = {}) {
   const headers = new Headers(options.headers);
   const path = resolveEndpoint(endpoint);
+  const url = endpoint.startsWith('http') ? endpoint : `${FASTAPI_BASE_URL}${path}`;
 
   const fetchOptions: RequestInit = {
     ...options,
+    credentials: 'include',
     headers,
-    signal: requestSignal(options.signal),
   };
-  if (!options.cache && !options.next) {
-    fetchOptions.cache = "no-store";
-  }
 
-  return fetch(`${getFastAPIUrl()}${path}`, fetchOptions);
+  return fetch(url, fetchOptions);
 }
 
 export async function fetchFromFastAPI(endpoint: string, options: RequestInit = {}) {
-  const session = await getCachedSession();
-  if (!session?.user?.id) {
-    throw new Error("No autorizado: Sesion de usuario invalida");
+  const headers = new Headers(options.headers);
+  const token = typeof window !== 'undefined' ? localStorage.getItem('yaku_token') : null;
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
   }
 
-  const headers = new Headers(options.headers);
-  headers.set("X-BFF-Token", createBffToken(session.user.id));
   const path = resolveEndpoint(endpoint);
+  const url = endpoint.startsWith('http') ? endpoint : `${FASTAPI_BASE_URL}${path}`;
 
   const fetchOptions: RequestInit = {
     ...options,
+    credentials: 'include',
     headers,
-    signal: requestSignal(options.signal),
   };
-  if (!options.cache && !options.next) {
-    fetchOptions.cache = "no-store";
+
+  const response = await fetch(url, fetchOptions);
+
+  // Si da 401, intentar refrescar
+  if (response.status === 401 && !endpoint.includes('/auth/refresh') && !endpoint.includes('/auth/login')) {
+    try {
+      const refreshRes = await fetch(`${FASTAPI_BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (refreshRes.ok) {
+        return fetch(url, fetchOptions);
+      }
+    } catch {}
   }
 
-  return fetch(`${getFastAPIUrl()}${path}`, fetchOptions);
+  return response;
 }

@@ -1,5 +1,5 @@
 // src/actions/crops.ts
-"use server";
+
 
 import { revalidatePath, revalidateTag } from "next/cache";
 import { fetchFromFastAPI } from "@/lib/bff";
@@ -31,9 +31,7 @@ export async function registrarCultivo(payload: {
 }
 
 export async function listarPlantas() {
-  const res = await fetchFromFastAPI("/plantas", {
-    next: { revalidate: CATALOG_CACHE_SECONDS, tags: ['catalogo:plantas'] },
-  });
+  const res = await fetchFromFastAPI("/plantas");
   if (!res.ok) {
     throw new Error("Error al obtener catálogo de plantas");
   }
@@ -41,9 +39,7 @@ export async function listarPlantas() {
 }
 
 export async function listarRegiones() {
-  const res = await fetchFromFastAPI("/ubicacion/regiones", {
-    next: { revalidate: CATALOG_CACHE_SECONDS, tags: ['ubicacion:regiones'] },
-  });
+  const res = await fetchFromFastAPI("/ubicacion/regiones");
   if (!res.ok) {
     throw new Error("Error al obtener departamentos");
   }
@@ -51,9 +47,7 @@ export async function listarRegiones() {
 }
 
 export async function listarProvincias(idRegion: number) {
-  const res = await fetchFromFastAPI(`/ubicacion/provincias/${idRegion}`, {
-    next: { revalidate: CATALOG_CACHE_SECONDS, tags: ['ubicacion:provincias'] },
-  });
+  const res = await fetchFromFastAPI(`/ubicacion/provincias/${idRegion}`);
   if (!res.ok) {
     throw new Error("Error al obtener provincias");
   }
@@ -61,9 +55,7 @@ export async function listarProvincias(idRegion: number) {
 }
 
 export async function listarDistritos(idProvincia: number) {
-  const res = await fetchFromFastAPI(`/ubicacion/distritos/${idProvincia}`, {
-    next: { revalidate: CATALOG_CACHE_SECONDS, tags: ['ubicacion:distritos'] },
-  });
+  const res = await fetchFromFastAPI(`/ubicacion/distritos/${idProvincia}`);
   if (!res.ok) {
     throw new Error("Error al obtener distritos");
   }
@@ -71,9 +63,7 @@ export async function listarDistritos(idProvincia: number) {
 }
 
 export async function listarTodasProvincias() {
-  const res = await fetchFromFastAPI("/ubicacion/provincias", {
-    next: { revalidate: CATALOG_CACHE_SECONDS, tags: ['ubicacion:provincias'] },
-  });
+  const res = await fetchFromFastAPI("/ubicacion/provincias");
   if (!res.ok) {
     throw new Error("Error al obtener todas las provincias");
   }
@@ -81,9 +71,7 @@ export async function listarTodasProvincias() {
 }
 
 export async function listarTodosDistritos() {
-  const res = await fetchFromFastAPI("/ubicacion/distritos", {
-    next: { revalidate: CATALOG_CACHE_SECONDS, tags: ['ubicacion:distritos'] },
-  });
+  const res = await fetchFromFastAPI("/ubicacion/distritos");
   if (!res.ok) {
     throw new Error("Error al obtener todos los distritos");
   }

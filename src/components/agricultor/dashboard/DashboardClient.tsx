@@ -8,22 +8,9 @@ import nextDynamic from 'next/dynamic';
 const DashboardHistoryChart = nextDynamic(() => import('@/components/charts/DashboardHistoryChart'), { ssr: false });
 const DashboardConsumptionChart = nextDynamic(() => import('@/components/charts/DashboardConsumptionChart'), { ssr: false });
 const DashboardHealthGauge = nextDynamic(() => import('@/components/charts/DashboardHealthGauge'), { ssr: false });
-import {
-  registrarCultivo,
-  registrarFuenteAgua,
-  listarPlantas,
-  listarFuentesAgua,
-  listarRegiones,
-  listarProvincias,
-  listarDistritos,
-} from '@/actions/crops';
 import NoCropsEmptyState from '@/components/layout/NoCropsEmptyState';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 import CountdownTimer from './CountdownTimer';
-
-const getCreatedCropId = (res: any): number => {
-  return res?.id_cultivo ?? res?.idCultivo ?? res?.id ?? 0;
-};
 
 const DASHBOARD_REFRESH_SECONDS = 60;
 const DEFAULT_DASHBOARD_TIME_ZONE = 'America/Lima';
@@ -148,12 +135,7 @@ export default function DashboardClient({
   const [dashboardRange, setDashboardRange] = useState<HistoryRange>('6h');
   const [startDateFilter, setStartDateFilter] = useState('');
   const [endDateFilter, setEndDateFilter] = useState('');
-  const [catalogsLoaded, setCatalogsLoaded] = useState(
-    catalogPlantas.length > 0 || fuentesAgua.length > 0 || regiones.length > 0
-  );
-  const [isLoadingCatalogs, setIsLoadingCatalogs] = useState(false);
-  const [localCatalogPlantas, setLocalCatalogPlantas] = useState<any[]>(catalogPlantas);
-  const [localRegiones, setLocalRegiones] = useState<any[]>(regiones);
+
 
   useEffect(() => {
     setLocalCultivos(cultivos);
@@ -179,528 +161,6 @@ export default function DashboardClient({
     setStartDateFilter('');
     setEndDateFilter('');
   }, [dashboardRange, filterMode]);
-
-  const ensureCatalogsLoaded = async () => {
-    if (catalogsLoaded || isLoadingCatalogs) return;
-    setIsLoadingCatalogs(true);
-    try {
-      const [plantas, fuentes, departamentos] = await Promise.all([
-        listarPlantas().catch(() => []),
-        listarFuentesAgua().catch(() => []),
-        listarRegiones().catch(() => []),
-      ]);
-      setLocalCatalogPlantas(plantas);
-      setLocalFuentesAgua(fuentes);
-      setLocalRegiones(departamentos);
-      setCatalogsLoaded(true);
-    } finally {
-      setIsLoadingCatalogs(false);
-    }
-  };
-
-  const openRegisterCrop = () => {
-    setIsOpenRegisterCrop(true);
-    void ensureCatalogsLoaded();
-  };
-
-  const openRegisterWaterSource = () => {
-    setIsOpenRegisterWaterSource(true);
-    void ensureCatalogsLoaded();
-  };
-
-
-  // Local state for water sources to update dropdown dynamically without full reload
-  const [localFuentesAgua, setLocalFuentesAgua] = useState<any[]>(fuentesAgua);
-
-  // Water source creation states
-  const [isOpenRegisterWaterSource, setIsOpenRegisterWaterSource] = useState(false);
-  const [newWaterSourceName, setNewWaterSourceName] = useState("");
-  const [newWaterSourceTipo, setNewWaterSourceTipo] = useState("tanque"); // 'tanque' o 'conexion_directa'
-  const [newWaterSourceCapacidad, setNewWaterSourceCapacidad] = useState("");
-  const [newWaterSourceAltura, setNewWaterSourceAltura] = useState("");
-  const [newWaterSourceAlturaSeguridad, setNewWaterSourceAlturaSeguridad] = useState("10"); // default 10 cm
-
-  // Crop creation states
-  const [isOpenRegisterCrop, setIsOpenRegisterCrop] = useState(false);
-  const [newCropNombrePlanta, setNewCropNombrePlanta] = useState("");
-  const [newCropIdPlanta, setNewCropIdPlanta] = useState("");
-  const [newCropIdFuenteAgua, setNewCropIdFuenteAgua] = useState("");
-  const [newCropLugar, setNewCropLugar] = useState("");
-  const [newCropEtapaCrecimiento, setNewCropEtapaCrecimiento] = useState("Crecimiento");
-  const [newCropArea, setNewCropArea] = useState("");
-  const [newCropFechaSiembra, setNewCropFechaSiembra] = useState("");
-  const [newCropIdRegion, setNewCropIdRegion] = useState("");
-  const [newCropIdProvincia, setNewCropIdProvincia] = useState("");
-  const [newCropIdDistrito, setNewCropIdDistrito] = useState("");
-  const [isOpenSuccessCrop, setIsOpenSuccessCrop] = useState(false);
-  const [successCropName, setSuccessCropName] = useState("");
-
-  const [localProvincias, setLocalProvincias] = useState<any[]>([]);
-  const [localDistritos, setLocalDistritos] = useState<any[]>([]);
-
-  // Load provinces dynamically when region changes
-  useEffect(() => {
-    if (!newCropIdRegion) {
-      setLocalProvincias([]);
-      return;
-    }
-    const regionId = parseInt(newCropIdRegion, 10);
-    if (isNaN(regionId)) return;
-
-    startTransition(async () => {
-      try {
-        const data = await listarProvincias(regionId);
-        setLocalProvincias(data);
-      } catch (err) {
-        console.error("Error al cargar provincias:", err);
-      }
-    });
-  }, [newCropIdRegion]);
-
-  // Load distritos dynamically when provincia changes
-  useEffect(() => {
-    if (!newCropIdProvincia) {
-      setLocalDistritos([]);
-      return;
-    }
-    const provinciaId = parseInt(newCropIdProvincia, 10);
-    if (isNaN(provinciaId)) return;
-
-    startTransition(async () => {
-      try {
-        const data = await listarDistritos(provinciaId);
-        setLocalDistritos(data);
-      } catch (err) {
-        console.error("Error al cargar distritos:", err);
-      }
-    });
-  }, [newCropIdProvincia]);
-
-  const filteredProvincias = localProvincias;
-  const filteredDistritos = localDistritos;
-
-  const resetCropForm = () => {
-    setNewCropNombrePlanta("");
-    setNewCropIdPlanta("");
-    setNewCropIdFuenteAgua("");
-    setNewCropLugar("");
-    setNewCropEtapaCrecimiento("Crecimiento");
-    setNewCropArea("");
-    setNewCropFechaSiembra("");
-    setNewCropIdRegion("");
-    setNewCropIdProvincia("");
-    setNewCropIdDistrito("");
-  };
-
-  const getCropValidationErrors = () => {
-    const errors: string[] = [];
-    const area = Number(newCropArea);
-
-    if (!newCropNombrePlanta.trim()) errors.push("nombre del cultivo");
-    if (!newCropIdPlanta) errors.push("especie botánica");
-    if (!newCropIdFuenteAgua) errors.push("fuente de agua");
-    if (!newCropIdRegion) errors.push("departamento");
-    if (!newCropIdProvincia) errors.push("provincia");
-    if (!newCropIdDistrito) errors.push("distrito");
-    if (!newCropLugar.trim()) errors.push("lugar o parcela");
-    if (!newCropEtapaCrecimiento) errors.push("etapa de crecimiento");
-    if (!newCropArea || Number.isNaN(area) || area <= 0) errors.push("área válida");
-    if (!newCropFechaSiembra) errors.push("fecha de siembra");
-
-    return errors;
-  };
-
-  const buildLocalCultivo = (res: any, payload: { nombre_planta: string; etapa_crecimiento?: string }) => {
-    const selectedPlant = localCatalogPlantas.find((planta: any) => planta.id?.toString() === newCropIdPlanta);
-    const selectedSource = localFuentesAgua.find((f: any) => f.id?.toString() === newCropIdFuenteAgua);
-    const idCultivo = getCreatedCropId(res);
-    const isDirect = selectedSource?.tipo === 'conexion_directa';
-
-    return {
-      idCultivo,
-      nombreCultivo: res.nombreCultivo ?? res.nombre_planta ?? payload.nombre_planta,
-      conceptoPlanta: res.conceptoPlanta ?? res.planta?.nombre ?? selectedPlant?.nombre ?? "Cultivo",
-      etapaCrecimiento: res.etapaCrecimiento ?? res.etapa_crecimiento ?? payload.etapa_crecimiento ?? null,
-      fuenteAgua: selectedSource ? {
-        id: selectedSource.id,
-        nombre: selectedSource.nombre,
-        tipo: selectedSource.tipo,
-      } : null,
-      esConexionDirecta: isDirect,
-      sensores: {
-        humedadSuelo: null,
-        humedadAmbiente: null,
-        temperaturaSuelo: null,
-        temperaturaAmbiente: null,
-      },
-      historialSensores: {
-        humedadSuelo: [],
-        humedadAmbiente: [],
-        temperaturaSuelo: [],
-        temperaturaAmbiente: [],
-      },
-      dispositivos: [],
-      tanque: null,
-      consumoSemanal: [],
-      limiteConsumo: null,
-      resumenDia: {
-        riegosHoy: 0,
-        litrosHoy: 0,
-        ultimoRiego: null,
-        humedadSueloProm: null,
-        humedadAmbiental: null,
-      },
-    } satisfies CultivoData;
-  };
-
-  const handleRegisterWaterSourceSubmit = async () => {
-    if (!newWaterSourceName) {
-      alert("Por favor ingrese un nombre para la fuente de agua.");
-      return;
-    }
-    if (newWaterSourceTipo === 'tanque') {
-      if (!newWaterSourceCapacidad || !newWaterSourceAltura) {
-        alert("Para un tanque, la capacidad y la altura total son obligatorias.");
-        return;
-      }
-    }
-
-    startTransition(async () => {
-      try {
-        const payload = {
-          nombre: newWaterSourceName,
-          tipo: newWaterSourceTipo,
-          capacidad_litros: newWaterSourceTipo === 'tanque' ? parseFloat(newWaterSourceCapacidad) : undefined,
-          altura_tanque_cm: newWaterSourceTipo === 'tanque' ? parseFloat(newWaterSourceAltura) : undefined,
-          altura_seguridad_cm: newWaterSourceAlturaSeguridad ? parseFloat(newWaterSourceAlturaSeguridad) : undefined
-        };
-
-        const res = await registrarFuenteAgua(payload);
-        if (res.id) {
-          alert(`Fuente de agua '${newWaterSourceName}' registrada correctamente.`);
-          
-          // Add to local state
-          const newSource = {
-            id: res.id,
-            nombre: res.nombre,
-            tipo: res.tipo,
-            capacidad_litros: res.capacidad_litros,
-            altura_tanque_cm: res.altura_tanque_cm,
-            altura_seguridad_cm: res.altura_seguridad_cm
-          };
-          setLocalFuentesAgua(prev => [...prev, newSource]);
-          
-          // Auto select the new water source in crop registration modal if it is open
-          setNewCropIdFuenteAgua(res.id.toString());
-
-          // Reset fields and close
-          setIsOpenRegisterWaterSource(false);
-          setNewWaterSourceName("");
-          setNewWaterSourceTipo("tanque");
-          setNewWaterSourceCapacidad("");
-          setNewWaterSourceAltura("");
-          setNewWaterSourceAlturaSeguridad("10");
-        }
-      } catch (err: any) {
-        alert(`Error al registrar la fuente de agua: ${err.message}`);
-      }
-    });
-  };
-
-  const handleRegisterCropSubmit = async () => {
-    const validationErrors = getCropValidationErrors();
-    if (validationErrors.length > 0) {
-      alert(`Complete los datos obligatorios: ${validationErrors.join(", ")}.`);
-      return;
-    }
-
-    startTransition(async () => {
-      try {
-        const payload = {
-          nombre_planta: newCropNombrePlanta.trim(),
-          id_planta: parseInt(newCropIdPlanta, 10),
-          id_fuente_agua: parseInt(newCropIdFuenteAgua, 10),
-          id_distrito: parseInt(newCropIdDistrito, 10),
-          lugar: newCropLugar.trim(),
-          etapa_crecimiento: newCropEtapaCrecimiento,
-          area_m2: parseFloat(newCropArea),
-          fecha_siembra: newCropFechaSiembra
-        };
-        const res = await registrarCultivo(payload);
-        const createdCropId = getCreatedCropId(res);
-        if (createdCropId) {
-          const registeredCropName = newCropNombrePlanta.trim();
-          const localCultivo = buildLocalCultivo(res, payload);
-          setLocalCultivos((prev) => [...prev.filter((cultivo) => cultivo.idCultivo !== localCultivo.idCultivo), localCultivo]);
-          setSelectedId(localCultivo.idCultivo.toString());
-          setSuccessCropName(registeredCropName);
-          setIsOpenSuccessCrop(true);
-          setIsOpenRegisterCrop(false);
-          resetCropForm();
-          router.refresh();
-        }
-      } catch (err: any) {
-        alert(`Error al registrar cultivo: ${err.message}`);
-      }
-    });
-  };
-
-  const renderSuccessCropDialog = () => (
-    <Dialog.Root
-      open={isOpenSuccessCrop}
-      onOpenChange={setIsOpenSuccessCrop}
-    >
-      <Dialog.Content aria-describedby={undefined} style={{ maxWidth: 400, background: '#1f2937', border: '1px solid #2d3748', textAlign: 'center' }}>
-        <Dialog.Title style={{ color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-          🌱 ¡Cultivo Registrado!
-        </Dialog.Title>
-        <Text size="2" color="gray" mb="4" style={{ display: 'block', marginTop: '8px' }}>
-          El cultivo "{successCropName}" se ha registrado correctamente en la plataforma.
-        </Text>
-        <Flex gap="3" justify="center" mt="5">
-          <Button color="blue" style={{ cursor: 'pointer' }} onClick={() => {
-            setIsOpenSuccessCrop(false);
-            router.push('/dashboard/agricultor/control');
-          }}>
-            Configurar Umbrales
-          </Button>
-          <Dialog.Close>
-            <Button variant="soft" color="gray" style={{ cursor: 'pointer' }}>
-              Cerrar
-            </Button>
-          </Dialog.Close>
-        </Flex>
-      </Dialog.Content>
-    </Dialog.Root>
-  );
-
-  const renderRegisterCropDialog = () => (
-    <Dialog.Root
-      open={isOpenRegisterCrop}
-      onOpenChange={(open) => {
-        setIsOpenRegisterCrop(open);
-        if (!open) resetCropForm();
-      }}
-    >
-      <Dialog.Content aria-describedby={undefined} style={{ maxWidth: 480, background: '#1f2937', border: '1px solid #2d3748' }}>
-        <Dialog.Title style={{ color: 'white' }}>Registrar Nuevo Cultivo</Dialog.Title>
-        <Text size="2" color="gray" mb="4">
-          Ingrese los detalles del nuevo cultivo para comenzar el monitoreo y control inteligente.
-        </Text>
-
-        <Flex direction="column" gap="3" mt="3">
-          <label><Text color="gray" size="2">Nombre del Cultivo *</Text></label>
-          <TextField.Root 
-            placeholder="Ej: Tomates de Parcela Norte" 
-            value={newCropNombrePlanta}
-            onChange={(e) => setNewCropNombrePlanta(e.target.value)}
-            style={{ background: '#111827', color: 'white' }}
-          />
-
-          <label><Text color="gray" size="2">Especie Botánica *</Text></label>
-          <SearchableSelect
-            value={newCropIdPlanta}
-            onValueChange={setNewCropIdPlanta}
-            disabled={isLoadingCatalogs}
-            placeholder={isLoadingCatalogs ? "Cargando especies..." : "Elegir especie..."}
-            searchPlaceholder="Buscar especie..."
-            options={localCatalogPlantas.map((p: any) => ({ value: p.id.toString(), label: `${p.nombre} (${p.tipo || 'Sin tipo'})` }))}
-          />
-
-          <label><Text color="gray" size="2">Fuente de Agua *</Text></label>
-          {localFuentesAgua.length === 0 ? (
-            <Flex direction="column" gap="2" p="3" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px' }}>
-              <Text size="1" color="red">No tienes fuentes de agua registradas. Necesitas al menos una para registrar tu cultivo.</Text>
-              <Button size="2" color="blue" variant="soft" style={{ cursor: 'pointer' }} onClick={openRegisterWaterSource}>
-                + Registrar Fuente de Agua
-              </Button>
-            </Flex>
-          ) : (
-            <Flex gap="2" align="center">
-              <Box style={{ flexGrow: 1 }}>
-                <SearchableSelect
-                  value={newCropIdFuenteAgua}
-                  onValueChange={setNewCropIdFuenteAgua}
-                  placeholder="Elegir fuente de agua..."
-                  searchPlaceholder="Buscar fuente..."
-                  options={localFuentesAgua.map((f: any) => ({ value: f.id.toString(), label: `${f.nombre} (${f.tipo === 'tanque' ? 'Tanque' : 'Conexión directa'})` }))}
-                />
-              </Box>
-              <Button size="2" color="blue" variant="soft" style={{ cursor: 'pointer' }} onClick={openRegisterWaterSource} title="Registrar nueva fuente de agua">
-                +
-              </Button>
-            </Flex>
-          )}
-
-          {/* GEOGRAFÍA JERÁRQUICA */}
-          <Grid columns="2" gap="3">
-            <Box>
-              <label><Text color="gray" size="2">Departamento *</Text></label>
-              <SearchableSelect
-                value={newCropIdRegion}
-                onValueChange={(val) => { setNewCropIdRegion(val); setNewCropIdProvincia(""); setNewCropIdDistrito(""); }}
-                placeholder="Región..."
-                searchPlaceholder="Buscar región..."
-                options={localRegiones.map((r: any) => ({ value: r.id.toString(), label: r.nombre }))}
-              />
-            </Box>
-
-            <Box>
-              <label><Text color="gray" size="2">Provincia *</Text></label>
-              <SearchableSelect
-                value={newCropIdProvincia}
-                onValueChange={(val) => { setNewCropIdProvincia(val); setNewCropIdDistrito(""); }}
-                disabled={!newCropIdRegion}
-                placeholder="Provincia..."
-                searchPlaceholder="Buscar provincia..."
-                options={filteredProvincias.map((p: any) => ({ value: p.id.toString(), label: p.nombre }))}
-              />
-            </Box>
-          </Grid>
-
-          <Grid columns="2" gap="3">
-            <Box>
-              <label><Text color="gray" size="2">Distrito *</Text></label>
-              <SearchableSelect
-                value={newCropIdDistrito}
-                onValueChange={setNewCropIdDistrito}
-                disabled={!newCropIdProvincia}
-                placeholder="Distrito..."
-                searchPlaceholder="Buscar distrito..."
-                options={filteredDistritos.map((d: any) => ({ value: d.id.toString(), label: d.nombre }))}
-              />
-            </Box>
-
-            <Box>
-              <label><Text color="gray" size="2">Lugar / Parcela *</Text></label>
-              <TextField.Root 
-                placeholder="Ej: Invernadero A" 
-                value={newCropLugar}
-                onChange={(e) => setNewCropLugar(e.target.value)}
-                style={{ background: '#111827', color: 'white' }}
-              />
-            </Box>
-          </Grid>
-
-          <Grid columns="2" gap="3">
-            <Box>
-              <label><Text color="gray" size="2">Etapa de Crecimiento *</Text></label>
-              <SearchableSelect
-                value={newCropEtapaCrecimiento}
-                onValueChange={setNewCropEtapaCrecimiento}
-                options={[
-                  { value: "Germinación", label: "Germinación" },
-                  { value: "Crecimiento", label: "Crecimiento" },
-                  { value: "Floración", label: "Floración" },
-                  { value: "Fructificación", label: "Fructificación" },
-                  { value: "Cosecha", label: "Cosecha" },
-                ]}
-              />
-            </Box>
-
-            <Box>
-              <label><Text color="gray" size="2">Área (m²) *</Text></label>
-              <TextField.Root 
-                type="number" 
-                placeholder="Ej: 120" 
-                value={newCropArea}
-                onChange={(e) => setNewCropArea(e.target.value)}
-                style={{ background: '#111827', color: 'white' }}
-              />
-            </Box>
-          </Grid>
-
-          <Box>
-            <label><Text color="gray" size="2">Fecha de Siembra *</Text></label>
-            <TextField.Root 
-              type="date" 
-              value={newCropFechaSiembra}
-              onChange={(e) => setNewCropFechaSiembra(e.target.value)}
-              style={{ background: '#111827', color: 'white' }}
-            />
-          </Box>
-        </Flex>
-
-        <Flex gap="3" mt="6" justify="end">
-          <Dialog.Close><Button variant="soft" color="gray" style={{ cursor: 'pointer' }}>Cancelar</Button></Dialog.Close>
-          <Button color="green" onClick={handleRegisterCropSubmit} style={{ cursor: 'pointer' }} disabled={isPending}>Registrar Cultivo
-          </Button>
-        </Flex>
-      </Dialog.Content>
-    </Dialog.Root>
-  );
-
-  const renderRegisterWaterSourceDialog = () => (
-    <Dialog.Root open={isOpenRegisterWaterSource} onOpenChange={setIsOpenRegisterWaterSource}>
-      <Dialog.Content aria-describedby={undefined} style={{ maxWidth: 450, background: '#1f2937', border: '1px solid #2d3748' }}>
-        <Dialog.Title style={{ color: 'white' }}>Registrar Fuente de Agua</Dialog.Title>
-        <Text size="2" color="gray" mb="4">
-          Configure un nuevo suministro o depósito para el riego de sus cultivos.
-        </Text>
-
-        <Flex direction="column" gap="3" mt="3">
-          <label><Text color="gray" size="2">Nombre de la Fuente *</Text></label>
-          <TextField.Root 
-            placeholder="Ej: Tanque Principal de Parcela" 
-            value={newWaterSourceName}
-            onChange={(e) => setNewWaterSourceName(e.target.value)}
-            style={{ background: '#111827', color: 'white' }}
-          />
-
-          <label><Text color="gray" size="2">Tipo de Suministro *</Text></label>
-          <Select.Root value={newWaterSourceTipo} onValueChange={setNewWaterSourceTipo}>
-            <Select.Trigger style={{ background: '#111827', color: 'white' }} />
-            <Select.Content>
-              <Select.Item value="tanque">Tanque / Reservorio</Select.Item>
-              <Select.Item value="conexion_directa">Conexión directa (medición con flujómetro)</Select.Item>
-            </Select.Content>
-          </Select.Root>
-
-          {newWaterSourceTipo === 'tanque' && (
-            <>
-              <Grid columns="2" gap="3">
-                <Box>
-                  <label><Text color="gray" size="2">Capacidad (Litros) *</Text></label>
-                  <TextField.Root 
-                    type="number" 
-                    placeholder="Ej: 1000" 
-                    value={newWaterSourceCapacidad}
-                    onChange={(e) => setNewWaterSourceCapacidad(e.target.value)}
-                    style={{ background: '#111827', color: 'white' }}
-                  />
-                </Box>
-                <Box>
-                  <label><Text color="gray" size="2">Altura Total (cm) *</Text></label>
-                  <TextField.Root 
-                    type="number" 
-                    placeholder="Ej: 150" 
-                    value={newWaterSourceAltura}
-                    onChange={(e) => setNewWaterSourceAltura(e.target.value)}
-                    style={{ background: '#111827', color: 'white' }}
-                  />
-                </Box>
-              </Grid>
-              <label><Text color="gray" size="2">Distancia Sensor a Techo / Seguridad (cm)</Text></label>
-              <TextField.Root 
-                type="number" 
-                placeholder="Ej: 10" 
-                value={newWaterSourceAlturaSeguridad}
-                onChange={(e) => setNewWaterSourceAlturaSeguridad(e.target.value)}
-                style={{ background: '#111827', color: 'white' }}
-              />
-            </>
-          )}
-        </Flex>
-
-        <Flex gap="3" mt="6" justify="end">
-          <Dialog.Close><Button variant="soft" color="gray" style={{ cursor: 'pointer' }}>Cancelar</Button></Dialog.Close>
-          <Button color="green" onClick={handleRegisterWaterSourceSubmit} style={{ cursor: 'pointer' }} disabled={!newWaterSourceName}>
-            Guardar Fuente
-          </Button>
-        </Flex>
-      </Dialog.Content>
-    </Dialog.Root>
-  );
 
   const hasCrops = localCultivos.length > 0;
   const cultivoActivo = hasCrops ? (localCultivos.find((c) => c.idCultivo.toString() === selectedId) || localCultivos[0]) : null;
@@ -805,7 +265,7 @@ export default function DashboardClient({
           <NoCropsEmptyState 
             title="No tienes cultivos registrados"
             description="Comienza registrando tu primer cultivo para monitorear sus condiciones de humedad, temperatura, y automatizar su riego inteligente."
-            onAction={openRegisterCrop}
+            onAction={() => router.push('/dashboard/agricultor/cultivos')}
           />
         </Flex>
       ) : (
@@ -878,13 +338,6 @@ export default function DashboardClient({
                 }}>
                    <CountdownTimer recolectorActivo={recolectorActivo} />
                 </div>
-
-                <Button color="blue" size="2" onClick={openRegisterWaterSource} style={{ cursor: 'pointer', minHeight: '38px' }}>
-                  Registrar Fuente
-                </Button>
-                <Button color="green" size="2" onClick={openRegisterCrop} style={{ cursor: 'pointer', minHeight: '38px' }}>
-                  Registrar Cultivo
-                </Button>
               </Flex>
             </Flex>
 
@@ -1021,11 +474,6 @@ export default function DashboardClient({
           </Flex>
         )
       )}
-
-      {/* DIALOGO DE REGISTRO DE CULTIVO Y FUENTE DE AGUA */}
-      {renderRegisterCropDialog()}
-      {renderSuccessCropDialog()}
-      {renderRegisterWaterSourceDialog()}
     </Box>
   );
 
@@ -1426,43 +874,58 @@ const ResumenDiaCard = ({
   isClientMounted: boolean;
   hasFilter: boolean;
 }) => {
-  let salud = 100;
   const sensoresEvaluados = [
-    sensores.humedadSuelo,
-    sensores.humedadAmbiente,
-    sensores.temperaturaAmbiente,
-    sensores.temperaturaSuelo
+    sensores?.humedadSuelo,
+    sensores?.humedadAmbiente,
+    sensores?.temperaturaAmbiente,
+    sensores?.temperaturaSuelo
   ];
   
-  sensoresEvaluados.forEach(s => {
-    if (s && s.umbral) {
-      if (s.valor < s.umbral.min || s.valor > s.umbral.max) {
-        salud -= 25;
-      }
-    }
-  });
+  const sensoresActivos = sensoresEvaluados.filter(
+    s => s && s.valor !== null && s.valor !== undefined
+  );
+  const tieneLecturas = sensoresActivos.length > 0;
 
-  const saludData = [
+  let salud = 100;
+  if (tieneLecturas) {
+    const sensoresConUmbral = sensoresActivos.filter(s => s.umbral);
+    if (sensoresConUmbral.length > 0) {
+      const enRango = sensoresConUmbral.filter(
+        s => s.valor >= s.umbral.min && s.valor <= s.umbral.max
+      ).length;
+      salud = Math.round((enRango / sensoresConUmbral.length) * 100);
+    } else {
+      salud = 100;
+    }
+  } else {
+    salud = 0;
+  }
+
+  const saludData = tieneLecturas ? [
     { name: 'Salud', value: salud },
     { name: 'Faltante', value: 100 - salud }
+  ] : [
+    { name: 'Sin datos', value: 100 }
   ];
 
-  const getSaludColor = (val: number) => {
-    if (val >= 100) return '#22c55e';
-    if (val >= 75) return '#2dd4bf';
+  const getSaludColor = (val: number, hasData: boolean) => {
+    if (!hasData) return '#64748b';
+    if (val >= 90) return '#22c55e';
+    if (val >= 70) return '#2dd4bf';
     if (val >= 50) return '#f59e0b';
     return '#ef4444';
   };
 
-  const getSaludTexto = (val: number) => {
-    if (val >= 100) return 'Excelente';
-    if (val >= 75) return 'Estable';
+  const getSaludTexto = (val: number, hasData: boolean) => {
+    if (!hasData) return 'Sin lecturas';
+    if (val >= 90) return 'Excelente';
+    if (val >= 70) return 'Estable';
     if (val >= 50) return 'Advertencia';
     return 'Crítico';
   };
 
-  const colorSalud = getSaludColor(salud);
-  const textoSalud = getSaludTexto(salud);
+  const colorSalud = getSaludColor(salud, tieneLecturas);
+  const textoSalud = getSaludTexto(salud, tieneLecturas);
 
   const Row = ({ label, value, color = '#38bdf8', isLast = false }: { label: string, value: string, color?: string, isLast?: boolean }) => (
     <Flex justify="between" align="center" py="3" style={{ borderBottom: isLast ? 'none' : '1px solid #1f2937' }}>
@@ -1492,10 +955,10 @@ const ResumenDiaCard = ({
           width: '100%'
         }}>
           <Text size="5" weight="bold" style={{ color: 'white', display: 'block', fontFamily: 'monospace', lineHeight: 1 }}>
-            {salud}%
+            {tieneLecturas ? `${salud}%` : '--'}
           </Text>
           <Text size="1" weight="medium" style={{ color: colorSalud, textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '2px', display: 'inline-block' }}>
-            Salud: {textoSalud}
+            {tieneLecturas ? `Salud: ${textoSalud}` : 'Sin telemetría'}
           </Text>
         </div>
       </Flex>
