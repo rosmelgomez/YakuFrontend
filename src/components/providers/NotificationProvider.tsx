@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import FloatingToast from '@/components/ui/FloatingToast';
 import { useAuth } from '@/context/AuthContext';
 import { AppNotification } from '@/lib/notifications';
+import { apiClient } from '@/services/apiClient';
 import {
   getNotificaciones,
   marcarNotificacionLeida,
@@ -238,21 +239,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     let stopped = false;
 
     const resolveWebSocketUrl = () => {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const hostname = window.location.hostname;
-      const configuredUrl = process.env.NEXT_PUBLIC_WS_URL;
-      if (!configuredUrl) return `${protocol}//${hostname}:8000/ws/alertas`;
-
-      try {
-        const url = new URL(configuredUrl);
-        if (hostname !== 'localhost' && hostname !== '127.0.0.1' && ['localhost', '127.0.0.1'].includes(url.hostname)) {
-          url.hostname = hostname;
-        }
-        url.protocol = protocol;
-        return url.toString();
-      } catch {
-        return `${protocol}//${hostname}:8000/ws/alertas`;
-      }
+      const url = new URL('/ws/alertas', import.meta.env.VITE_FASTAPI_WS_URL);
+      // Una página servida por HTTPS no puede abrir un WebSocket ws:// (el navegador lo bloquea).
+      if (window.location.protocol === 'https:') url.protocol = 'wss:';
+      return url.toString();
     };
 
     const connectWS = async () => {
@@ -268,12 +258,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       };
 
       try {
-        const ticketResponse = await fetch('/api/ws-ticket', { method: 'POST' });
-        if (!ticketResponse.ok) {
-          scheduleReconnect();
-          return;
-        }
-        const { ticket } = await ticketResponse.json();
+        const { ticket } = await apiClient<{ ticket: string }>('/ws-ticket', {
+          method: 'POST',
+        });
         const ticketUrl = new URL(wsUrl);
         ticketUrl.searchParams.set('ticket', ticket);
         socket = new WebSocket(ticketUrl.toString());

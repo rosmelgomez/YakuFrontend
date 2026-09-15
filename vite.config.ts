@@ -1,10 +1,14 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'node:path';
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  // Vite no expone las variables de .env en process.env dentro de este archivo: hay que cargarlas.
+  const env = loadEnv(mode, process.cwd(), '');
+
+  return {
   plugins: [
     react(),
     tailwindcss(),
@@ -24,12 +28,12 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
-        target: process.env.VITE_FASTAPI_URL || 'http://127.0.0.1:8000',
+        target: env.VITE_FASTAPI_URL,
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
       '/ws': {
-        target: process.env.VITE_FASTAPI_WS_URL || 'ws://127.0.0.1:8000',
+        target: env.VITE_FASTAPI_WS_URL,
         ws: true,
       },
     },
@@ -59,4 +63,5 @@ export default defineConfig({
     },
     chunkSizeWarningLimit: 1000,
   },
+  };
 });
