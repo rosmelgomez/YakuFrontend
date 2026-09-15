@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Text } from "@radix-ui/themes";
 import { formatearTiempoDesdeUltimo, formatearSegundos } from "../selectors";
 
@@ -46,6 +46,7 @@ interface RiegoActivoTimerProps {
   } | null;
   bombaEncendida: boolean;
   timeoutMin: number;
+  onComplete?: () => void;
 }
 
 export function RiegoActivoTimer({
@@ -53,29 +54,45 @@ export function RiegoActivoTimer({
   riegoActivo,
   bombaEncendida,
   timeoutMin,
+  onComplete,
 }: RiegoActivoTimerProps) {
   const [seconds, setSeconds] = useState<number>(0);
   const plannedSeconds = Number(riegoActivo?.duracionSegundos || timeoutMin * 60);
+  const completedRef = useRef<boolean>(false);
 
   useEffect(() => {
-    if (!isActuatorActive || !riegoActivo || !bombaEncendida) {
+    completedRef.current = false;
+  }, [riegoActivo?.id, bombaEncendida]);
+
+  useEffect(() => {
+    if (!isActuatorActive || !bombaEncendida) {
       setSeconds(0);
       return;
     }
 
-    const baseElapsed = Number(riegoActivo.segundosTranscurridos || 0);
-    const referenceDate = riegoActivo.fechaReferencia
+    const baseElapsed = Number(riegoActivo?.segundosTranscurridos || 0);
+    const referenceDate = riegoActivo?.fechaReferencia
       ? new Date(riegoActivo.fechaReferencia)
       : null;
+    const mountTime = Date.now();
 
     const updateTimer = () => {
       const liveElapsed =
         referenceDate && !Number.isNaN(referenceDate.getTime())
           ? Math.max(0, Math.floor((Date.now() - referenceDate.getTime()) / 1000))
-          : 0;
+          : Math.max(0, Math.floor((Date.now() - mountTime) / 1000));
       const totalElapsed = baseElapsed + liveElapsed;
-      const planned = Number(riegoActivo.duracionSegundos || 0);
-      setSeconds(planned > 0 ? Math.min(totalElapsed, planned) : totalElapsed);
+      const planned = Number(riegoActivo?.duracionSegundos || timeoutMin * 60);
+
+      if (planned > 0 && totalElapsed >= planned) {
+        setSeconds(planned);
+        if (!completedRef.current) {
+          completedRef.current = true;
+          onComplete?.();
+        }
+      } else {
+        setSeconds(totalElapsed);
+      }
     };
 
     updateTimer();
@@ -88,6 +105,8 @@ export function RiegoActivoTimer({
     riegoActivo?.duracionSegundos,
     riegoActivo?.fechaReferencia,
     bombaEncendida,
+    timeoutMin,
+    onComplete,
   ]);
 
   return (

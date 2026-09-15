@@ -577,8 +577,8 @@ export default function DispositivosClient({
   const showAssigned = activeTab === "all" || activeTab === "asignar";
 
   const renderDispositivosStockCard = () => (
-    <Card size="3" style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
-      <Flex align="center" gap="2" mb="4"><Cpu size={20} color="#34d399" /><Text size="4" weight="bold" color="indigo">Dispositivos en Stock</Text></Flex>
+    <Card size={{ initial: "2", sm: "3" }} style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
+      <Flex align="center" gap="2" mb="4"><Cpu size={20} color="#34d399" /><Text size={{ initial: "3", sm: "4" }} weight="bold" color="indigo">Dispositivos en Stock</Text></Flex>
       <Grid columns={{ initial: "1", md: showComponents ? "2" : "3" }} gap="3">
         {devices.filter((d: any) => d.en_almacen === true && ["disponible", "reparacion"].includes(d.estado)).map((d: any) => (
           <Card key={d.id} style={{ background: "var(--surface2-mockup)", borderColor: "var(--border-mockup)" }}>
@@ -601,8 +601,8 @@ export default function DispositivosClient({
   );
 
   const renderComponentesStockCard = () => (
-    <Card size="3" style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
-      <Flex align="center" gap="2" mb="4"><Layers size={20} color="#a78bfa" /><Text size="4" weight="bold" color="indigo">Componentes en Stock</Text></Flex>
+    <Card size={{ initial: "2", sm: "3" }} style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
+      <Flex align="center" gap="2" mb="4"><Layers size={20} color="#a78bfa" /><Text size={{ initial: "3", sm: "4" }} weight="bold" color="indigo">Componentes en Stock</Text></Flex>
       <Grid columns={{ initial: "1", md: showDevices ? "2" : "3" }} gap="3">
         {components.filter((c: any) => c.en_almacen === true).map((c: any) => (
           <Card key={c.id} style={{ background: "var(--surface2-mockup)", borderColor: "var(--border-mockup)" }}>
@@ -624,16 +624,16 @@ export default function DispositivosClient({
 
   return (
     <Box style={{ opacity: isPending ? 0.6 : 1, transition: "opacity 0.2s" }}>
-      <Flex direction="column" gap="4" mb="6">
+      <Flex direction="column" gap="4" mb="5">
         <Box>
-          <Text size="6" weight="bold" color="indigo" as="div">
+          <Text size={{ initial: "5", sm: "6" }} weight="bold" color="indigo" as="div">
             {activeTab === "componentes"
               ? "Componentes IoT"
               : activeTab === "asignar"
               ? "Asignar Dispositivo"
               : "Dispositivos IoT"}
           </Text>
-          <Text size="2" color="gray" style={{ fontFamily: "monospace" }}>
+          <Text size={{ initial: "1", sm: "2" }} color="gray" style={{ fontFamily: "monospace" }}>
             {activeTab === "componentes"
               ? "Gestiona el inventario y stock de sensores, actuadores y componentes."
               : activeTab === "asignar"
@@ -673,8 +673,8 @@ export default function DispositivosClient({
       ) : null}
 
       {showAssigned && (
-        <Card size="3" style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
-        <Flex align="center" gap="2" mb="4"><Layers size={20} color="#60a5fa" /><Text size="4" weight="bold" color="indigo">Nodos en Campo</Text></Flex>
+        <Card size={{ initial: "2", sm: "3" }} style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
+        <Flex align="center" gap="2" mb="4"><Layers size={20} color="#60a5fa" /><Text size={{ initial: "3", sm: "4" }} weight="bold" color="indigo">Nodos en Campo</Text></Flex>
         <Grid columns={{ initial: "1", md: "2", lg: "3", xl: "4" }} gap="4">
           {assignedDevices.map((d: any) => {
             const assign = d.asignaciones_iot?.find((a: any) => !a.id_componente) || d.asignaciones_iot?.[0];

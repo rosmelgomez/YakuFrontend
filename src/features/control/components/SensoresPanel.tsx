@@ -44,7 +44,7 @@ export function SensoresPanel({
   return (
     <Flex direction="column" gap="5">
       <Card
-        size="3"
+        size={{ initial: "2", sm: "3" }}
         style={{
           background: "var(--surface-mockup)",
           borderColor: "var(--border-mockup)",
@@ -55,93 +55,84 @@ export function SensoresPanel({
           📡 Dispositivos de Captura de Sensores
         </Text>
         {dispositivosSensores.length > 0 ? (
-          <Flex direction="column" gap="3">
+          <div className="flex flex-col gap-3">
             {dispositivosSensores.map((dev: any) => (
-              <Flex
+              <div
                 key={`sensor-${dev.id}`}
-                justify="between"
-                align="center"
-                style={{
-                  borderBottom: "1px solid var(--border-mockup)",
-                  paddingBottom: "10px",
-                }}
+                className="p-3 sm:p-4 rounded-xl bg-slate-900/60 border border-slate-800/80 transition-colors"
               >
-                <Box>
-                  <Flex align="center" gap="2">
-                    <Text size="2" weight="bold" style={{ color: "white" }}>
-                      {dev.nombre}
-                    </Text>
-                    {dev.tipoNombre && (
-                      <Badge color="indigo" variant="outline" size="1">
-                        {dev.tipoNombre}
-                      </Badge>
-                    )}
-                  </Flex>
-                  <Text
-                    size="1"
-                    color="gray"
-                    style={{ fontFamily: "monospace", display: "block", marginTop: "2px" }}
-                  >
-                    MAC: {dev.mac}
-                  </Text>
-                  {dev.sensores && dev.sensores.length > 0 && (
-                    <Box mt="1" pl="2" style={{ borderLeft: "2px solid var(--border-mockup)" }}>
-                      {dev.sensores.map((s: any, index: number) => (
-                        <Flex
-                          key={`sensor-${dev.id}-${s.id}-${index}`}
-                          align="center"
-                          gap="2"
-                          mt="1"
+                {/* FILA SUPERIOR: Encabezado del Dispositivo y Controles Principales */}
+                <div className="flex items-center justify-between gap-3 pb-2.5 border-b border-slate-800/60">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-bold text-white text-sm sm:text-base leading-tight">
+                        {dev.nombre}
+                      </span>
+                      {dev.tipoNombre && (
+                        <Badge color="indigo" variant="outline" size="1">
+                          {dev.tipoNombre}
+                        </Badge>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-slate-400 font-mono block mt-0.5">
+                      MAC: {dev.mac}
+                    </span>
+                  </div>
+
+                  {/* Estado de Conexión + Switch de Activación */}
+                  <div className="flex items-center gap-2.5 shrink-0">
+                    <Badge color={dev.conectado ? "green" : "red"} variant="soft" size="1">
+                      {dev.conectado ? "Online" : "Offline"}
+                    </Badge>
+                    <Switch
+                      checked={dev.funcionamientoActivo}
+                      onCheckedChange={(checked) => onToggleCaptura(dev.id, checked)}
+                      style={{ cursor: "pointer" }}
+                    />
+                  </div>
+                </div>
+
+                {/* SECCIÓN INFERIOR: Lista de Sensores Vinculados */}
+                {dev.sensores && dev.sensores.length > 0 && (
+                  <div className="mt-2.5 space-y-1.5 pl-2 border-l-2 border-slate-800">
+                    {dev.sensores.map((s: any, index: number) => (
+                      <div
+                        key={`sensor-${dev.id}-${s.id}-${index}`}
+                        className="flex items-center justify-between gap-2 py-0.5"
+                      >
+                        <div className="min-w-0 flex-1 text-xs text-slate-300">
+                          <span className="text-slate-500 mr-1.5">•</span>
+                          <span className="text-slate-200 font-medium">{s.nombre}</span>{" "}
+                          <span className="text-slate-500 font-mono text-[11px]">
+                            (GPIO {s.pin})
+                          </span>
+                        </div>
+                        <Button
+                          size="1"
+                          variant="ghost"
+                          color="indigo"
+                          onClick={() => {
+                            setCalibDevId(dev.id);
+                            setCalibPin(s.pin);
+                            setCalibSensorName(s.nombre);
+                            setCalibOffset("0.0");
+                          }}
+                          style={{
+                            cursor: "pointer",
+                            height: "22px",
+                            padding: "0 6px",
+                            fontSize: "0.72rem",
+                          }}
                         >
-                          <Text size="1" color="gray">
-                            • <span style={{ color: "#9ca3af" }}>{s.nombre}</span>{" "}
-                            <span
-                              style={{
-                                color: "#6b7280",
-                                fontSize: "0.75rem",
-                                fontFamily: "monospace",
-                              }}
-                            >
-                              (GPIO {s.pin})
-                            </span>
-                          </Text>
-                          <Button
-                            size="1"
-                            variant="ghost"
-                            color="indigo"
-                            onClick={() => {
-                              setCalibDevId(dev.id);
-                              setCalibPin(s.pin);
-                              setCalibSensorName(s.nombre);
-                              setCalibOffset("0.0");
-                            }}
-                            style={{
-                              cursor: "pointer",
-                              height: "18px",
-                              padding: "0 4px",
-                              fontSize: "0.7rem",
-                            }}
-                          >
-                            ⚙️ Calibrar
-                          </Button>
-                        </Flex>
-                      ))}
-                    </Box>
-                  )}
-                </Box>
-                <Flex gap="3" align="center">
-                  <Badge color={dev.conectado ? "green" : "red"} variant="soft">
-                    {dev.conectado ? "Online" : "Offline"}
-                  </Badge>
-                  <Switch
-                    checked={dev.funcionamientoActivo}
-                    onCheckedChange={(checked) => onToggleCaptura(dev.id, checked)}
-                    style={{ cursor: "pointer" }}
-                  />
-                </Flex>
-              </Flex>
+                          ⚙️ Calibrar
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             ))}
-          </Flex>
+          </div>
         ) : (
           <Text color="gray" size="2">
             No hay dispositivos de captura de sensores vinculados a este cultivo.
@@ -158,6 +149,7 @@ export function SensoresPanel({
           aria-describedby={undefined}
           style={{
             maxWidth: 400,
+            width: "min(400px, 92vw)",
             background: "var(--surface-mockup)",
             border: "1px solid var(--border-mockup)",
           }}

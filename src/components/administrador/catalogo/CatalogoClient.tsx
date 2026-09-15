@@ -192,10 +192,10 @@ export default function CatalogoClient({ catalogPlantas = [], regiones = [], pro
 
   return (
     <Box style={{ opacity: isPending ? 0.6 : 1, transition: "opacity 0.2s" }}>
-      <Flex direction="column" gap="4" mb="6">
+      <Flex direction="column" gap="4" mb="5">
         <Box>
-          <Text size="6" weight="bold" color="indigo" as="div">Catalogo</Text>
-          <Text size="2" color="gray" style={{ fontFamily: "monospace" }}>Administra plantas y ubicaciones geograficas.</Text>
+          <Text size={{ initial: "5", sm: "6" }} weight="bold" color="indigo" as="div">Catálogo</Text>
+          <Text size={{ initial: "1", sm: "2" }} color="gray" style={{ fontFamily: "monospace" }}>Administra plantas y ubicaciones geográficas.</Text>
         </Box>
       </Flex>
 
@@ -204,15 +204,15 @@ export default function CatalogoClient({ catalogPlantas = [], regiones = [], pro
           <Plus size={16} style={{ marginRight: "4px" }} /> Registrar Planta
         </Button>
         <Button color="teal" onClick={() => setIsOpenRegisterGeo(true)} style={{ cursor: "pointer" }}>
-          <MapPin size={16} style={{ marginRight: "4px" }} /> Registrar Ubicacion
+          <MapPin size={16} style={{ marginRight: "4px" }} /> Registrar Ubicación
         </Button>
       </Flex>
 
       <Grid columns={{ initial: "1", lg: "2" }} gap="5">
-        <Card size="3" style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
+        <Card size={{ initial: "2", sm: "3" }} style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
           <Flex align="center" gap="2" mb="4">
             <Tag size={20} color="#818cf8" />
-            <Text size="4" weight="bold" color="indigo">Catalogo Botanico</Text>
+            <Text size={{ initial: "3", sm: "4" }} weight="bold" color="indigo">Catálogo Botánico</Text>
           </Flex>
           <Text size="2" color="gray" mb="3" as="div" style={{ fontWeight: "bold" }}>Especies Registradas ({catalogPlantas.length})</Text>
           <ScrollArea style={{ height: 350 }}>
@@ -237,7 +237,7 @@ export default function CatalogoClient({ catalogPlantas = [], regiones = [], pro
                       <Plus size={15} />
                     </Button>
                   </Flex>
-                  <Text size="1" color="gray" style={{ display: "block", marginTop: "2px" }}>{p.descripcion || "Sin descripcion"}</Text>
+                  <Text size="1" color="gray" style={{ display: "block", marginTop: "2px" }}>{p.descripcion || "Sin descripción"}</Text>
                   <Text size="1" color="indigo" style={{ display: "block", marginTop: "5px" }}>
                     {p.umbrales?.filter((umbral) => idsMetricasPlanta.has(umbral.id_tipo_metrica)).length ?? 0} parámetros configurados
                   </Text>
@@ -247,10 +247,10 @@ export default function CatalogoClient({ catalogPlantas = [], regiones = [], pro
           </ScrollArea>
         </Card>
 
-        <Card size="3" style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
+        <Card size={{ initial: "2", sm: "3" }} style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
           <Flex align="center" gap="2" mb="4">
             <MapPin size={20} color="#f87171" />
-            <Text size="4" weight="bold" color="indigo">Divisiones Geograficas</Text>
+            <Text size={{ initial: "3", sm: "4" }} weight="bold" color="indigo">Divisiones Geográficas</Text>
           </Flex>
           <Tabs.Root defaultValue="reg">
             <Tabs.List size="2" style={{ marginBottom: "16px" }}>
@@ -284,7 +284,7 @@ export default function CatalogoClient({ catalogPlantas = [], regiones = [], pro
       </Grid>
 
       <Dialog.Root open={isOpenRegisterPlant} onOpenChange={setIsOpenRegisterPlant}>
-        <Dialog.Content aria-describedby={undefined} style={{ maxWidth: 620, background: "var(--surface-mockup)", border: "1px solid var(--border-mockup)" }}>
+        <Dialog.Content aria-describedby={undefined} style={{ maxWidth: 620, width: "92vw", maxHeight: "90vh", overflowY: "auto", background: "var(--surface-mockup)", border: "1px solid var(--border-mockup)" }}>
           <Dialog.Title style={{ color: "white" }}>Registrar Especie de Planta</Dialog.Title>
           <form onSubmit={handleRegisterPlantSubmit}>
             <Flex direction="column" gap="3" mt="3">
@@ -344,7 +344,7 @@ export default function CatalogoClient({ catalogPlantas = [], regiones = [], pro
       </Dialog.Root>
 
       <Dialog.Root open={plantEditing !== null} onOpenChange={(open) => !open && setPlantEditing(null)}>
-        <Dialog.Content aria-describedby={undefined} style={{ maxWidth: 620, background: "var(--surface-mockup)", border: "1px solid var(--border-mockup)" }}>
+        <Dialog.Content aria-describedby={undefined} style={{ maxWidth: 620, width: "92vw", maxHeight: "90vh", overflowY: "auto", background: "var(--surface-mockup)", border: "1px solid var(--border-mockup)" }}>
           <Dialog.Title style={{ color: "white" }}>Parámetros de {plantEditing?.nombre}</Dialog.Title>
           <Text size="2" color="gray" as="div" mt="1" mb="3">
             Modifica los rangos existentes o completa uno nuevo. Deja ambos campos vacíos para quitar un parámetro.
@@ -393,7 +393,7 @@ export default function CatalogoClient({ catalogPlantas = [], regiones = [], pro
       </Dialog.Root>
 
       <Dialog.Root open={isOpenRegisterGeo} onOpenChange={setIsOpenRegisterGeo}>
-        <Dialog.Content aria-describedby={undefined} style={{ maxWidth: 480, background: "var(--surface-mockup)", border: "1px solid var(--border-mockup)" }}>
+        <Dialog.Content aria-describedby={undefined} style={{ maxWidth: 480, width: "92vw", maxHeight: "90vh", overflowY: "auto", background: "var(--surface-mockup)", border: "1px solid var(--border-mockup)" }}>
           <Dialog.Title style={{ color: "white" }}>Registrar Ubicacion Geografica</Dialog.Title>
           <Flex direction="column" gap="3" mt="3">
             <Select.Root value={newGeoLevel} onValueChange={setNewGeoLevel}>

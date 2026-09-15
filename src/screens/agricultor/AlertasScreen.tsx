@@ -64,7 +64,7 @@ export default function AlertasScreen() {
 
   if (loading) {
     return (
-      <Box className="page-content" px={{ initial: "4", sm: "5", md: "6" }} py={{ initial: "4", sm: "5", md: "6" }}>
+      <Box className="page-content" px={{ initial: "2", sm: "4", md: "6" }} py={{ initial: "3", sm: "4", md: "5" }}>
         <DashboardSkeleton variant="form" />
       </Box>
     );
@@ -72,7 +72,7 @@ export default function AlertasScreen() {
 
   if (cultivosBase.length === 0) {
     return (
-      <Box className="page-content" px={{ initial: "4", sm: "5", md: "6" }} py={{ initial: "4", sm: "5", md: "6" }}>
+      <Box className="page-content" px={{ initial: "2", sm: "4", md: "6" }} py={{ initial: "3", sm: "4", md: "5" }}>
         <NoCropsEmptyState
           title="No tienes alertas activas"
           description="Para monitorear las alertas de humedad, temperatura y nivel de tanque, primero debes registrar tu cultivo."
@@ -84,7 +84,7 @@ export default function AlertasScreen() {
   const selectedCultivoId = cultivoParam ? parseInt(cultivoParam, 10) : cultivosBase[0].id;
 
   return (
-    <Box className="page-content" px={{ initial: "4", sm: "5", md: "6" }} py={{ initial: "4", sm: "5", md: "6" }}>
+    <Box className="page-content" px={{ initial: "2", sm: "4", md: "6" }} py={{ initial: "3", sm: "4", md: "5" }}>
       <AlertasClient
         userId={userId}
         cultivos={cultivosBase}

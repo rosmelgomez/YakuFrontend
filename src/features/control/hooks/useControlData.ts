@@ -45,23 +45,36 @@ export function useControlData({
     abortControllerRef.current = controller;
 
     try {
-      const res = await fetch(`/api/control/${targetCropId}`, {
+      const token = typeof window !== "undefined" ? localStorage.getItem("yaku_token") : null;
+      const headers: Record<string, string> = {
+        "Cache-Control": "no-cache",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      let res = await fetch(`/api/control/${targetCropId}`, {
         method: "GET",
         signal: controller.signal,
-        headers: {
-          "Cache-Control": "no-cache",
-        },
+        headers,
       });
+
+      if (!res.ok) {
+        res = await fetch(`/api/control/data?idCultivo=${targetCropId}`, {
+          method: "GET",
+          signal: controller.signal,
+          headers,
+        });
+      }
 
       if (!res.ok) {
         throw new Error(`HTTP error ${res.status}`);
       }
 
       const json = await res.json();
-      if (json.success && json.data) {
-        if (cropIdRef.current === targetCropId) {
-          setControlData(json.data);
-        }
+      const resolvedData = json.data ?? (json.bomba || json.valvula ? json : null);
+      if (resolvedData && cropIdRef.current === targetCropId) {
+        setControlData(resolvedData);
       }
     } catch (err: any) {
       if (err.name !== "AbortError") {

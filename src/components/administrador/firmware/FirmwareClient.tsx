@@ -1,7 +1,6 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   Cable, CheckCircle2, Cpu, FileArchive, History, LoaderCircle, Plus,
   Eye, EyeOff, Pause, Play, RefreshCw, Send, TerminalSquare, Trash2, Upload, Usb, Wifi, X,
@@ -13,6 +12,7 @@ import {
   obtenerProvisionamientoFirmware,
 } from "@/actions/firmware";
 import { EspFlasher, FirmwareSegment } from "@/lib/firmware/esp-flasher";
+import { fetchFromFastAPI } from "@/lib/api/client";
 import { firmwareTypeForDevice } from "@/lib/firmware/compatibility";
 import { emitirNotificacion } from "@/lib/notifications";
 import styles from "./FirmwareClient.module.css";
@@ -106,6 +106,7 @@ export default function FirmwareClient({
   users,
   crops,
   loadErrors,
+  onRefresh,
 }: {
   initialVersions: FirmwareVersion[];
   initialInstallations: Installation[];
@@ -113,8 +114,8 @@ export default function FirmwareClient({
   users: User[];
   crops: Crop[];
   loadErrors: string[];
+  onRefresh?: () => Promise<void>;
 }) {
-  const router = useRouter();
   const flasherRef = useRef<EspFlasher | null>(null);
   const monitorPausedRef = useRef(false);
   const terminalRef = useRef<HTMLPreElement | null>(null);
@@ -344,7 +345,7 @@ export default function FirmwareClient({
       );
 
       setStatus("Instalacion completada y configuracion anterior borrada. Envia ahora la configuracion de campo.");
-      router.refresh();
+      await onRefresh?.();
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : "La instalacion fallo";
       setError(message);
@@ -416,7 +417,7 @@ export default function FirmwareClient({
       const body = new FormData();
       body.set("metadata", JSON.stringify(metadata));
       uploadSegments.forEach((item) => body.append("files", item.file));
-      const response = await fetch("/api/admin/firmware", { method: "POST", body });
+      const response = await fetchFromFastAPI("/firmware/versions", { method: "POST", body });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
         throw new Error(payload.detail || "No se pudo publicar la version");
@@ -424,7 +425,7 @@ export default function FirmwareClient({
       setStatus("Version publicada correctamente.");
       setUploadSegments([]);
       form.reset();
-      router.refresh();
+      await onRefresh?.();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudo publicar la version");
     } finally {
@@ -441,7 +442,7 @@ export default function FirmwareClient({
     try {
       await descontinuarVersionFirmware(id);
       setStatus(`Versión v${versionStr} descontinuada correctamente.`);
-      router.refresh();
+      await onRefresh?.();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudo descontinuar la versión");
     } finally {
@@ -487,7 +488,11 @@ export default function FirmwareClient({
                   <span className={styles.label}>Agricultor</span>
                   <select className={styles.select} value={userId} onChange={(event) => selectUser(event.target.value)}>
                     <option value="">Seleccionar agricultor</option>
-                    {farmers.map((user) => <option key={user.id} value={user.id}>{user.nombre} {user.apellido || ""} · {user.correo}</option>)}
+                    {farmers.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {[user.nombre, user.apellido].filter(Boolean).join(" ")}
+                      </option>
+                    ))}
                   </select>
                 </label>
                 <label className={styles.field}>

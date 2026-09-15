@@ -1,4 +1,5 @@
-import { ESPLoader, Transport } from "esptool-js";
+import { ESPLoader, Transport } from "esptool-js";
+import { fetchFromFastAPI } from "@/lib/api/client";
 
 export type FirmwareSegment = {
   nombre: string;
@@ -81,10 +82,10 @@ export class EspFlasher {
 
     const fileArray: Array<{ data: Uint8Array; address: number }> = [];
     for (const segment of segments) {
-      const response = await fetch(
-        `/api/admin/firmware/${versionId}/files/${encodeURIComponent(segment.nombre)}`,
-        { cache: "no-store" },
-      );
+      const response = await fetchFromFastAPI(
+        `/firmware/versions/${versionId}/files/${encodeURIComponent(segment.nombre)}`,
+        { cache: "no-store" },
+      );
       if (!response.ok) {
         const payload = await response.json().catch(() => null);
         const detail = payload?.detail ? `: ${payload.detail}` : "";

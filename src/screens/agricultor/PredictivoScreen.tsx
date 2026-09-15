@@ -64,7 +64,7 @@ export default function PredictivoScreen() {
 
   if (loading) {
     return (
-      <Box className="page-content" px={{ initial: "4", sm: "5", md: "6" }} py={{ initial: "4", sm: "5", md: "6" }}>
+      <Box className="page-content" px={{ initial: "2", sm: "4", md: "6" }} py={{ initial: "3", sm: "4", md: "5" }}>
         <DashboardSkeleton variant="chart" />
       </Box>
     );
@@ -76,7 +76,7 @@ export default function PredictivoScreen() {
 
   if (cultivosBase.length === 0) {
     return (
-      <Box className="page-content" px={{ initial: "4", sm: "5", md: "6" }} py={{ initial: "4", sm: "5", md: "6" }}>
+      <Box className="page-content" px={{ initial: "2", sm: "4", md: "6" }} py={{ initial: "3", sm: "4", md: "5" }}>
         <NoCropsEmptyState
           title="No tienes predicciones de IA activas"
           description="Para consultar las recomendaciones automáticas de riego inteligente generadas por el modelo de Machine Learning, primero debes registrar tu cultivo."
@@ -88,7 +88,7 @@ export default function PredictivoScreen() {
   const selectedCultivoId = cultivoParam ? parseInt(cultivoParam, 10) : cultivosBase[0].id;
 
   return (
-    <Box className="page-content" px={{ initial: "4", sm: "5", md: "6" }} py={{ initial: "4", sm: "5", md: "6" }}>
+    <Box className="page-content" px={{ initial: "2", sm: "4", md: "6" }} py={{ initial: "3", sm: "4", md: "5" }}>
       <MLClient
         cultivos={cultivosBase}
         data={mlData}

@@ -55,4 +55,18 @@
 .metricList { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .metric { font: 12px "Courier New", monospace; padding: 6px 8px; color: #9ed8f1; background: #0d171d; border: 1px solid rgba(56,189,248,.18); border-radius: 4px; }
 @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } .header { align-items: flex-start; flex-direction: column; } }
-@media (max-width: 620px) { .shell { padding: 18px 10px 36px; } .formGrid { grid-template-columns: 1fr; } .fieldFull { grid-column: auto; } .fileRow { grid-template-columns: minmax(0,1fr) 120px 36px; } .tabs { width: 100%; } .tab { flex: 1; padding-inline: 7px; } }
+@media (max-width: 620px) { 
+  .shell { padding: 8px 4px 24px; } 
+  .title { font-size: 20px; }
+  .subtitle { font-size: 13px; }
+  .panelHeader { padding: 12px 14px; }
+  .panelTitle { font-size: 14px; }
+  .panelBody { padding: 14px; }
+  .formGrid { grid-template-columns: 1fr; } 
+  .fieldFull { grid-column: auto; } 
+  .fileRow { grid-template-columns: minmax(0,1fr) 110px 36px; } 
+  .tabs { width: 100%; overflow-x: auto; } 
+  .tab { flex: 1; padding: 7px 8px; font-size: 12px; } 
+  .kv { grid-template-columns: 1fr; gap: 4px; }
+  .table th, .table td { padding: 8px 10px; font-size: 12px; }
+}

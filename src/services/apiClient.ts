@@ -1,5 +1,7 @@
 // src/services/apiClient.ts
 
+import { refreshSession } from '@/lib/api/session-refresh';
+
 export const API_BASE_URL = import.meta.env.VITE_FASTAPI_URL || '/api';
 
 export class ApiError extends Error {
@@ -64,26 +66,16 @@ export async function apiClient<T = any>(
     });
 
   if (response.status === 401 && !endpoint.includes('/auth/login') && !endpoint.includes('/auth/refresh')) {
-    // Intentar refrescar la sesión si hay un endpoint disponible
-    try {
-      const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
-        method: 'POST',
+    if (await refreshSession(API_BASE_URL)) {
+      const retryRes = await fetch(url, {
         credentials: 'include',
+        headers: defaultHeaders,
+        ...customConfig,
       });
-      if (refreshRes.ok) {
-        // Reintentar la solicitud original
-        const retryRes = await fetch(url, {
-          credentials: 'include',
-          headers: defaultHeaders,
-          ...customConfig,
-        });
-        if (retryRes.ok) {
-          if (retryRes.status === 204) return {} as T;
-          return await retryRes.json();
-        }
+      if (retryRes.ok) {
+        if (retryRes.status === 204) return {} as T;
+        return await retryRes.json();
       }
-    } catch {
-      // Ignorar fallo de refresh y proceder con el error normal
     }
   }
 

@@ -1,5 +1,7 @@
 // src/lib/api/client.ts
 
+import { refreshSession } from '@/lib/api/session-refresh';
+
 export const FASTAPI_BASE_URL = import.meta.env.VITE_FASTAPI_URL || '/api';
 
 function resolveEndpoint(endpoint: string) {
@@ -40,15 +42,7 @@ export async function fetchFromFastAPI(endpoint: string, options: RequestInit = 
 
   // Si da 401, intentar refrescar
   if (response.status === 401 && !endpoint.includes('/auth/refresh') && !endpoint.includes('/auth/login')) {
-    try {
-      const refreshRes = await fetch(`${FASTAPI_BASE_URL}/auth/refresh`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-      if (refreshRes.ok) {
-        return fetch(url, fetchOptions);
-      }
-    } catch {}
+    if (await refreshSession(FASTAPI_BASE_URL)) return fetch(url, fetchOptions);
   }
 
   return response;

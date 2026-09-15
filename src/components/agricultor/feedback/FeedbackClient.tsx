@@ -33,7 +33,7 @@ const ratingLabels: Record<number, string> = {
 function StarRating({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   const [hover, setHover] = useState(0);
   return (
-    <div className="flex gap-1.5 items-center">
+    <div className="flex gap-1 sm:gap-1.5 items-center">
       {[1, 2, 3, 4, 5].map((n) => (
         <button
           key={n}
@@ -41,14 +41,14 @@ function StarRating({ value, onChange }: { value: number; onChange: (v: number) 
           onMouseEnter={() => setHover(n)}
           onMouseLeave={() => setHover(0)}
           onClick={() => onChange(n)}
-          className={`w-10 h-10 rounded-xl transition-all flex items-center justify-center cursor-pointer ${
+          className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl transition-all flex items-center justify-center cursor-pointer ${
             (hover || value) >= n
               ? "text-amber-400 bg-amber-500/20 shadow-sm shadow-amber-500/10 scale-105"
               : "text-slate-500 bg-slate-800/90 hover:bg-slate-700/80 hover:text-slate-300"
           }`}
         >
           <svg
-            className="w-5 h-5 transition-transform"
+            className="w-4 h-4 sm:w-5 sm:h-5 transition-transform"
             viewBox="0 0 24 24"
             fill={(hover || value) >= n ? "currentColor" : "none"}
             stroke="currentColor"
@@ -59,7 +59,7 @@ function StarRating({ value, onChange }: { value: number; onChange: (v: number) 
         </button>
       ))}
       {value > 0 && (
-        <span className="text-xs font-semibold text-amber-400 ml-2 bg-amber-950/40 px-2.5 py-1 rounded-full border border-amber-800/50">
+        <span className="text-[11px] sm:text-xs font-semibold text-amber-400 ml-1.5 sm:ml-2 bg-amber-950/40 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full border border-amber-800/50">
           {ratingLabels[value] || `${value}/5`}
         </span>
       )}
@@ -73,7 +73,7 @@ function StarDisplay({ value, max = 5 }: { value: number; max?: number }) {
       {Array.from({ length: max }, (_, i) => i + 1).map((n) => (
         <svg
           key={n}
-          className={`w-4 h-4 ${n <= value ? "text-amber-400 fill-amber-400" : "text-slate-600"}`}
+          className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${n <= value ? "text-amber-400 fill-amber-400" : "text-slate-600"}`}
           viewBox="0 0 24 24"
           stroke="currentColor"
           strokeWidth={1.5}
@@ -178,23 +178,23 @@ export default function FeedbackClient({
   const lastSubmission = history.length > 0 ? history[0] : null;
 
   return (
-    <div className="w-full max-w-full space-y-6 fade-in">
+    <div className="w-full max-w-full space-y-4 sm:space-y-6 fade-in">
       {/* Navegación por pestañas (Tabs) de ancho completo */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-800 pb-3 sm:pb-4">
         <div>
-          <h1 className="font-display font-bold text-2xl text-white tracking-tight">
+          <h1 className="font-display font-bold text-base sm:text-xl md:text-2xl text-white tracking-tight">
             Retroalimentación y Encuestas
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
             Comparte tu experiencia para ayudarnos a optimizar el riego y monitoreo de tus cultivos.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 bg-slate-900/90 p-1.5 rounded-xl border border-slate-800 self-start sm:self-auto">
+        <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-900/90 p-1 sm:p-1.5 rounded-xl border border-slate-800 self-start sm:self-auto">
           <button
             type="button"
             onClick={() => setActiveTab("form")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all cursor-pointer ${
               activeTab === "form"
                 ? "bg-emerald-600 text-white shadow-md shadow-emerald-950/40"
                 : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
@@ -207,17 +207,17 @@ export default function FeedbackClient({
           <button
             type="button"
             onClick={() => setActiveTab("history")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all cursor-pointer ${
               activeTab === "history"
                 ? "bg-emerald-600 text-white shadow-md shadow-emerald-950/40"
                 : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
             }`}
           >
             {Icons.clock("w-4 h-4")}
-            <span>Historial de Respuestas</span>
+            <span>Historial</span>
             {totalSubmissions > 0 && (
               <span
-                className={`text-xs px-2 py-0.5 rounded-full font-bold transition-colors ${
+                className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-bold transition-colors ${
                   activeTab === "history"
                     ? "bg-emerald-800 text-emerald-100"
                     : "bg-slate-800 text-slate-300"
@@ -321,24 +321,24 @@ export default function FeedbackClient({
               )}
 
               {/* Preguntas en Grid de Ancho Completo */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 sm:gap-5">
                 {formattedQuestions.map((q, i) => {
                   const isWide = q.type === "text";
                   return (
                     <div
                       key={q.id}
-                      className={`metric-card p-5 sm:p-6 flex flex-col justify-between transition-all hover:border-slate-700/80 ${
+                      className={`metric-card p-3.5 sm:p-5 flex flex-col justify-between transition-all hover:border-slate-700/80 ${
                         isWide ? "lg:col-span-2" : ""
                       }`}
                     >
                       <div>
-                        <div className="flex items-start justify-between gap-3 mb-4">
-                          <div className="flex items-start gap-3">
-                            <span className="w-7 h-7 rounded-xl bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                        <div className="flex items-start justify-between gap-2.5 sm:gap-3 mb-3 sm:mb-4">
+                          <div className="flex items-start gap-2.5 sm:gap-3">
+                            <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg sm:rounded-xl bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 text-[11px] sm:text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
                               {i + 1}
                             </span>
                             <div>
-                              <p className="font-semibold text-slate-100 text-base leading-snug">
+                              <p className="font-semibold text-slate-100 text-sm sm:text-base leading-snug">
                                 {q.question}
                               </p>
                               {q.required ? (
@@ -442,33 +442,33 @@ export default function FeedbackClient({
       {activeTab === "history" && (
         <div className="space-y-6">
           {/* Métricas Resumen del Historial Personal (Ancho Completo) */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="metric-card p-5 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                {Icons.message("w-6 h-6")}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            <div className="metric-card p-3.5 sm:p-5 flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                {Icons.message("w-5 h-5 sm:w-6 sm:h-6")}
               </div>
               <div>
-                <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
+                <p className="text-[11px] sm:text-xs text-slate-400 font-medium uppercase tracking-wider">
                   Total Valoraciones
                 </p>
-                <p className="text-2xl font-bold font-display text-white mt-0.5">
+                <p className="text-xl sm:text-2xl font-bold font-display text-white mt-0.5">
                   {totalSubmissions}
                 </p>
               </div>
             </div>
 
-            <div className="metric-card p-5 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
-                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+            <div className="metric-card p-3.5 sm:p-5 flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="currentColor">
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                 </svg>
               </div>
               <div>
-                <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
+                <p className="text-[11px] sm:text-xs text-slate-400 font-medium uppercase tracking-wider">
                   Promedio de Satisfacción
                 </p>
-                <div className="flex items-baseline gap-2 mt-0.5">
-                  <p className="text-2xl font-bold font-display text-white">
+                <div className="flex items-baseline gap-1.5 sm:gap-2 mt-0.5">
+                  <p className="text-xl sm:text-2xl font-bold font-display text-white">
                     {avgSatisfaction}
                   </p>
                   <span className="text-xs text-slate-400">/ 5.0</span>
@@ -476,15 +476,15 @@ export default function FeedbackClient({
               </div>
             </div>
 
-            <div className="metric-card p-5 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
-                {Icons.calendar("w-6 h-6")}
+            <div className="metric-card p-3.5 sm:p-5 flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
+                {Icons.calendar("w-5 h-5 sm:w-6 sm:h-6")}
               </div>
               <div>
-                <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
+                <p className="text-[11px] sm:text-xs text-slate-400 font-medium uppercase tracking-wider">
                   Último Envío
                 </p>
-                <p className="text-sm font-semibold text-white mt-1 truncate max-w-[200px]">
+                <p className="text-xs sm:text-sm font-semibold text-white mt-1 truncate max-w-[200px]">
                   {lastSubmission
                     ? new Date(lastSubmission.fecha).toLocaleDateString("es-PE", {
                         day: "numeric",
@@ -499,26 +499,26 @@ export default function FeedbackClient({
 
           {/* Listado de Envíos Anteriores */}
           {history.length === 0 ? (
-            <div className="metric-card p-12 text-center space-y-4 max-w-lg mx-auto">
-              <div className="w-16 h-16 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center mx-auto text-slate-400">
-                {Icons.message("w-8 h-8")}
+            <div className="metric-card p-8 sm:p-12 text-center space-y-4 max-w-lg mx-auto">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center mx-auto text-slate-400">
+                {Icons.message("w-7 h-7 sm:w-8 sm:h-8")}
               </div>
-              <h3 className="font-display font-bold text-xl text-white">
+              <h3 className="font-display font-bold text-lg sm:text-xl text-white">
                 Aún no has enviado valoraciones
               </h3>
-              <p className="text-slate-400 text-sm leading-relaxed">
+              <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">
                 Tus comentarios ayudan a calibrar el sistema para tus necesidades de riego y cultivo.
               </p>
               <button
                 type="button"
                 onClick={() => setActiveTab("form")}
-                className="btn-primary px-6 py-2.5 text-sm"
+                className="btn-primary px-5 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm"
               >
                 Completar mi primera encuesta
               </button>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {history.map((item, idx) => {
                 const isExpanded = expandedId === item.id;
                 const formattedDate = new Date(item.fecha).toLocaleString("es-PE", {
@@ -529,25 +529,25 @@ export default function FeedbackClient({
                 return (
                   <div
                     key={item.id || idx}
-                    className="metric-card p-5 sm:p-6 transition-all space-y-4"
+                    className="metric-card p-3.5 sm:p-5 transition-all space-y-3 sm:space-y-4"
                   >
                     {/* Fila Principal del Historial */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div className="flex items-start gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold shrink-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                      <div className="flex items-start gap-3 sm:gap-4">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-xs sm:text-sm font-bold shrink-0">
                           #{history.length - idx}
                         </div>
                         <div>
-                          <div className="flex items-center gap-3 flex-wrap">
-                            <h4 className="font-semibold text-white text-base">
+                          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                            <h4 className="font-semibold text-white text-sm sm:text-base">
                               Valoración del {formattedDate}
                             </h4>
                             {item.cultivo_nombre && (
-                              <span className="chip status-water text-xs">
+                              <span className="chip status-water text-[10px] sm:text-xs">
                                 🌱 {item.cultivo_nombre}
                               </span>
                             )}
-                            <span className="chip status-active text-xs">
+                            <span className="chip status-active text-[10px] sm:text-xs">
                               Enviada
                             </span>
                           </div>

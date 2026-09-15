@@ -80,20 +80,20 @@ export default function NotificacionesHistoryScreen() {
   }, [notifications]);
 
   return (
-    <Box className="page-content" px={{ initial: "4", sm: "5", md: "6" }} py={{ initial: "4", sm: "5", md: "6" }}>
-      <div className="max-w-5xl mx-auto space-y-6">
+    <Box className="page-content" px={{ initial: "2", sm: "4", md: "6" }} py={{ initial: "3", sm: "4", md: "5" }}>
+      <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6">
         {/* CABECERA */}
-        <Flex justify="between" align={{ initial: 'start', sm: 'center' }} gap="4" wrap="wrap">
+        <Flex justify="between" align={{ initial: 'start', sm: 'center' }} gap="3" wrap="wrap">
           <div>
             <Flex align="center" gap="2.5" mb="1">
-              <div className="p-2 rounded-xl bg-emerald-950/60 border border-emerald-800/60 text-emerald-400">
-                <Bell size={22} />
+              <div className="p-1.5 sm:p-2 rounded-xl bg-emerald-950/60 border border-emerald-800/60 text-emerald-400">
+                <Bell size={20} className="sm:w-[22px] sm:h-[22px]" />
               </div>
-              <h1 className="text-2xl font-bold text-white tracking-tight">
-                Historial de Notificaciones
+              <h1 className="text-base sm:text-xl md:text-2xl font-bold text-white tracking-tight">
+                Notificaciones
               </h1>
             </Flex>
-            <p className="text-sm text-slate-400">
+            <p className="text-xs sm:text-sm text-slate-400">
               {isAdmin
                 ? "Registro cronológico de eventos del parque IoT, despliegue de firmware y usuarios."
                 : "Registro cronológico de ciclos de riego, incidencias operativas y asignaciones de hardware."}
@@ -133,20 +133,20 @@ export default function NotificacionesHistoryScreen() {
         </Flex>
 
         {/* CONTADORES / FILTROS RESUMEN */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3">
           <button
             onClick={() => setFilterSeverity('todas')}
-            className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+            className={`p-2.5 sm:p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
               filterSeverity === 'todas'
                 ? 'bg-slate-800/90 border-slate-600 shadow-md ring-1 ring-slate-500'
                 : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
             }`}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-300">Todas</span>
-              <Filter size={14} className="text-slate-400" />
+              <span className="text-[11px] sm:text-xs font-semibold text-slate-300">Todas</span>
+              <Filter size={13} className="text-slate-400" />
             </div>
-            <div className="mt-2 font-mono font-bold text-2xl text-white">
+            <div className="mt-1 sm:mt-2 font-mono font-bold text-lg sm:text-2xl text-white">
               {counts.todas}
             </div>
           </button>
@@ -159,17 +159,17 @@ export default function NotificacionesHistoryScreen() {
               <button
                 key={sev}
                 onClick={() => setFilterSeverity(sev)}
-                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                className={`p-2.5 sm:p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
                   isSelected
                     ? `${cfg.bg} ${cfg.border} shadow-md ring-1 ring-current ${cfg.text}`
                     : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-300">{cfg.label}</span>
-                  <Icon size={14} className={cfg.text} />
+                  <span className="text-[11px] sm:text-xs font-semibold text-slate-300">{cfg.label}</span>
+                  <Icon size={13} className={cfg.text} />
                 </div>
-                <div className={`mt-2 font-mono font-bold text-2xl ${cfg.text}`}>
+                <div className={`mt-1 sm:mt-2 font-mono font-bold text-lg sm:text-2xl ${cfg.text}`}>
                   {counts[sev]}
                 </div>
               </button>
@@ -180,47 +180,48 @@ export default function NotificacionesHistoryScreen() {
         {/* BUSCADOR */}
         <div className="relative">
           <TextField.Root
-            placeholder="Buscar por título, descripción o módulo de origen..."
+            placeholder="Buscar por título, descripción o módulo..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            size="3"
-            style={{ background: '#0b1329', color: 'white', borderColor: '#1e293b', borderRadius: '12px' }}
+            size="2"
+            style={{ background: '#0b1329', color: 'white', borderColor: '#1e293b', borderRadius: '10px' }}
           >
             <TextField.Slot>
-              <Search size={16} color="#94a3b8" />
+              <Search size={15} color="#94a3b8" />
             </TextField.Slot>
           </TextField.Root>
         </div>
 
         {/* LISTA DE NOTIFICACIONES */}
-        <div className="space-y-3">
+        <div className="space-y-2.5 sm:space-y-3">
           {filtered.map((item) => {
             const cfg = typeConfig[item.severidad] || typeConfig.info;
             const Icon = cfg.icon;
             return (
               <Card
                 key={item.id}
-                size="2"
+                size="1"
                 style={{
                   background: item.leida ? '#0a1020' : '#0d1730',
                   borderColor: item.leida ? '#1e293b' : '#334155',
-                  borderRadius: '14px',
+                  borderRadius: '12px',
+                  padding: '10px 14px',
                   transition: 'all 0.2s ease',
                 }}
               >
-                <div className="flex items-start gap-4 p-1">
+                <div className="flex items-start gap-3 sm:gap-4">
                   {/* Icono de severidad */}
-                  <div className={`shrink-0 p-2.5 rounded-xl border ${cfg.bg} ${cfg.border} ${cfg.text} mt-0.5`}>
-                    <Icon size={18} />
+                  <div className={`shrink-0 p-2 sm:p-2.5 rounded-xl border ${cfg.bg} ${cfg.border} ${cfg.text} mt-0.5`}>
+                    <Icon size={16} className="sm:w-[18px] sm:h-[18px]" />
                   </div>
 
                   {/* Detalle */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <h4 className="font-semibold text-white text-sm tracking-wide">
+                      <h4 className="font-semibold text-white text-xs sm:text-sm tracking-wide">
                         {item.titulo}
                       </h4>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${cfg.chip}`}>
+                      <span className={`text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full border ${cfg.chip}`}>
                         {cfg.label.toUpperCase()}
                       </span>
                       {!item.leida && (
@@ -228,13 +229,13 @@ export default function NotificacionesHistoryScreen() {
                       )}
                     </div>
 
-                    <p className="text-xs text-slate-300 leading-relaxed mb-2.5 break-words">
+                    <p className="text-[11px] sm:text-xs text-slate-300 leading-relaxed mb-2 break-words">
                       {item.mensaje}
                     </p>
 
-                    <div className="flex items-center gap-3 text-[11px] text-slate-400 flex-wrap">
+                    <div className="flex items-center gap-2.5 sm:gap-3 text-[10px] sm:text-[11px] text-slate-400 flex-wrap">
                       <span className="flex items-center gap-1">
-                        <Clock size={12} />
+                        <Clock size={11} />
                         {new Date(item.timestamp).toLocaleString('es-PE', {
                           day: 'numeric',
                           month: 'short',

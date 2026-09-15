@@ -130,8 +130,8 @@ export async function ejecutarPrediccionEnVivo(userId: number, idCultivo: number
     });
 
     if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(errorText || 'Error en comunicación con backend FastAPI');
+      const errorText = await parseErrorText(res);
+      return { success: false, error: errorText };
     }
 
     revalidatePath('/dashboard/agricultor/control');
@@ -139,5 +139,27 @@ export async function ejecutarPrediccionEnVivo(userId: number, idCultivo: number
     return { success: true, data: await res.json() };
   } catch (error: any) {
     return { success: false, error: error.message || 'Error de red o comunicación' };
+  }
+}
+
+export async function detenerRiego(idCultivo: number, motivo: string = "cronometro_completado") {
+  try {
+    const res = await fetchFromFastAPI("/control/riego/detener", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idCultivo, motivo })
+    });
+
+    if (!res.ok) {
+      const errorMsg = await parseErrorText(res);
+      return { success: false, error: errorMsg };
+    }
+
+    revalidatePath('/dashboard/agricultor/control');
+    revalidatePath('/dashboard/agricultor');
+    const data = await res.json();
+    return { success: true, data };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Error al detener riego" };
   }
 }

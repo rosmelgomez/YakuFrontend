@@ -117,16 +117,16 @@ export default function FuenteAguaScreen() {
   const filteredFuentes = filter === "all" ? fuentes : fuentes.filter((f) => f.tipo === filter);
 
   return (
-    <div className="page-content w-full px-4 sm:px-5 md:px-6 py-4 sm:py-5 md:py-6 space-y-6">
+    <div className="page-content w-full px-2 sm:px-4 md:px-6 py-3 sm:py-4 md:py-5 space-y-4 sm:space-y-6">
       {/* Header with Title, Counts and Actions */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400">
-              <Droplets size={24} />
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
+              <Droplets className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Fuentes de Agua</h2>
+              <h2 className="text-base sm:text-xl md:text-2xl font-bold text-white tracking-tight">Fuentes de Agua</h2>
               <p className="text-slate-400 text-xs sm:text-sm">
                 {fuentes.length} fuente{fuentes.length !== 1 ? "s" : ""} registrada{fuentes.length !== 1 ? "s" : ""} ·{" "}
                 {tanquesCount} tanque{tanquesCount !== 1 ? "s" : ""} · {redesCount} red{redesCount !== 1 ? "es" : ""} directa{redesCount !== 1 ? "s" : ""}
@@ -269,13 +269,13 @@ export default function FuenteAguaScreen() {
             return (
               <div
                 key={fuente.id}
-                className="bg-slate-900/85 border border-slate-800/90 hover:border-slate-700/80 transition-all rounded-2xl p-5 shadow-lg flex flex-col justify-between"
+                className="bg-slate-900/85 border border-slate-800/90 hover:border-slate-700/80 transition-all rounded-2xl p-3.5 sm:p-5 shadow-lg flex flex-col justify-between"
               >
                 <div>
                   {/* Card Header */}
-                  <div className="flex items-start justify-between gap-2 mb-3">
+                  <div className="flex items-start justify-between gap-2 mb-2.5 sm:mb-3">
                     <div className="min-w-0">
-                      <h3 className="font-bold text-white text-base truncate">{fuente.nombre}</h3>
+                      <h3 className="font-bold text-white text-sm sm:text-base truncate">{fuente.nombre}</h3>
                       <p className="text-slate-400 text-xs mt-0.5 flex items-center gap-1 truncate">
                         {linkedCrop ? (
                           <>
@@ -290,7 +290,7 @@ export default function FuenteAguaScreen() {
                       </p>
                     </div>
                     <span
-                      className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border shrink-0 ${
+                      className={`px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-[11px] font-semibold border shrink-0 ${
                         isTanque
                           ? "bg-sky-950/80 text-sky-400 border-sky-800/60"
                           : "bg-emerald-950/80 text-emerald-400 border-emerald-800/60"
@@ -301,33 +301,33 @@ export default function FuenteAguaScreen() {
                   </div>
 
                   {/* Status Badge */}
-                  <div className="mb-4">
+                  <div className="mb-3 sm:mb-4">
                     {isTanque ? (
                       hasTanqueTelemetry ? (
                         <span
-                          className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border inline-flex items-center gap-1.5 ${levelBadgeClass}`}
+                          className={`px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-semibold border inline-flex items-center gap-1.5 ${levelBadgeClass}`}
                         >
                           <span className="w-2 h-2 rounded-full bg-current animate-pulse" />
                           {tankPct >= 50 ? "Nivel Óptimo" : tankPct >= 25 ? "Nivel Bajo" : "Nivel Crítico"} · {tankPct}%
                         </span>
                       ) : (
-                        <span className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-800/80 text-slate-400 border border-slate-700/70 inline-flex items-center gap-1.5">
+                        <span className="px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-medium bg-slate-800/80 text-slate-400 border border-slate-700/70 inline-flex items-center gap-1.5">
                           <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
                           Esperando lectura ultrasónica
                         </span>
                       )
                     ) : isCutOff ? (
-                      <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-950 text-rose-400 border border-rose-800 inline-flex items-center gap-1.5 animate-pulse">
+                      <span className="px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-bold bg-rose-950 text-rose-400 border border-rose-800 inline-flex items-center gap-1.5 animate-pulse">
                         <AlertTriangle size={12} />
                         ¡Corte de Suministro Detectado!
                       </span>
                     ) : isValveOpen ? (
-                      <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800 inline-flex items-center gap-1.5">
+                      <span className="px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800 inline-flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
                         Riego Activo · Flujo Normal
                       </span>
                     ) : (
-                      <span className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-800 text-slate-300 border border-slate-700 inline-flex items-center gap-1.5">
+                      <span className="px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-medium bg-slate-800 text-slate-300 border border-slate-700 inline-flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
                         Válvula Cerrada · En Reposo
                       </span>
@@ -335,36 +335,36 @@ export default function FuenteAguaScreen() {
                   </div>
 
                   {/* Specs Overview */}
-                  <div className="grid grid-cols-3 gap-2 text-xs bg-slate-950/50 p-3 rounded-xl border border-slate-800/60 mb-4 font-mono">
+                  <div className="grid grid-cols-3 gap-1.5 sm:gap-2 text-[11px] sm:text-xs bg-slate-950/50 p-2.5 sm:p-3 rounded-xl border border-slate-800/60 mb-3 sm:mb-4 font-mono">
                     {isTanque ? (
                       <>
                         <div>
-                          <span className="text-[10px] text-slate-400 block mb-0.5">Capacidad</span>
+                          <span className="text-[9px] sm:text-[10px] text-slate-400 block mb-0.5">Capacidad</span>
                           <span className="font-bold text-white">{tankCapacidad.toLocaleString("es-PE")} L</span>
                         </div>
                         <div>
-                          <span className="text-[10px] text-slate-400 block mb-0.5">Altura Tanque</span>
+                          <span className="text-[9px] sm:text-[10px] text-slate-400 block mb-0.5">Altura Tanque</span>
                           <span className="font-semibold text-slate-200">
                             {tankHeight > 0 ? `${tankHeight} cm` : "--"}
                           </span>
                         </div>
                         <div>
-                          <span className="text-[10px] text-slate-400 block mb-0.5">Seguridad</span>
+                          <span className="text-[9px] sm:text-[10px] text-slate-400 block mb-0.5">Seguridad</span>
                           <span className="font-semibold text-slate-300">{tankSafety} cm</span>
                         </div>
                       </>
                     ) : (
                       <>
                         <div>
-                          <span className="text-[10px] text-slate-400 block mb-0.5">Suministro</span>
+                          <span className="text-[9px] sm:text-[10px] text-slate-400 block mb-0.5">Suministro</span>
                           <span className="font-bold text-white">Continua</span>
                         </div>
                         <div>
-                          <span className="text-[10px] text-slate-400 block mb-0.5">Electroválvula</span>
+                          <span className="text-[9px] sm:text-[10px] text-slate-400 block mb-0.5">Electroválvula</span>
                           <span className="font-semibold text-emerald-400">GPIO 25</span>
                         </div>
                         <div>
-                          <span className="text-[10px] text-slate-400 block mb-0.5">Sensor Flujo</span>
+                          <span className="text-[9px] sm:text-[10px] text-slate-400 block mb-0.5">Sensor Flujo</span>
                           <span className="font-semibold text-sky-400">GPIO 27</span>
                         </div>
                       </>
@@ -372,7 +372,7 @@ export default function FuenteAguaScreen() {
                   </div>
 
                   {/* Telemetry & Consumption Box */}
-                  <div className="mb-4 bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/60 space-y-2.5">
+                  <div className="mb-3 sm:mb-4 bg-slate-950/60 p-2.5 sm:p-3.5 rounded-xl border border-slate-800/60 space-y-2">
                     {isTanque ? (
                       <>
                         {hasTanqueTelemetry ? (

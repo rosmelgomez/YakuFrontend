@@ -112,14 +112,14 @@ export default function UsuariosClient({ initialUsers = [], initialDevices = [],
 
   return (
     <Box style={{ opacity: isPending ? 0.6 : 1, transition: "opacity 0.2s" }}>
-      <Flex direction="column" gap="4" mb="6">
+      <Flex direction="column" gap="4" mb="5">
         <Box>
-          <Text size="6" weight="bold" color="indigo" as="div">Usuarios</Text>
-          <Text size="2" color="gray" style={{ fontFamily: "monospace" }}>Gestiona roles, estados y cuentas del sistema.</Text>
+          <Text size={{ initial: "5", sm: "6" }} weight="bold" color="indigo" as="div">Usuarios</Text>
+          <Text size={{ initial: "1", sm: "2" }} color="gray" style={{ fontFamily: "monospace" }}>Gestiona roles, estados y cuentas del sistema.</Text>
         </Box>
       </Flex>
 
-      <Card size="3" style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
+      <Card size={{ initial: "2", sm: "3" }} style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
         <Flex
           direction={{ initial: "column", sm: "row" }}
           justify="between"
@@ -127,7 +127,7 @@ export default function UsuariosClient({ initialUsers = [], initialDevices = [],
           gap="3"
           mb="4"
         >
-          <Text size={{ initial: "4", sm: "5" }} weight="bold" color="indigo" as="div">
+          <Text size={{ initial: "3", sm: "4" }} weight="bold" color="indigo" as="div">
             Usuarios del Sistema
           </Text>
           <Button
@@ -226,11 +226,11 @@ export default function UsuariosClient({ initialUsers = [], initialDevices = [],
       </Card>
 
       <Dialog.Root open={isOpenRegisterUser} onOpenChange={setIsOpenRegisterUser}>
-        <Dialog.Content aria-describedby={undefined} style={{ maxWidth: 520, background: "var(--surface-mockup)", border: "1px solid var(--border-mockup)" }}>
+        <Dialog.Content aria-describedby={undefined} style={{ maxWidth: 520, width: "92vw", maxHeight: "90vh", overflowY: "auto", background: "var(--surface-mockup)", border: "1px solid var(--border-mockup)" }}>
           <Dialog.Title style={{ color: "white" }}>Registrar Nuevo Usuario</Dialog.Title>
           <form onSubmit={handleRegisterUserSubmit}>
             <Flex direction="column" gap="3" mt="3">
-              <Grid columns="2" gap="3">
+              <Grid columns={{ initial: "1", sm: "2" }} gap="3">
                 <Box>
                   <Text size="1" color="gray" mb="1" as="div">Nombres *</Text>
                   <TextField.Root placeholder="Nombres" value={newUserNombre} onChange={(e) => setNewUserNombre(e.target.value)} required />
@@ -241,7 +241,7 @@ export default function UsuariosClient({ initialUsers = [], initialDevices = [],
                 </Box>
               </Grid>
 
-              <Grid columns="2" gap="3">
+              <Grid columns={{ initial: "1", sm: "2" }} gap="3">
                 <Box>
                   <Text size="1" color="gray" mb="1" as="div">Correo Electrónico *</Text>
                   <TextField.Root type="email" placeholder="Correo" value={newUserCorreo} onChange={(e) => setNewUserCorreo(e.target.value)} required />
@@ -252,7 +252,7 @@ export default function UsuariosClient({ initialUsers = [], initialDevices = [],
                 </Box>
               </Grid>
 
-              <Grid columns="2" gap="3">
+              <Grid columns={{ initial: "1", sm: "2" }} gap="3">
                 <Box>
                   <Text size="1" color="gray" mb="1" as="div">DNI / Documento</Text>
                   <TextField.Root placeholder="8 dígitos" maxLength={20} value={newUserDni} onChange={(e) => setNewUserDni(e.target.value)} />

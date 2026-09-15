@@ -28,20 +28,20 @@ export default function RespaldoClient() {
 
   return (
     <Box style={{ opacity: isPending ? 0.6 : 1, transition: "opacity 0.2s" }}>
-      <Flex direction="column" gap="4" mb="6">
+      <Flex direction="column" gap="4" mb="5">
         <Box>
-          <Text size="6" weight="bold" color="indigo" as="div">Respaldo</Text>
-          <Text size="2" color="gray" style={{ fontFamily: "monospace" }}>Genera copias de seguridad desde el backend.</Text>
+          <Text size={{ initial: "5", sm: "6" }} weight="bold" color="indigo" as="div">Respaldo</Text>
+          <Text size={{ initial: "1", sm: "2" }} color="gray" style={{ fontFamily: "monospace" }}>Genera copias de seguridad desde el backend.</Text>
         </Box>
       </Flex>
-      <Card size="3" style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
-        <Flex direction="column" gap="4" align="center" justify="center" p="5">
-          <HardDrive size={64} color="#818cf8" style={{ filter: "drop-shadow(0 0 10px rgba(129, 140, 248, 0.3))" }} />
+      <Card size={{ initial: "2", sm: "3" }} style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
+        <Flex direction="column" gap="4" align="center" justify="center" p={{ initial: "3", sm: "5" }}>
+          <HardDrive className="w-12 h-12 sm:w-16 sm:h-16" color="#818cf8" style={{ filter: "drop-shadow(0 0 10px rgba(129, 140, 248, 0.3))" }} />
           <Box style={{ textAlign: "center" }}>
-            <Text size="4" weight="bold" style={{ color: "white" }} as="div" mb="2">Copia de Seguridad de la Base de Datos</Text>
-            <Text size="2" color="gray">Descargue un archivo comprimido de respaldo completo de la base de datos.</Text>
+            <Text size={{ initial: "3", sm: "4" }} weight="bold" style={{ color: "white" }} as="div" mb="2">Copia de Seguridad de la Base de Datos</Text>
+            <Text size={{ initial: "1", sm: "2" }} color="gray">Descargue un archivo de respaldo completo de la base de datos.</Text>
           </Box>
-          <Button size="3" color="indigo" onClick={handleTriggerBackup} disabled={isPending} style={{ cursor: "pointer", padding: "12px 24px" }}>
+          <Button size={{ initial: "2", sm: "3" }} color="indigo" onClick={handleTriggerBackup} disabled={isPending} style={{ cursor: "pointer" }}>
             Generar y Descargar Backup (.SQL)
           </Button>
         </Flex>

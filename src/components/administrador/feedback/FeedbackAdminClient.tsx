@@ -464,40 +464,40 @@ export default function FeedbackAdminClient({
       {/* Cabecera y Barra de Pestañas (Ancho Completo) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
-          <h1 className="font-display font-bold text-2xl text-white tracking-tight">
+          <h1 className="font-display font-bold text-base sm:text-xl md:text-2xl text-white tracking-tight">
             Panel de Retroalimentación de Agricultores
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-xs sm:text-sm text-slate-400 mt-1">
             Mide la satisfacción del usuario, analiza la eficiencia de cada pregunta y administra el cuestionario activo.
           </p>
         </div>
 
         {/* Selector de Pestañas */}
-        <div className="flex items-center gap-2 bg-slate-900/90 p-1.5 rounded-xl border border-slate-800 self-start sm:self-auto">
+        <div className="flex items-center gap-1.5 bg-slate-900/90 p-1 sm:p-1.5 rounded-xl border border-slate-800 self-stretch sm:self-auto overflow-x-auto">
           <button
             type="button"
             onClick={() => setActiveTab("kpis")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all cursor-pointer whitespace-nowrap ${
               activeTab === "kpis"
                 ? "bg-emerald-600 text-white shadow-md shadow-emerald-950/40"
                 : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
             }`}
           >
             {Icons.chartBar("w-4 h-4")}
-            <span>KPIs y Métricas de Eficiencia</span>
+            <span>KPIs y Eficiencia</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab("preguntas")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all cursor-pointer whitespace-nowrap ${
               activeTab === "preguntas"
                 ? "bg-emerald-600 text-white shadow-md shadow-emerald-950/40"
                 : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
             }`}
           >
             {Icons.settings("w-4 h-4")}
-            <span>Gestión de Preguntas</span>
+            <span>Preguntas</span>
             <span
               className={`text-xs px-2 py-0.5 rounded-full font-bold transition-colors ${
                 activeTab === "preguntas"
@@ -513,41 +513,41 @@ export default function FeedbackAdminClient({
 
       {/* PESTAÑA 1: KPIS Y MÉTRICAS DE EFICIENCIA */}
       {activeTab === "kpis" && (
-        <div className="space-y-6">
+        <div className="space-y-5 sm:space-y-6">
           {/* Fila Superior: 4 Métricas Globales */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="metric-card p-5 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                {Icons.message("w-6 h-6")}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="metric-card p-3 sm:p-5 flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                {Icons.message("w-5 h-5 sm:w-6 sm:h-6")}
               </div>
-              <div>
-                <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs text-slate-400 font-medium uppercase tracking-wider truncate">
                   Total Valoraciones
                 </p>
-                <p className="text-2xl font-bold font-display text-white mt-0.5">
+                <p className="text-lg sm:text-2xl font-bold font-display text-white mt-0.5">
                   {kpis?.total_feedbacks ?? 0}
                 </p>
-                <p className="text-xs text-slate-400">Completadas por agricultores</p>
+                <p className="text-[10px] sm:text-xs text-slate-400 hidden sm:block">Completadas por agricultores</p>
               </div>
             </div>
 
-            <div className="metric-card p-5 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
-                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+            <div className="metric-card p-3 sm:p-5 flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="currentColor">
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                 </svg>
               </div>
-              <div>
-                <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
-                  Satisfacción Global
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs text-slate-400 font-medium uppercase tracking-wider truncate">
+                  Satisfacción
                 </p>
-                <div className="flex items-baseline gap-2 mt-0.5">
-                  <p className="text-2xl font-bold font-display text-white">
+                <div className="flex items-baseline gap-1 mt-0.5">
+                  <p className="text-lg sm:text-2xl font-bold font-display text-white">
                     {kpis?.promedio_general?.toFixed(1) ?? "0.0"}
                   </p>
-                  <span className="text-xs text-slate-400">/ 5.0 ★</span>
+                  <span className="text-[10px] sm:text-xs text-slate-400">/ 5★</span>
                 </div>
-                <p className="text-xs text-amber-400 font-semibold">
+                <p className="text-[10px] sm:text-xs text-amber-400 font-semibold truncate hidden sm:block">
                   {kpis && kpis.promedio_general >= 4
                     ? "Nivel Excelente"
                     : kpis && kpis.promedio_general >= 3
@@ -557,57 +557,57 @@ export default function FeedbackAdminClient({
               </div>
             </div>
 
-            <div className="metric-card p-5 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
-                {Icons.trendingUp("w-6 h-6")}
+            <div className="metric-card p-3 sm:p-5 flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
+                {Icons.trendingUp("w-5 h-5 sm:w-6 sm:h-6")}
               </div>
-              <div>
-                <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
-                  Tasa de Respuesta
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs text-slate-400 font-medium uppercase tracking-wider truncate">
+                  Tasa Respuesta
                 </p>
-                <p className="text-2xl font-bold font-display text-white mt-0.5">
+                <p className="text-lg sm:text-2xl font-bold font-display text-white mt-0.5">
                   {kpis?.tasa_completitud_promedio?.toFixed(1) ?? "0.0"}%
                 </p>
-                <p className="text-xs text-slate-400">Completitud promedio</p>
+                <p className="text-[10px] sm:text-xs text-slate-400 hidden sm:block">Completitud promedio</p>
               </div>
             </div>
 
-            <div className="metric-card p-5 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400">
-                {Icons.sliders("w-6 h-6")}
+            <div className="metric-card p-3 sm:p-5 flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
+                {Icons.sliders("w-5 h-5 sm:w-6 sm:h-6")}
               </div>
-              <div>
-                <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
-                  Preguntas Activas
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs text-slate-400 font-medium uppercase tracking-wider truncate">
+                  Activas
                 </p>
-                <p className="text-2xl font-bold font-display text-white mt-0.5">
+                <p className="text-lg sm:text-2xl font-bold font-display text-white mt-0.5">
                   {kpis?.preguntas_activas ?? activeCount}
-                  <span className="text-xs text-slate-400 font-normal">
+                  <span className="text-[10px] sm:text-xs text-slate-400 font-normal">
                     {" "}/ {kpis?.preguntas_totales ?? questions.length}
                   </span>
                 </p>
-                <p className="text-xs text-emerald-400 font-medium">En producción</p>
+                <p className="text-[10px] sm:text-xs text-emerald-400 font-medium hidden sm:block">En producción</p>
               </div>
             </div>
           </div>
 
           {/* Fila de Gráficos Comparativos (Recharts) */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
             {/* Gráfico 1: Tasa de Respuesta por Pregunta (%) */}
-            <div className="metric-card p-5 sm:p-6 space-y-4">
+            <div className="metric-card p-3.5 sm:p-6 space-y-3 sm:space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-semibold text-white text-base">
-                    Eficiencia: Tasa de Respuesta por Pregunta (%)
+                  <h3 className="font-semibold text-white text-sm sm:text-base">
+                    Eficiencia: Tasa de Respuesta (%)
                   </h3>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Porcentaje de agricultores que respondieron cada pregunta configurada
+                  <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
+                    Porcentaje de agricultores que respondieron cada pregunta
                   </p>
                 </div>
-                <span className="chip status-active text-xs">Completitud</span>
+                <span className="chip status-active text-[10px] sm:text-xs">Completitud</span>
               </div>
 
-              <div className="h-64 w-full pt-2">
+              <div className="h-52 sm:h-64 w-full pt-2">
                 {chartCompletionData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartCompletionData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
@@ -640,20 +640,20 @@ export default function FeedbackAdminClient({
             </div>
 
             {/* Gráfico 2: Calificación Promedio por Pregunta Rating */}
-            <div className="metric-card p-5 sm:p-6 space-y-4">
+            <div className="metric-card p-3.5 sm:p-6 space-y-3 sm:space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-semibold text-white text-base">
-                    Satisfacción: Calificación Promedio (1 a 5★)
+                  <h3 className="font-semibold text-white text-sm sm:text-base">
+                    Satisfacción: Calificación (1 a 5★)
                   </h3>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Promedio de estrellas obtenido en preguntas de tipo valoración
+                  <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
+                    Promedio de estrellas en preguntas de valoración
                   </p>
                 </div>
-                <span className="chip status-warning text-xs">Rating</span>
+                <span className="chip status-warning text-[10px] sm:text-xs">Rating</span>
               </div>
 
-              <div className="h-64 w-full pt-2">
+              <div className="h-52 sm:h-64 w-full pt-2">
                 {chartRatingData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartRatingData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
@@ -752,7 +752,7 @@ export default function FeedbackAdminClient({
               return (
                 <div
                   key={qKpi.id_pregunta}
-                  className="metric-card p-5 sm:p-6 space-y-4 flex flex-col justify-between"
+                  className="metric-card p-3.5 sm:p-6 space-y-3 sm:space-y-4 flex flex-col justify-between"
                 >
                   <div>
                     {/* Encabezado de la Tarjeta */}
@@ -976,7 +976,7 @@ export default function FeedbackAdminClient({
               .map((q, i) => (
                 <div
                   key={q.id}
-                  className={`metric-card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all ${
+                  className={`metric-card p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 transition-all ${
                     !q.active ? "opacity-60 bg-slate-900/50" : ""
                   }`}
                 >

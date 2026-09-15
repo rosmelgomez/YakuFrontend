@@ -1,5 +1,5 @@
 // src/screens/administrador/FirmwareScreen.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Box } from '@radix-ui/themes';
 import { listarDispositivos, listarUsuarios } from '@/actions/admin';
 import { listarTodosCultivos } from '@/actions/crops';
@@ -16,44 +16,46 @@ export default function FirmwareScreen() {
   const [crops, setCrops] = useState<any[]>([]);
   const [loadErrors, setLoadErrors] = useState<string[]>([]);
 
-  useEffect(() => {
-    let isMounted = true;
-    Promise.allSettled([
+  const loadData = useCallback(async () => {
+    const [vRes, iRes, dRes, uRes, cRes] = await Promise.allSettled([
       listarVersionesFirmware(),
       listarInstalacionesFirmware(),
       listarDispositivos(),
       listarUsuarios(),
       listarTodosCultivos(),
-    ]).then(([vRes, iRes, dRes, uRes, cRes]) => {
-      if (!isMounted) return;
-      if (vRes.status === 'fulfilled') setVersions(vRes.value || []);
-      if (iRes.status === 'fulfilled') setInstallations(iRes.value || []);
-      if (dRes.status === 'fulfilled') setDevices(dRes.value || []);
-      if (uRes.status === 'fulfilled') setUsers(uRes.value || []);
-      if (cRes.status === 'fulfilled') setCrops(cRes.value || []);
+    ]);
+    if (vRes.status === 'fulfilled') setVersions(vRes.value || []);
+    if (iRes.status === 'fulfilled') setInstallations(iRes.value || []);
+    if (dRes.status === 'fulfilled') setDevices(dRes.value || []);
+    if (uRes.status === 'fulfilled') setUsers(uRes.value || []);
+    if (cRes.status === 'fulfilled') setCrops(cRes.value || []);
 
-      const errs = [vRes, iRes, dRes, uRes, cRes]
-        .filter((r) => r.status === 'rejected')
-        .map((r: any) => (r.reason instanceof Error ? r.reason.message : 'No se pudo cargar información del backend'));
-      setLoadErrors(errs);
-      setLoading(false);
+    const errs = [vRes, iRes, dRes, uRes, cRes]
+      .filter((result) => result.status === 'rejected')
+      .map((result: any) => (result.reason instanceof Error ? result.reason.message : 'No se pudo cargar información del backend'));
+    setLoadErrors(errs);
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    loadData().finally(() => {
+      if (isMounted) setLoading(false);
     });
-
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [loadData]);
 
   if (loading) {
     return (
-      <Box className="page-content" px={{ initial: "4", sm: "5", md: "6" }} py={{ initial: "4", sm: "5", md: "6" }}>
+      <Box className="page-content" px={{ initial: "2", sm: "4", md: "6" }} py={{ initial: "3", sm: "4", md: "5" }}>
         <DashboardSkeleton variant="admin" />
       </Box>
     );
   }
 
   return (
-    <Box className="page-content" px={{ initial: "4", sm: "5", md: "6" }} py={{ initial: "4", sm: "5", md: "6" }}>
+    <Box className="page-content" px={{ initial: "2", sm: "4", md: "6" }} py={{ initial: "3", sm: "4", md: "5" }}>
       <FirmwareClient
         initialVersions={versions}
         initialInstallations={installations}
@@ -61,6 +63,7 @@ export default function FirmwareScreen() {
         users={users}
         crops={crops}
         loadErrors={loadErrors}
+        onRefresh={loadData}
       />
     </Box>
   );

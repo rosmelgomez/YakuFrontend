@@ -26,20 +26,22 @@ export default function HistoricoMultiLineChart({ filteredChartData }: any) {
   };
 
   return (
-    <ResponsiveContainer width="100%" height={380} minWidth={0}>
-      <LineChart data={filteredChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-mockup)" vertical={false} />
-        <XAxis dataKey="label" stroke="#6b7280" fontSize={11} tickMargin={12} minTickGap={30} axisLine={false} tickLine={false} />
-        <YAxis stroke="#6b7280" fontSize={11} domain={[0, 100]} axisLine={false} tickLine={false} tickFormatter={(val) => val === 90 ? '90% / °C' : val} />
-        <Tooltip content={<CustomTooltip />} />
-        <Legend iconType="plainline" wrapperStyle={{ paddingTop: '20px', fontSize: '12px', color: '#9ca3af' }} />
+    <div className="w-full h-full min-w-0">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+        <LineChart data={filteredChartData} margin={{ top: 10, right: 10, left: -22, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border-mockup)" vertical={false} />
+          <XAxis dataKey="label" stroke="#6b7280" fontSize={11} tickMargin={8} minTickGap={25} axisLine={false} tickLine={false} />
+          <YAxis stroke="#6b7280" fontSize={11} domain={[0, 100]} axisLine={false} tickLine={false} tickFormatter={(val) => val === 90 ? '90% / °C' : val} />
+          <Tooltip content={<CustomTooltip />} />
+          <Legend iconType="plainline" wrapperStyle={{ paddingTop: '10px', fontSize: '11px', color: '#9ca3af' }} />
 
-        <Line name="Hum. suelo (%)" type="monotone" dataKey="humedadSuelo" stroke="#22c55e" strokeWidth={2} dot={false} connectNulls />
-        <Line name="Hum. ambiental (%)" type="monotone" dataKey="humedadAmbiente" stroke="#06b6d4" strokeWidth={2} dot={false} connectNulls />
-        <Line name="Temp. ambiental (°C)" type="monotone" dataKey="temperaturaAmbiente" stroke="#f59e0b" strokeWidth={2} strokeDasharray="5 5" dot={false} connectNulls />
-        <Line name="Temp. suelo (°C)" type="monotone" dataKey="temperaturaSuelo" stroke="#3b82f6" strokeWidth={2} strokeDasharray="5 5" dot={false} connectNulls />
-        <Line name="Eventos de riego" type="monotone" dataKey="riegos" stroke="#1e40af" strokeWidth={2} strokeDasharray="3 3" dot={{ r: 3, fill: '#1e40af' }} connectNulls />
-      </LineChart>
-    </ResponsiveContainer>
+          <Line name="Hum. suelo (%)" type="monotone" dataKey="humedadSuelo" stroke="#22c55e" strokeWidth={2} dot={false} connectNulls />
+          <Line name="Hum. ambiental (%)" type="monotone" dataKey="humedadAmbiente" stroke="#06b6d4" strokeWidth={2} dot={false} connectNulls />
+          <Line name="Temp. ambiental (°C)" type="monotone" dataKey="temperaturaAmbiente" stroke="#f59e0b" strokeWidth={2} strokeDasharray="5 5" dot={false} connectNulls />
+          <Line name="Temp. suelo (°C)" type="monotone" dataKey="temperaturaSuelo" stroke="#3b82f6" strokeWidth={2} strokeDasharray="5 5" dot={false} connectNulls />
+          <Line name="Eventos de riego" type="monotone" dataKey="riegos" stroke="#1e40af" strokeWidth={2} strokeDasharray="3 3" dot={{ r: 3, fill: '#1e40af' }} connectNulls />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
   );
 }

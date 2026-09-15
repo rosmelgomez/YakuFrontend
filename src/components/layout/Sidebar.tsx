@@ -57,12 +57,11 @@ const farmerNavEntries: NavEntry[] = [
 
   { type: 'section', id: 'sec-analisis', title: 'Análisis' },
   { type: 'item', id: 'farmer-historical', label: 'Históricos', href: '/dashboard/agricultor/historico', icon: BarChart3 },
-  { type: 'item', id: 'farmer-notifications', label: 'Historial de notificaciones', href: '/dashboard/agricultor/notificaciones', icon: Bell, mobilePrimary: true },
+  { type: 'item', id: 'farmer-notifications', label: 'Notificaciones', href: '/dashboard/agricultor/notificaciones', icon: Bell, mobilePrimary: true },
   { type: 'item', id: 'farmer-predictive', label: 'Inteligencia IA', href: '/dashboard/agricultor/ml', icon: Brain },
 
-  { type: 'section', id: 'sec-cuenta', title: 'Mi cuenta' },
+  { type: 'section', id: 'sec-feedback', title: 'Opinión' },
   { type: 'item', id: 'farmer-feedback', label: 'Valoraciones', href: '/dashboard/agricultor/feedback', icon: MessageSquareText },
-  { type: 'item', id: 'farmer-profile', label: 'Mi perfil', href: '/dashboard/agricultor/perfil', icon: User },
 ];
 
 const adminNavEntries: NavEntry[] = [
@@ -83,9 +82,6 @@ const adminNavEntries: NavEntry[] = [
   { type: 'section', id: 'sec-config', title: 'Configuración' },
   { type: 'item', id: 'admin-feedback', label: 'Preguntas feedback', href: '/dashboard/administrador/feedback', icon: MessageSquareText },
   { type: 'item', id: 'admin-backup', label: 'Respaldo de datos', href: '/dashboard/administrador/respaldo', icon: Database },
-
-  { type: 'section', id: 'sec-admin-cuenta', title: 'Mi cuenta' },
-  { type: 'item', id: 'admin-profile', label: 'Mi perfil', href: '/dashboard/administrador/perfil', icon: User },
 ];
 
 export default function Sidebar({ initials = "JR" }: { initials?: string }) {
@@ -95,7 +91,8 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
 
   const [openProfile, setOpenProfile] = useState(false);
   const [openMore, setOpenMore] = useState(false);
-  const profileRef = useRef<HTMLDivElement>(null);
+  const desktopProfileRef = useRef<HTMLDivElement>(null);
+  const mobileProfileRef = useRef<HTMLDivElement>(null);
   const moreRef = useRef<HTMLDivElement>(null);
 
   // Detección responsiva de pantalla grande (>= 1100px)
@@ -126,16 +123,28 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
   }, [isExpanded]);
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+    function handleClickOutside(event: MouseEvent | TouchEvent) {
+      const target = event.target as Node;
+      if (!target) return;
+
+      const isInsideDesktop = desktopProfileRef.current && desktopProfileRef.current.contains(target);
+      const isInsideMobile = mobileProfileRef.current && mobileProfileRef.current.contains(target);
+
+      if (!isInsideDesktop && !isInsideMobile) {
         setOpenProfile(false);
       }
-      if (moreRef.current && !moreRef.current.contains(event.target as Node)) {
+
+      if (moreRef.current && !moreRef.current.contains(target)) {
         setOpenMore(false);
       }
     }
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside, { passive: true });
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, []);
 
   const userRole = user?.rol || 'agricultor';
@@ -162,13 +171,26 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
     (entry) => entry.type === 'item' && !entry.mobilePrimary && isRouteActive(entry.href)
   );
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } catch (err) {
-      console.error(err);
+  const handleLogout = async (e?: React.MouseEvent | React.TouchEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
     }
-    window.location.href = '/auth/login';
+    setOpenProfile(false);
+    setOpenMore(false);
+
+    try {
+      localStorage.removeItem('yaku_user');
+      localStorage.removeItem('yaku_token');
+
+      const logoutPromise = logout();
+      const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 1200));
+      await Promise.race([logoutPromise, timeoutPromise]);
+    } catch (err) {
+      console.error('Error durante el cierre de sesión:', err);
+    } finally {
+      window.location.href = '/auth/login';
+    }
   };
 
   return (
@@ -208,10 +230,11 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
             width: 100%;
             align-items: center;
             justify-content: space-around;
+            gap: 2px;
           }
           .mobile-nav-item {
-            width: 44px;
-            height: 44px;
+            width: clamp(38px, 10vw, 44px);
+            height: clamp(38px, 10vw, 44px);
             border-radius: 12px;
             display: flex;
             align-items: center;
@@ -219,6 +242,7 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
             color: #64748b;
             text-decoration: none;
             position: relative;
+            touch-action: manipulation;
             transition: all 0.2s ease;
           }
           .mobile-nav-item:hover {
@@ -498,12 +522,12 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-white text-xs font-semibold truncate leading-tight">{userName}</p>
-                    <p className="text-emerald-400 text-[11px] truncate capitalize opacity-80 leading-tight mt-0.5">{roleLabel}</p>
+                    <p className="text-emerald-400 text-[11px] truncate capitalize opacity-80 leading-tight mt-0.5">{roleLabel} · Mi perfil</p>
                   </div>
                 </Link>
                 <button
                   type="button"
-                  onClick={handleLogout}
+                  onClick={(e) => handleLogout(e)}
                   title="Cerrar sesión"
                   className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0 ml-1 border-none bg-transparent cursor-pointer"
                 >
@@ -512,7 +536,7 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
               </div>
             </div>
           ) : (
-            <div ref={profileRef} className="pt-2 mt-auto border-t border-slate-800/80 flex flex-col items-center relative">
+            <div ref={desktopProfileRef} className="pt-2 mt-auto border-t border-slate-800/80 flex flex-col items-center relative">
               <button
                 type="button"
                 onClick={() => setOpenProfile(!openProfile)}
@@ -526,6 +550,8 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
               {openProfile && (
                 <div
                   className="dropdown-menu"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
                   style={{
                     position: 'absolute',
                     width: '210px',
@@ -537,8 +563,9 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
                     zIndex: 150,
                   }}
                 >
-                  <div style={{ padding: '6px 12px 4px', fontSize: '11px', color: '#94a3b8', fontWeight: 600, borderBottom: '1px solid #1e293b', marginBottom: '4px' }}>
-                    {userName}
+                  <div style={{ padding: '6px 12px 6px', fontSize: '11px', color: '#94a3b8', fontWeight: 600, borderBottom: '1px solid #1e293b', marginBottom: '4px' }}>
+                    <div className="text-white font-bold truncate">{userName}</div>
+                    <div className="text-emerald-400 text-[10px] capitalize">{roleLabel}</div>
                   </div>
                   <Link
                     href={profileHref}
@@ -564,7 +591,7 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
                   </Link>
                   <button
                     type="button"
-                    onClick={handleLogout}
+                    onClick={(e) => handleLogout(e)}
                     style={{
                       width: '100%',
                       background: 'transparent',
@@ -577,6 +604,7 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
                       gap: '10px',
                       cursor: 'pointer',
                       fontSize: '0.9rem',
+                      textAlign: 'left',
                     }}
                     onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.background = 'rgba(239,68,68,0.08)')}
                     onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.background = 'transparent')}
@@ -616,7 +644,10 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
             <button
               type="button"
               title="Más opciones"
-              onClick={() => setOpenMore(!openMore)}
+              onClick={() => {
+                setOpenMore(!openMore);
+                setOpenProfile(false);
+              }}
               className={`mobile-nav-item ${isMoreActive ? 'active' : ''}`}
               style={{ border: 'none', background: isMoreActive ? 'rgba(34,197,94,0.12)' : 'transparent' }}
             >
@@ -624,7 +655,11 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
             </button>
 
             {openMore && (
-              <div className="more-menu">
+              <div
+                className="more-menu"
+                onMouseDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
+              >
                 <div style={{ padding: '6px 10px 4px', fontSize: '11px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   {isAdmin ? 'Administración' : 'Más opciones'}
                 </div>
@@ -660,10 +695,13 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
           </div>
 
           {/* PERFIL MÓVIL */}
-          <div ref={profileRef} style={{ position: 'relative' }}>
+          <div ref={mobileProfileRef} style={{ position: 'relative' }}>
             <button
               type="button"
-              onClick={() => setOpenProfile(!openProfile)}
+              onClick={() => {
+                setOpenProfile(!openProfile);
+                setOpenMore(false);
+              }}
               title="Mi cuenta"
               style={{
                 width: '38px',
@@ -686,6 +724,8 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
             {openProfile && (
               <div
                 className="dropdown-menu"
+                onMouseDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
                 style={{
                   position: 'absolute',
                   width: '210px',
@@ -697,8 +737,9 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
                   zIndex: 150,
                 }}
               >
-                <div style={{ padding: '6px 12px 4px', fontSize: '11px', color: '#94a3b8', fontWeight: 600, borderBottom: '1px solid #1e293b', marginBottom: '4px' }}>
-                  {userName}
+                <div style={{ padding: '6px 12px 6px', fontSize: '11px', color: '#94a3b8', fontWeight: 600, borderBottom: '1px solid #1e293b', marginBottom: '4px' }}>
+                  <div className="text-white font-bold truncate">{userName}</div>
+                  <div className="text-emerald-400 text-[10px] capitalize">{roleLabel}</div>
                 </div>
                 <Link
                   href={profileHref}
@@ -722,7 +763,7 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
                 </Link>
                 <button
                   type="button"
-                  onClick={handleLogout}
+                  onClick={(e) => handleLogout(e)}
                   style={{
                     width: '100%',
                     background: 'transparent',
@@ -735,6 +776,7 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
                     gap: '10px',
                     cursor: 'pointer',
                     fontSize: '0.9rem',
+                    textAlign: 'left',
                   }}
                 >
                   <LogOut size={18} />

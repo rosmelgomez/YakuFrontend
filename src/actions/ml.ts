@@ -54,7 +54,13 @@ export async function seleccionarModeloML(idModelo: number, idCultivo: number) {
     });
 
     if (!res.ok) {
-      const errorMsg = await res.text();
+      let errorMsg = await res.text();
+      try {
+        const parsed = JSON.parse(errorMsg);
+        if (parsed && typeof parsed.detail === "string") {
+          errorMsg = parsed.detail;
+        }
+      } catch {}
       return { success: false, error: errorMsg || 'Error al seleccionar el modelo en FastAPI' };
     }
 

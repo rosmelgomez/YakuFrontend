@@ -29,6 +29,7 @@ import {
   actualizarTiempoMaximoRele,
   actualizarCooldownRiego,
   ejecutarPrediccionEnVivo,
+  detenerRiego,
 } from "@/actions/control";
 import { listarModelosML, seleccionarModeloML } from "@/actions/ml";
 import type { ControlPanelProps } from "../types";
@@ -119,7 +120,10 @@ export function ControlPanel({
       controlData.actuadorTipo?.metodoMedicion === "flujometro"
   );
   const isRiegoEnCurso = Boolean(
-    (controlData.bomba?.encendida || controlData.riegoActivo) && isActuatorActive
+    (controlData.bomba?.encendida ||
+      controlData.valvula?.abierta ||
+      controlData.riegoActivo) &&
+      isActuatorActive
   );
 
   const sesionPausada = (controlData as any).sesionPausada;
@@ -208,9 +212,9 @@ export function ControlPanel({
 
   // Guardar duración de relé
   const handleSaveRelayDuration = () => {
-    if (isActuatorActive) {
+    if (isRiegoEnCurso) {
       alert(
-        "Bloqueado: no se puede cambiar el tiempo del relé mientras el dispositivo está activo."
+        "Bloqueado: no se puede cambiar el tiempo de riego mientras hay un riego en curso."
       );
       return;
     }
@@ -219,7 +223,7 @@ export function ControlPanel({
       maxRelayMinutes < 1 ||
       maxRelayMinutes > 30
     ) {
-      alert("El tiempo máximo del relé debe estar entre 1 y 30 minutos.");
+      alert("El tiempo de riego debe estar entre 1 y 30 minutos.");
       return;
     }
     startTransition(async () => {
@@ -237,6 +241,12 @@ export function ControlPanel({
 
   // Guardar cooldown
   const handleSaveCooldown = () => {
+    if (isRiegoEnCurso) {
+      alert(
+        "Bloqueado: no se puede cambiar el tiempo de cooldown mientras hay un riego en curso."
+      );
+      return;
+    }
     if (
       !Number.isInteger(cooldownMinutes) ||
       cooldownMinutes < 1 ||
@@ -256,6 +266,14 @@ export function ControlPanel({
             cooldownMinutos: cooldownMinutes,
           }));
           alert("Tiempo de cooldown ML actualizado correctamente.");
+          const elapsedSec = controlData.tiempoDesdeUltimoRiegoSeg ?? (
+            controlData.ultimoRiegoFechaFin
+              ? Math.floor((Date.now() - new Date(controlData.ultimoRiegoFechaFin).getTime()) / 1000)
+              : null
+          );
+          if (elapsedSec !== null && elapsedSec >= cooldownMinutes * 60) {
+            await runLiveMlCheck(true);
+          }
         } else {
           alert(`Error al guardar el cooldown: ${res.error}`);
         }
@@ -265,11 +283,71 @@ export function ControlPanel({
     });
   };
 
+  // Guardar configuración completa de tiempos (Formulario Flotante)
+  const handleSaveTimingConfig = async (newRelayMin: number, newCooldownMin: number) => {
+    if (isRiegoEnCurso) {
+      alert("Bloqueado: no se pueden modificar los tiempos mientras hay un riego en curso.");
+      return { success: false, error: "Riego en curso" };
+    }
+    if (!Number.isInteger(newRelayMin) || newRelayMin < 1 || newRelayMin > 30) {
+      alert("El tiempo de riego debe estar entre 1 y 30 minutos.");
+      return { success: false, error: "Tiempo de riego inválido" };
+    }
+    if (!Number.isInteger(newCooldownMin) || newCooldownMin < 1 || newCooldownMin > 1440) {
+      alert("El cooldown debe estar entre 1 y 1440 minutos.");
+      return { success: false, error: "Cooldown inválido" };
+    }
+
+    try {
+      const [resRelay, resCooldown] = await Promise.all([
+        actualizarTiempoMaximoRele(idCultivo, newRelayMin),
+        actualizarCooldownRiego(idCultivo, newCooldownMin),
+      ]);
+
+      if (!resRelay.success) {
+        alert(`Error al guardar tiempo de riego: ${resRelay.error}`);
+        return { success: false, error: resRelay.error };
+      }
+      if (!resCooldown.success) {
+        alert(`Error al guardar cooldown: ${resCooldown.error}`);
+        return { success: false, error: resCooldown.error };
+      }
+
+      setMaxRelayMinutes(newRelayMin);
+      setCooldownMinutes(newCooldownMin);
+      setControlData((current) => ({
+        ...current,
+        bomba: { ...current.bomba, timeoutMin: newRelayMin },
+        cooldownMinutos: newCooldownMin,
+      }));
+
+      // Si el cooldown se redujo y el tiempo transcurrido ya lo superó, evaluar inmediatamente
+      const elapsedSec = controlData.tiempoDesdeUltimoRiegoSeg ?? (
+        controlData.ultimoRiegoFechaFin
+          ? Math.floor((Date.now() - new Date(controlData.ultimoRiegoFechaFin).getTime()) / 1000)
+          : null
+      );
+      if (elapsedSec !== null && elapsedSec >= newCooldownMin * 60) {
+        await runLiveMlCheck(true);
+      }
+      return { success: true };
+    } catch (err: any) {
+      alert(`Error al guardar la configuración: ${err.message}`);
+      return { success: false, error: err.message };
+    }
+  };
+
   // Alternar captura de datos
   const handleToggleCaptura = async (dispositivoId: number, active: boolean) => {
     const esActuador = dispositivosActuadores.some(
       (dev: any) => dev.id === dispositivoId
     );
+    if (esActuador && !active && isRiegoEnCurso) {
+      alert(
+        "No se puede apagar el dispositivo actuador mientras hay un riego en curso. Espere a que finalice el ciclo de riego."
+      );
+      return;
+    }
     if (esActuador && active) {
       const haySensorActivo = dispositivosSensores.some(
         (dev: any) => dev.funcionamientoActivo
@@ -325,6 +403,12 @@ export function ControlPanel({
 
   // Seleccionar modelo ML
   const handleSelectModel = async (idModelo: number) => {
+    if (isActuatorActive) {
+      alert(
+        "Bloqueado: no se puede cambiar el modelo de Machine Learning mientras el dispositivo actuador está activo. Desactive el dispositivo actuador primero para cambiar de modelo."
+      );
+      return;
+    }
     startTransition(async () => {
       const res = await seleccionarModeloML(idModelo, idCultivo);
       if (!res.success) {
@@ -362,18 +446,37 @@ export function ControlPanel({
     });
   };
 
-  // Ejecución manual de ML (eliminado el polling automático de 30s)
-  const runLiveMlCheck = async () => {
+  // Detener riego (por cronómetro completado o manual)
+  const handleStopIrrigation = async (motivo: string = "cronometro_completado") => {
+    try {
+      const res = await detenerRiego(idCultivo, motivo);
+      if (res.success) {
+        await refresh();
+      } else {
+        console.error("Error al detener riego:", res.error);
+      }
+    } catch (err) {
+      console.error("Error al detener riego:", err);
+    }
+  };
+
+  // Ejecución de ML (manual o automática tras cumplir cooldown)
+  const runLiveMlCheck = async (silent = false) => {
     if (isCheckingMl || !isActuatorActive || isRiegoEnCurso) return;
     setIsCheckingMl(true);
     try {
       const res = await ejecutarPrediccionEnVivo(userId, idCultivo);
       if (!res.success) {
+        const isCooldown = res.error?.toLowerCase().includes("cooldown");
         setLastMlCheck({
-          status: "error",
-          message: res.error || "No se pudo ejecutar la predicción ML.",
+          status: isCooldown ? "ok" : "error",
+          message: isCooldown
+            ? `⏳ En reposo: ${res.error}`
+            : (res.error || "No se pudo ejecutar la predicción ML."),
         });
-        alert(`Error al verificar ML: ${res.error}`);
+        if (!silent && !isCooldown) {
+          alert(`Error al verificar ML: ${res.error}`);
+        }
         return;
       }
 
@@ -389,11 +492,50 @@ export function ControlPanel({
         status: "error",
         message: err.message || "Error al ejecutar la predicción ML.",
       });
-      alert(`Error al verificar ML: ${err.message}`);
+      if (!silent) {
+        alert(`Error al verificar ML: ${err.message}`);
+      }
     } finally {
       setIsCheckingMl(false);
     }
   };
+
+  // Disparo automático de predicción ML una vez que el tiempo desde el último riego cumple el cooldown
+  const cooldownEvaluatedRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const checkCooldownAndTriggerMl = () => {
+      if (
+        !controlData.ultimoRiegoFechaFin ||
+        isRiegoEnCurso ||
+        !isActuatorActive ||
+        isCheckingMl
+      ) {
+        return;
+      }
+
+      const fechaFin = new Date(controlData.ultimoRiegoFechaFin);
+      const cooldownSegundos = (cooldownMinutes || 10) * 60;
+      const elapsedSeconds = Math.floor((Date.now() - fechaFin.getTime()) / 1000);
+
+      // Si ya transcurrió el tiempo de cooldown (ej. >= 10 min) y no se ha evaluado para este ciclo
+      const evalKey = `${controlData.ultimoRiegoFechaFin}_${cooldownMinutes}`;
+      if (elapsedSeconds >= cooldownSegundos && cooldownEvaluatedRef.current !== evalKey) {
+        cooldownEvaluatedRef.current = evalKey;
+        runLiveMlCheck(true);
+      }
+    };
+
+    checkCooldownAndTriggerMl();
+    const interval = setInterval(checkCooldownAndTriggerMl, 5000);
+    return () => clearInterval(interval);
+  }, [
+    controlData.ultimoRiegoFechaFin,
+    cooldownMinutes,
+    isRiegoEnCurso,
+    isActuatorActive,
+    isCheckingMl,
+  ]);
 
   const { bomba, modo, seguridad = {}, logs = [] } = controlData;
 
@@ -419,55 +561,59 @@ export function ControlPanel({
         }}
       />
 
-      {/* HEADER */}
-      <Flex justify="between" align="end" mb="6" wrap="wrap" gap="4">
-        <Box>
-          <Flex align="center" gap="4" mb="3">
-            <Text size="6" weight="bold" color="indigo" as="div">
+      {/* HEADER RESPONSIVE */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-4 mb-2">
+            <h2 className="text-xl sm:text-2xl font-bold text-indigo-400 tracking-tight leading-tight m-0">
               Control y configuración
-            </Text>
-            <SearchableSelect
-              value={idCultivo.toString()}
-              onValueChange={handleCultivoChange}
-              placeholder="Seleccionar cultivo"
-              searchPlaceholder="Buscar cultivo..."
-              style={{
-                background: "var(--surface2-mockup)",
-                borderColor: "var(--border-mockup)",
-                width: 240,
-              }}
-              options={cultivos.map((c: any) => ({
-                value: c.id.toString(),
-                label: c.nombre_planta,
-              }))}
-            />
-          </Flex>
-          <Text size="3" style={{ color: "#9ca3af", fontFamily: "monospace" }}>
+            </h2>
+            <div className="w-full sm:w-60 shrink-0">
+              <SearchableSelect
+                value={idCultivo.toString()}
+                onValueChange={handleCultivoChange}
+                placeholder="Seleccionar cultivo"
+                searchPlaceholder="Buscar cultivo..."
+                style={{
+                  background: "var(--surface2-mockup)",
+                  borderColor: "var(--border-mockup)",
+                  width: "100%",
+                }}
+                options={cultivos.map((c: any) => ({
+                  value: c.id.toString(),
+                  label: c.nombre_planta,
+                }))}
+              />
+            </div>
+          </div>
+          <div className="text-xs sm:text-sm text-slate-400 font-mono leading-relaxed break-words">
             Modo activo:{" "}
-            <span style={{ color: "#818cf8", fontWeight: "bold" }}>
+            <span className="text-indigo-400 font-bold">
               {modo?.actual || "Automático"}
             </span>{" "}
             · GPIO {bomba?.pin || "N/A"} → Relé → Bomba
-          </Text>
-        </Box>
-        <Badge
-          color={badgeColor as any}
-          size="3"
-          variant="soft"
-          style={{ borderRadius: "8px", padding: "6px 12px" }}
-        >
-          <Box
-            style={{
-              width: "8px",
-              height: "8px",
-              borderRadius: "50%",
-              background: badgeDotColor,
-              marginRight: "8px",
-            }}
-          />
-          {badgeText}
-        </Badge>
-      </Flex>
+          </div>
+        </div>
+        <div className="self-start sm:self-auto shrink-0">
+          <Badge
+            color={badgeColor as any}
+            size="2"
+            variant="soft"
+            style={{ borderRadius: "8px", padding: "6px 12px" }}
+          >
+            <Box
+              style={{
+                width: "8px",
+                height: "8px",
+                borderRadius: "50%",
+                background: badgeDotColor,
+                marginRight: "8px",
+              }}
+            />
+            {badgeText}
+          </Badge>
+        </div>
+      </div>
 
       {/* MAIN GRID */}
       <Grid
@@ -486,35 +632,42 @@ export function ControlPanel({
             style={{
               marginBottom: "1.5rem",
               background: "var(--bg-mockup)",
-              borderRadius: "8px",
+              borderRadius: "10px",
               padding: "4px",
               border: "1px solid var(--border-mockup)",
               display: "flex",
+              width: "100%",
             }}
           >
             <Tabs.Trigger
               value="sensores"
               style={{
                 cursor: "pointer",
-                padding: "8px 16px",
-                fontSize: "0.9rem",
+                padding: "8px 12px",
+                fontSize: "clamp(0.8rem, 2.5vw, 0.9rem)",
                 flex: 1,
                 textAlign: "center",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
               }}
             >
-              📡 Sensores de Captura
+              📡 Sensores <span className="hidden sm:inline">de Captura</span>
             </Tabs.Trigger>
             <Tabs.Trigger
               value="actuadores"
               style={{
                 cursor: "pointer",
-                padding: "8px 16px",
-                fontSize: "0.9rem",
+                padding: "8px 12px",
+                fontSize: "clamp(0.8rem, 2.5vw, 0.9rem)",
                 flex: 1,
                 textAlign: "center",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
               }}
             >
-              ⚡ Actuadores Físicos
+              ⚡ Actuadores <span className="hidden sm:inline">Físicos</span>
             </Tabs.Trigger>
           </Tabs.List>
 
@@ -539,6 +692,7 @@ export function ControlPanel({
               cooldownMinutes={cooldownMinutes}
               setCooldownMinutes={setCooldownMinutes}
               onSaveCooldown={handleSaveCooldown}
+              onSaveTimingConfig={handleSaveTimingConfig}
               onToggleCaptura={handleToggleCaptura}
               modelosML={modelosML}
               isLoadingModelosML={isLoadingModelosML}
@@ -547,6 +701,7 @@ export function ControlPanel({
               isCheckingMl={isCheckingMl}
               lastMlCheck={lastMlCheck}
               isPending={isPending}
+              onStopIrrigation={handleStopIrrigation}
             />
           </Tabs.Content>
         </Tabs.Root>

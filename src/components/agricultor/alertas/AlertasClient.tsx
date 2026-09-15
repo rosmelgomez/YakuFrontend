@@ -314,17 +314,19 @@ export default function AlertasClient({
 
   return (
     <Box style={{ opacity: isLoadingCropData ? 0.6 : 1, transition: 'opacity 0.2s ease-in-out' }}>
-      <Flex justify="between" mb="6">
-        <Text size="6" weight="bold" color="indigo">Alertas</Text>
-        <SearchableSelect
-          value={selectedCultivoId.toString()}
-          onValueChange={handleCultivoChange}
-          placeholder="Seleccionar cultivo"
-          searchPlaceholder="Buscar cultivo..."
-          style={{ background: 'var(--surface2-mockup)', borderColor: 'var(--border-mockup)', width: 240 }}
-          options={cultivos.map((c: any) => ({ value: c.id.toString(), label: c.nombre_planta }))}
-          disabled={isLoadingCropData}
-        />
+      <Flex justify="between" align={{ initial: 'start', sm: 'center' }} direction={{ initial: 'column', sm: 'row' }} gap="3" mb={{ initial: "4", sm: "6" }}>
+        <Text size={{ initial: "5", sm: "6" }} weight="bold" color="indigo">Notificaciones y Alertas</Text>
+        <Box style={{ width: '100%', maxWidth: '280px' }}>
+          <SearchableSelect
+            value={selectedCultivoId.toString()}
+            onValueChange={handleCultivoChange}
+            placeholder="Seleccionar cultivo"
+            searchPlaceholder="Buscar cultivo..."
+            style={{ background: 'var(--surface2-mockup)', borderColor: 'var(--border-mockup)', width: '100%' }}
+            options={cultivos.map((c: any) => ({ value: c.id.toString(), label: c.nombre_planta }))}
+            disabled={isLoadingCropData}
+          />
+        </Box>
       </Flex>
 
 
@@ -360,11 +362,11 @@ export default function AlertasClient({
 
       <Box mb="4">
         {/* Card 1: Notificaciones del navegador */}
-        <Card size="2" mb="4" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)' }}>
+        <Card size={{ initial: "1", sm: "2" }} mb="4" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)' }}>
           <Flex justify="between" align={{ initial: 'start', sm: 'center' }} gap="3" wrap="wrap">
             <Box>
-              <Text size="3" weight="bold" color="indigo" as="div">Notificaciones del navegador</Text>
-              <Text size="2" color="gray" as="div">
+              <Text size={{ initial: "2", sm: "3" }} weight="bold" color="indigo" as="div">Notificaciones del navegador</Text>
+              <Text size={{ initial: "1", sm: "2" }} color="gray" as="div">
                 {pushStatus === 'granted' && 'Activadas y sincronizadas con Yaku.'}
                 {pushStatus === 'default' && 'Actívalas para recibir alertas aunque el panel no esté abierto.'}
                 {pushStatus === 'denied' && 'Bloqueadas por el navegador. Debes habilitarlas desde los permisos del sitio.'}
@@ -375,21 +377,21 @@ export default function AlertasClient({
             </Box>
             <Flex gap="2">
               {pushStatus === 'default' && isSecure && (
-                <Button onClick={handleRequestPush} disabled={isSubscribing}>
+                <Button size="2" onClick={handleRequestPush} disabled={isSubscribing}>
                   {isSubscribing ? 'Activando…' : 'Activar notificaciones'}
                 </Button>
               )}
               {pushStatus === 'granted' && (
-                <Button variant="soft" onClick={handleTestNotification}>Probar notificación</Button>
+                <Button size="2" variant="soft" onClick={handleTestNotification}>Probar notificación</Button>
               )}
             </Flex>
           </Flex>
         </Card>
 
         {/* Card 2: Preferencias de Notificaciones */}
-        <Card size="3" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', display: 'flex', flexDirection: 'column', height: 'auto' }}>
-          <Text size="4" weight="bold" color="indigo" mb="4" as="div">Preferencias de notificaciones</Text>
-          <Flex direction="column" gap="4" style={{ flexGrow: 1 }}>
+        <Card size={{ initial: "2", sm: "3" }} style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', display: 'flex', flexDirection: 'column', height: 'auto' }}>
+          <Text size={{ initial: "3", sm: "4" }} weight="bold" color="indigo" mb="3" as="div">Preferencias de notificaciones</Text>
+          <Flex direction="column" gap="3" style={{ flexGrow: 1 }}>
             
             <Box style={{ flexGrow: 1 }}>
               {isLoadingNotifConfig ? (
@@ -406,14 +408,14 @@ export default function AlertasClient({
                       recordatorio_minutos: 15,
                     };
                     return (
-                      <Card key={tipo.codigo} size="1" style={{ background: 'rgba(30, 41, 59, 0.45)', borderColor: 'var(--border-mockup)', padding: '14px 16px', borderRadius: '10px' }}>
+                      <Card key={tipo.codigo} size="1" style={{ background: 'rgba(30, 41, 59, 0.45)', borderColor: 'var(--border-mockup)', padding: '12px 14px', borderRadius: '10px' }}>
                         <Flex justify="between" align="center" mb="1">
                           <Text size="2" weight="bold" color={tipo.badgeColor as any} as="div">{tipo.titulo}</Text>
                           <Badge color={tipo.badgeColor as any} size="1">
                             {tipo.codigo === 'RIEGO_ML' ? 'IA / Sensores' : 'Crítica'}
                           </Badge>
                         </Flex>
-                        <Text size="1" color="gray" mb="3" as="div" style={{ lineHeight: '1.4', minHeight: '38px' }}>
+                        <Text size="1" color="gray" mb="3" as="div" style={{ lineHeight: '1.4', minHeight: '34px' }}>
                           {tipo.descripcion}
                         </Text>
                         
@@ -447,8 +449,8 @@ export default function AlertasClient({
       </Box>
 
       {/* Card 3: Historial y Alertas Activas (a lo ancho completo debajo) */}
-      <Card size="3" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)' }}>
-        <Text size="4" weight="bold" color="indigo" mb="5" as="div">Historial y estado de alertas</Text>
+      <Card size={{ initial: "2", sm: "3" }} style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)' }}>
+        <Text size={{ initial: "3", sm: "4" }} weight="bold" color="indigo" mb="4" as="div">Historial y estado de alertas</Text>
         {(() => {
             const isVariableAlert = (alert: any) => {
               const t = (alert.titulo || alert.tipo || '').toLowerCase();
@@ -480,8 +482,8 @@ export default function AlertasClient({
 
             return (
               <>
-                <Box style={{ maxHeight: '350px', overflowY: 'auto' }}>
-                  <Table.Root variant="surface" style={{ background: 'rgba(30, 41, 59, 0.2)' }}>
+                <Box style={{ maxHeight: '350px', overflowY: 'auto', overflowX: 'auto', width: '100%' }}>
+                  <Table.Root variant="surface" style={{ background: 'rgba(30, 41, 59, 0.2)', minWidth: '520px' }}>
                     <Table.Header>
                       <Table.Row style={{ borderColor: 'var(--border-mockup)' }}>
                         <Table.ColumnHeaderCell style={{ color: 'var(--indigo-11)' }}>Estado</Table.ColumnHeaderCell>

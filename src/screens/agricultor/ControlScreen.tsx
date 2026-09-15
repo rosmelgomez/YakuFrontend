@@ -73,7 +73,7 @@ export default function ControlScreen() {
 
   if (loading) {
     return (
-      <Box className="page-content" px={{ initial: "4", sm: "5", md: "6" }} py={{ initial: "4", sm: "5", md: "6" }}>
+      <Box className="page-content" px={{ initial: "3", sm: "4", md: "6" }} py={{ initial: "3", sm: "4", md: "6" }}>
         <DashboardSkeleton variant="control" />
       </Box>
     );
@@ -85,7 +85,7 @@ export default function ControlScreen() {
 
   if (cultivosBase.length === 0) {
     return (
-      <Box className="page-content" px={{ initial: "4", sm: "5", md: "6" }} py={{ initial: "4", sm: "5", md: "6" }}>
+      <Box className="page-content" px={{ initial: "3", sm: "4", md: "6" }} py={{ initial: "3", sm: "4", md: "6" }}>
         <NoCropsEmptyState
           title="No tienes control de riego activo"
           description="Para administrar el riego inteligente por IA y supervisar tus bombas y actuadores, primero debes registrar tu cultivo."
@@ -97,7 +97,7 @@ export default function ControlScreen() {
   const selectedCultivoId = cultivosBase[0].id;
 
   return (
-    <Box className="page-content" px={{ initial: "4", sm: "5", md: "6" }} py={{ initial: "4", sm: "5", md: "6" }}>
+    <Box className="page-content" px={{ initial: "3", sm: "4", md: "6" }} py={{ initial: "3", sm: "4", md: "6" }}>
       <ControlClient
         userId={userId}
         cultivos={cultivosBase}

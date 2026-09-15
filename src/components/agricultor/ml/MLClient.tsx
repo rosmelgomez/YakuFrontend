@@ -3,9 +3,7 @@
 
 import React, { useEffect, useRef, useState, useTransition } from 'react';
 import { Box, Text, Flex, Card, Button, Badge, ScrollArea, Grid } from '@radix-ui/themes';
-import nextDynamic from 'next/dynamic';
-
-const MLPredictionChart = nextDynamic(() => import('@/components/charts/MLPredictionChart'), { ssr: false });
+import MLPredictionChart from '@/components/charts/MLPredictionChart';
 import { solicitarPrediccionML, reentrenarModeloML, seleccionarModeloML } from '@/actions/ml';
 import { useRouter } from 'next/navigation';
 import SearchableSelect from '@/components/ui/SearchableSelect';
@@ -149,126 +147,140 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
   return (
     <Box style={{ opacity: isPending ? 0.6 : 1, transition: 'opacity 0.2s' }}>
       {/* HEADER: Metadatos extraídos de la Base de Datos */}
-      <Flex justify="between" align="start" mb="6" wrap="wrap" gap="4">
-        <Box>
-          <Flex align="center" gap="4" mb="3">
-            <Text size="6" weight="bold" color="indigo" as="div">Machine Learning</Text>
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-3 sm:gap-4 mb-4">
+        <div className="min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-1.5">
+            <h2 className="text-base sm:text-xl font-bold text-indigo-400">Machine Learning</h2>
             {cultivos && cultivos.length > 0 && idCultivo && (
-              <SearchableSelect
-                value={idCultivo.toString()}
-                onValueChange={(v) => startTransition(() => router.push(`?cultivo=${v}`))}
-                placeholder="Seleccionar cultivo"
-                searchPlaceholder="Buscar cultivo..."
-                style={{ background: '#111827', borderColor: '#1f2937', width: 240 }}
-                options={cultivos.map((c: any) => ({ value: c.id.toString(), label: c.nombre_planta }))}
-              />
+              <div className="w-full sm:w-auto">
+                <SearchableSelect
+                  value={idCultivo.toString()}
+                  onValueChange={(v) => startTransition(() => router.push(`?cultivo=${v}`))}
+                  placeholder="Seleccionar cultivo"
+                  searchPlaceholder="Buscar cultivo..."
+                  style={{ background: '#111827', borderColor: '#1f2937', minWidth: 'auto', width: '100%' }}
+                  options={cultivos.map((c: any) => ({ value: c.id.toString(), label: c.nombre_planta }))}
+                />
+              </div>
             )}
-          </Flex>
-          <Text size="3" style={{ color: '#9ca3af', fontFamily: 'monospace' }}>
-            {modelo.algoritmo} · {modelo.nombre} v{modelo.version} · 4 features + hora del día · MAE {modelo.mae}%
-          </Text>
+          </div>
+          <p className="text-[11px] sm:text-xs text-slate-400 font-mono break-words">
+            {modelo.algoritmo} · {modelo.nombre} v{modelo.version} · 4 features + hora · MAE {modelo.mae}%
+          </p>
           
-          <Flex gap="2" mt="4" wrap="wrap">
-            <Text size="2" color="gray" mr="2" style={{ alignSelf: 'center' }}>Features del modelo:</Text>
-            <Badge color="green" variant="outline">Hum. suelo</Badge>
-            <Badge color="blue" variant="outline">Hum. ambiental</Badge>
-            <Badge color="orange" variant="outline">Temp. ambiental</Badge>
-            <Badge color="sky" variant="outline">Temp. suelo</Badge>
-            <Badge color="gray" variant="outline">Hora del día</Badge>
-          </Flex>
-        </Box>
+          <div className="flex gap-1.5 mt-2 flex-wrap">
+            <span className="text-[11px] text-slate-400 self-center mr-0.5">Features:</span>
+            <Badge color="green" variant="outline" size="1">Hum. suelo</Badge>
+            <Badge color="blue" variant="outline" size="1">Hum. amb</Badge>
+            <Badge color="orange" variant="outline" size="1">Temp. amb</Badge>
+            <Badge color="sky" variant="outline" size="1">Temp. suelo</Badge>
+            <Badge color="gray" variant="outline" size="1">Hora</Badge>
+          </div>
+        </div>
 
-        <Flex gap="3" align="center">
+        <div className="flex items-center gap-2 self-start shrink-0">
           {modelo.activo ? (
-            <Badge color="purple" size="2" style={{ padding: '6px 12px', borderRadius: '8px' }}>
+            <Badge color="purple" size="1" style={{ padding: '4px 8px', borderRadius: '6px', fontWeight: 'bold' }}>
               🧠 Modelo activo
             </Badge>
           ) : (
-            <Badge color="gray" size="2">Modelo inactivo</Badge>
+            <Badge color="gray" size="1">Modelo inactivo</Badge>
           )}
           {isAdmin && (
-            <Button variant="outline" color="gray" onClick={handleRetrain} disabled={loading} style={{ cursor: 'pointer' }}>
-              {loading ? 'Procesando...' : 'Reentrenar modelo'}
+            <Button variant="outline" color="gray" size="1" onClick={handleRetrain} disabled={loading} style={{ cursor: 'pointer' }}>
+              {loading ? '...' : 'Reentrenar'}
             </Button>
           )}
-        </Flex>
-      </Flex>
+        </div>
+      </div>
 
       {/* GRÁFICO PRINCIPAL */}
-      <Card size="4" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '16px' }}>
-        <Flex justify="between" mb="5">
-          <Text size="4" weight="bold" color="indigo">Predicción y telemetría de parámetros</Text>
-          <Text size="2" color="gray">Próximas 2 horas (FastAPI)</Text>
-        </Flex>
+      <Card size={{ initial: "2", sm: "3" }} style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '16px' }}>
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <Text size={{ initial: "2", sm: "3" }} weight="bold" color="indigo">Predicción y telemetría de parámetros</Text>
+          <Text size="1" color="gray">Próximas 2 horas (FastAPI)</Text>
+        </div>
 
-        <Box ref={chartContainerRef} style={{ width: '100%', height: '350px', minWidth: 0, position: 'relative' }}>
-          {chartWidth > 0 && (
-            <MLPredictionChart chartWidth={chartWidth} historial={historial} umbral={umbral} />
-          )}
+        <Box ref={chartContainerRef} className="w-full h-[210px] sm:h-[270px] md:h-[320px] min-w-0 relative">
+          <MLPredictionChart chartWidth={chartWidth} historial={historial} umbral={umbral} />
         </Box>
 
         {/* INTEGRACIÓN FASTAPI */}
-        <Flex justify="between" align="center" mt="5" p="4" style={{ background: 'rgba(167, 139, 250, 0.05)', border: '1px solid rgba(167, 139, 250, 0.2)', borderRadius: '12px' }}>
-          <Flex gap="4" align="center">
-            <Text size="8" style={{ filter: 'drop-shadow(0 0 8px rgba(167, 139, 250, 0.5))' }}>🧠</Text>
-            <Box>
-              <Text color="purple" weight="bold" as="div" mb="1">Predicción del modelo (FastAPI)</Text>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 mt-3 sm:mt-4 p-2.5 sm:p-3.5 rounded-xl border border-purple-500/25 bg-purple-500/5">
+          <div className="flex items-start sm:items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-base shrink-0">
+              🧠
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm font-bold text-purple-300 leading-tight">
+                Predicción del modelo (FastAPI)
+              </p>
               {prediction ? (
-                <Text color="green" size="2" weight="bold" style={{ fontFamily: 'monospace' }}>
+                <p className="text-[11px] font-mono font-bold text-emerald-400 mt-0.5">
                   Resultado: {prediction.mensaje} (Riego: {prediction.riego === 1 ? 'ON' : 'OFF'}) · Probabilidad: {prediction.probabilidad_riego !== null ? `${(prediction.probabilidad_riego * 100).toFixed(1)}%` : 'N/A'}
-                </Text>
+                </p>
               ) : (
-                <Text color="gray" size="2">
+                <p className="text-[11px] text-slate-400 mt-0.5 leading-tight">
                   {loading ? 'Consultando al microservicio de FastAPI en tiempo real...' : 'Generar proyecciones futuras y evaluar estrés hídrico mediante el BFF.'}
-                </Text>
+                </p>
               )}
-            </Box>
-          </Flex>
-          <Button color="purple" variant="soft" onClick={handleFastAPIRequest} disabled={loading} style={{ cursor: 'pointer' }}>
+            </div>
+          </div>
+          <Button
+            color="purple"
+            variant="soft"
+            size="2"
+            onClick={handleFastAPIRequest}
+            disabled={loading}
+            className="w-full sm:w-auto shrink-0 cursor-pointer font-semibold text-xs"
+            style={{ borderRadius: '8px', minHeight: '2.25rem' }}
+          >
             {loading ? 'Cargando...' : 'Solicitar predicción'}
           </Button>
-        </Flex>
+        </div>
       </Card>
 
       {/* SIMULADOR DE INFERENCIA MANUAL */}
-      <Card size="3" mt="6" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '16px' }}>
-        <Flex justify="between" align="center" mb="4" wrap="wrap" gap="4">
-          <Box>
-            <Text size="4" weight="bold" color="indigo" as="div">
+      <Card size={{ initial: "2", sm: "3" }} mt={{ initial: "3", sm: "5" }} style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '16px' }}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 mb-3">
+          <div>
+            <h3 className="text-xs sm:text-sm font-bold text-indigo-400">
               Simulador de Riego Inteligente (Entrada Manual)
-            </Text>
-            <Text size="2" color="gray">
-              Prueba el comportamiento del modelo activo para <strong>{cultivos?.find((c: any) => c.id === idCultivo)?.nombre_planta || 'este cultivo'}</strong>.
-            </Text>
-          </Box>
-          <Flex gap="3" align="center">
-            <Text size="2" color="gray">Modelo Activo:</Text>
+            </h3>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              Prueba el comportamiento del modelo activo para <strong className="text-slate-200">{cultivos?.find((c: any) => c.id === idCultivo)?.nombre_planta || 'este cultivo'}</strong>.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 self-start sm:self-auto w-full sm:w-auto">
+            <span className="text-[11px] text-slate-400 shrink-0">Modelo:</span>
             {modelos && modelos.length > 0 ? (
-              <SearchableSelect
-                value={modelos.find((m: any) => m.activo)?.id_modelo?.toString() || ""}
-                onValueChange={handleSelectModel}
-                disabled={loading}
-                placeholder="Seleccionar modelo"
-                searchPlaceholder="Buscar modelo..."
-                style={{ background: '#1f2937', borderColor: '#374151', minWidth: 260 }}
-                options={modelos.map((m: any) => ({
-                  value: m.id_modelo.toString(),
-                  label: `${m.nombre_modelo} (v${m.version} - Acc: ${m.precision_modelo?.toFixed(1)}%)`,
-                }))}
-              />
+              <div className="flex-1 sm:flex-initial min-w-0">
+                <SearchableSelect
+                  value={modelos.find((m: any) => m.activo)?.id_modelo?.toString() || ""}
+                  onValueChange={handleSelectModel}
+                  disabled={loading}
+                  placeholder="Seleccionar modelo"
+                  searchPlaceholder="Buscar modelo..."
+                  style={{ background: '#1f2937', borderColor: '#374151', minWidth: 'auto', width: '100%' }}
+                  options={modelos.map((m: any) => ({
+                    value: m.id_modelo.toString(),
+                    label: `${m.nombre_modelo} (v${m.version} - Acc: ${m.precision_modelo?.toFixed(1)}%)`,
+                  }))}
+                />
+              </div>
             ) : (
-              <Badge color="indigo" variant="outline" size="2">
-                Modelo: {modelo.nombre || 'Sin nombre'} v{modelo.version}
+              <Badge color="indigo" variant="outline" size="1">
+                {modelo.nombre || 'Modelo'} v{modelo.version}
               </Badge>
             )}
-          </Flex>
-        </Flex>
+          </div>
+        </div>
 
         <form onSubmit={handleSimulate}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3.5 mb-3">
             <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', color: '#9ca3af', marginBottom: '6px', fontWeight: '500' }}>
-                Humedad del Suelo (%)
+              <label className="block text-[11px] sm:text-xs text-slate-400 font-medium mb-1">
+                Humedad Suelo (%)
               </label>
               <input
                 type="number"
@@ -277,13 +289,13 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
                 max="100"
                 value={simInputs.humedad_suelo}
                 onChange={(e) => setSimInputs({ ...simInputs, humedad_suelo: e.target.value })}
-                className="w-full bg-[#1f2937] border border-[#374151] rounded-lg p-2.5 text-white focus:outline-none focus:border-violet-600 focus:ring-1 focus:ring-violet-600 transition-all"
+                className="w-full bg-[#1f2937] border border-[#374151] rounded-lg py-1.5 px-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-mono"
                 required
               />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', color: '#9ca3af', marginBottom: '6px', fontWeight: '500' }}>
-                Humedad Ambiental (%)
+              <label className="block text-[11px] sm:text-xs text-slate-400 font-medium mb-1">
+                Humedad Amb. (%)
               </label>
               <input
                 type="number"
@@ -292,13 +304,13 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
                 max="100"
                 value={simInputs.humedad_ambiente}
                 onChange={(e) => setSimInputs({ ...simInputs, humedad_ambiente: e.target.value })}
-                className="w-full bg-[#1f2937] border border-[#374151] rounded-lg p-2.5 text-white focus:outline-none focus:border-violet-600 focus:ring-1 focus:ring-violet-600 transition-all"
+                className="w-full bg-[#1f2937] border border-[#374151] rounded-lg py-1.5 px-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-mono"
                 required
               />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', color: '#9ca3af', marginBottom: '6px', fontWeight: '500' }}>
-                Temperatura Ambiente (°C)
+              <label className="block text-[11px] sm:text-xs text-slate-400 font-medium mb-1">
+                Temp. Amb. (°C)
               </label>
               <input
                 type="number"
@@ -307,13 +319,13 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
                 max="60"
                 value={simInputs.temperatura_ambiente}
                 onChange={(e) => setSimInputs({ ...simInputs, temperatura_ambiente: e.target.value })}
-                className="w-full bg-[#1f2937] border border-[#374151] rounded-lg p-2.5 text-white focus:outline-none focus:border-violet-600 focus:ring-1 focus:ring-violet-600 transition-all"
+                className="w-full bg-[#1f2937] border border-[#374151] rounded-lg py-1.5 px-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-mono"
                 required
               />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', color: '#9ca3af', marginBottom: '6px', fontWeight: '500' }}>
-                Temperatura del Suelo (°C)
+              <label className="block text-[11px] sm:text-xs text-slate-400 font-medium mb-1">
+                Temp. Suelo (°C)
               </label>
               <input
                 type="number"
@@ -322,267 +334,276 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
                 max="60"
                 value={simInputs.temperatura_suelo}
                 onChange={(e) => setSimInputs({ ...simInputs, temperatura_suelo: e.target.value })}
-                className="w-full bg-[#1f2937] border border-[#374151] rounded-lg p-2.5 text-white focus:outline-none focus:border-violet-600 focus:ring-1 focus:ring-violet-600 transition-all"
+                className="w-full bg-[#1f2937] border border-[#374151] rounded-lg py-1.5 px-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-mono"
                 required
               />
             </div>
           </div>
 
-          <Flex justify="end" gap="3">
+          <div className="flex justify-end">
             <Button
               type="submit"
               color="indigo"
-              size="3"
+              size="2"
               disabled={simLoading}
-              style={{ cursor: 'pointer', borderRadius: '8px', padding: '0 24px', fontWeight: 'bold' }}
+              className="w-full sm:w-auto cursor-pointer font-semibold text-xs"
+              style={{ borderRadius: '8px', minHeight: '2.25rem', padding: '0 16px' }}
             >
               {simLoading ? 'Simulando...' : '💡 Ejecutar Simulación'}
             </Button>
-          </Flex>
+          </div>
         </form>
 
         {simError && (
-          <Box mt="4" p="3" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px' }}>
-            <Text color="red" size="2">{simError}</Text>
+          <Box mt="2.5" p="2" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px' }}>
+            <Text color="red" size="1">{simError}</Text>
           </Box>
         )}
 
         {simResult && (
-          <Box mt="5" p="4" style={{ background: '#1f2937', border: '1px solid #374151', borderRadius: '12px' }}>
-            <Text size="3" weight="bold" color="indigo" mb="3" as="div">
-              Resultado de la Predicción
-            </Text>
-            <Flex gap="4" align="center" wrap="wrap">
-              <Box style={{ flex: '1 1 200px' }}>
-                <Flex align="center" gap="3" mb="2">
-                  <Text size="3" color="gray">Recomendación:</Text>
-                  <Badge
-                    color={simResult.riego === 1 ? 'green' : 'orange'}
-                    size="3"
-                    variant="solid"
-                    style={{ padding: '6px 16px', borderRadius: '8px', fontSize: '1rem', fontWeight: 'bold' }}
-                  >
-                    {simResult.riego === 1 ? '💧 REGAR' : '🚫 NO REGAR'}
-                  </Badge>
-                </Flex>
-                <Text size="2" color="gray" style={{ display: 'block', marginBottom: '8px' }}>
-                  {simResult.mensaje}
-                </Text>
-                {simResult.probabilidad_riego !== null && (
-                  <Box>
-                    <Flex justify="between" mb="1">
-                      <Text size="1" color="gray">Confianza del modelo:</Text>
-                      <Text size="1" weight="bold" color="indigo">{(simResult.probabilidad_riego * 100).toFixed(1)}%</Text>
-                    </Flex>
-                    <Box style={{ width: '100%', height: '6px', background: '#374151', borderRadius: '3px', overflow: 'hidden', marginBottom: '8px' }}>
-                      <Box
-                        style={{
-                          width: `${simResult.probabilidad_riego * 100}%`,
-                          height: '100%',
-                          background: 'linear-gradient(90deg, #8b5cf6, #3b82f6)',
-                          borderRadius: '3px',
-                          transition: 'width 0.5s ease-in-out'
-                        }}
-                      />
-                    </Box>
-                    <Text size="1" color="gray" style={{ display: 'block', fontStyle: 'italic', lineHeight: '1.3' }}>
-                      La confianza indica la probabilidad de que el cultivo necesite riego. Un valor cercano a 100% significa que es urgente regar; valores bajos cercanos a 0% indican que tiene humedad suficiente y no se debe regar.
-                    </Text>
-                  </Box>
-                )}
-              </Box>
-
-              <Box style={{ flex: '1 1 250px', borderLeft: '1px solid #374151', paddingLeft: '20px' }}>
-                <Text size="2" color="gray" as="div">
-                  <strong>Modelo Utilizado:</strong> {simResult.modelo_activo}
-                </Text>
-              </Box>
-            </Flex>
-          </Box>
+          <div className="mt-3 p-3 rounded-xl border border-slate-700 bg-slate-900/90">
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <span className="text-xs font-bold text-indigo-400">
+                Resultado de la Predicción
+              </span>
+              <Badge
+                color={simResult.riego === 1 ? 'green' : 'orange'}
+                size="1"
+                variant="solid"
+                style={{ padding: '2px 8px', borderRadius: '4px', fontWeight: 'bold' }}
+              >
+                {simResult.riego === 1 ? '💧 REGAR' : '🚫 NO REGAR'}
+              </Badge>
+            </div>
+            <p className="text-xs text-slate-300 mb-2 leading-relaxed">
+              {simResult.mensaje}
+            </p>
+            {simResult.probabilidad_riego !== null && (
+              <div>
+                <div className="flex justify-between items-center mb-1 text-[11px]">
+                  <span className="text-slate-400">Confianza del modelo:</span>
+                  <span className="font-mono font-bold text-indigo-400">
+                    {(simResult.probabilidad_riego * 100).toFixed(1)}%
+                  </span>
+                </div>
+                <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden mb-1">
+                  <div
+                    className="h-full bg-gradient-to-r from-violet-500 to-indigo-500 rounded-full transition-all duration-500"
+                    style={{ width: `${simResult.probabilidad_riego * 100}%` }}
+                  />
+                </div>
+                <p className="text-[10px] text-slate-500 italic">
+                  {simResult.probabilidad_riego > 0.5 ? 'El modelo detecta necesidad hídrica inminente.' : 'El modelo determina niveles óptimos de humedad.'}
+                </p>
+              </div>
+            )}
+          </div>
         )}
       </Card>
 
       {/* HISTORIAL DE PREDICCIONES E INFERENCIA */}
-      <Card size="3" mt="6" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '16px' }}>
-        <Text size="4" weight="bold" color="indigo" mb="4" as="div">
-          Historial de Decisiones e Inferencia del Modelo
-        </Text>
+      <Card size={{ initial: "2", sm: "3" }} mt={{ initial: "3", sm: "5" }} style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '16px' }}>
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <div>
+            <h3 className="text-xs sm:text-sm font-bold text-indigo-400">
+              Historial de Decisiones e Inferencia
+            </h3>
+            <p className="text-[11px] text-slate-400">
+              Registro cronológico de evaluaciones del modelo para este cultivo.
+            </p>
+          </div>
+          {predicciones && predicciones.length > 0 && (
+            <Badge color="gray" variant="soft" size="1" className="shrink-0">
+              {predicciones.length} registros
+            </Badge>
+          )}
+        </div>
         
         {!predicciones || predicciones.length === 0 ? (
-          <Box p="4" style={{ textAlign: 'center' }}>
+          <Box p="3" style={{ textAlign: 'center' }}>
             <Text color="gray" size="2">No hay registros de inferencia previos para este cultivo.</Text>
           </Box>
         ) : (
           <>
-            <ScrollArea scrollbars="horizontal" style={{ width: '100%' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--border-mockup)' }}>
-                    <th style={{ padding: '12px 8px', color: '#9ca3af', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Hora</th>
-                    <th style={{ padding: '12px 8px', color: '#9ca3af', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Variables de Entrada</th>
-                    <th style={{ padding: '12px 8px', color: '#9ca3af', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Recomendación</th>
-                    <th style={{ padding: '12px 8px', color: '#9ca3af', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Confianza</th>
-                    <th style={{ padding: '12px 8px', color: '#9ca3af', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Resultado en Campo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {predicciones.slice((currentPageInferences - 1) * pageSizeInferences, currentPageInferences * pageSizeInferences).map((p: any) => {
-                    const esRiego = p.recomendacion === 'regar';
-                    const detalles = p.riego_detalles;
-                    
-                    return (
-                      <tr key={p.id} style={{ borderBottom: '1px solid var(--border-mockup)', transition: 'background-color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
-                        {/* 1. Hora */}
-                        <td style={{ padding: '14px 8px', whiteSpace: 'nowrap' }}>
-                          <Text size="2" color="gray" style={{ fontFamily: 'monospace' }}>
-                            {p.fecha} {p.hora}
-                          </Text>
-                        </td>
-                        
-                        {/* 2. Variables */}
-                        <td style={{ padding: '14px 8px' }}>
-                          <Flex gap="2" wrap="wrap">
-                            <Badge color="green" variant="soft" style={{ fontSize: '0.75rem' }}>
-                              H.Suelo: {p.variables.humedad_suelo !== null ? `${Number(p.variables.humedad_suelo).toFixed(1)}%` : 'N/A'}
+            {/* VISTA MÓVIL: Tarjetas compactas adaptativas (< 768px) */}
+            <div className="block md:hidden divide-y divide-slate-800/70">
+              {predicciones.slice((currentPageInferences - 1) * pageSizeInferences, currentPageInferences * pageSizeInferences).map((p: any) => {
+                const esRiego = p.recomendacion === 'regar';
+                const detalles = p.riego_detalles;
+                return (
+                  <div key={p.id} className="py-2.5 first:pt-0 last:pb-0">
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] font-mono text-slate-400">{p.fecha} {p.hora}</span>
+                        <Badge color={esRiego ? 'purple' : 'gray'} variant="solid" size="1" style={{ borderRadius: '4px', padding: '1px 6px', fontSize: '10px' }}>
+                          {esRiego ? '💧 Regar' : '🚫 No regar'}
+                        </Badge>
+                      </div>
+                      <span className="text-[11px] font-mono font-bold text-indigo-300">
+                        {p.probabilidad !== null ? `${(p.probabilidad * 100).toFixed(0)}% conf.` : '—'}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1 mb-1.5 text-[10px]">
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-800/40">
+                        H.Suelo: {p.variables.humedad_suelo !== null ? `${Number(p.variables.humedad_suelo).toFixed(1)}%` : 'N/A'}
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-blue-950/60 text-blue-300 border border-blue-800/40">
+                        H.Amb: {p.variables.humedad_ambiente !== null ? `${Number(p.variables.humedad_ambiente).toFixed(1)}%` : 'N/A'}
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-amber-950/60 text-amber-300 border border-amber-800/40">
+                        T.Amb: {p.variables.temperatura_ambiente !== null ? `${Number(p.variables.temperatura_ambiente).toFixed(1)}°` : 'N/A'}
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-sky-950/60 text-sky-300 border border-sky-800/40">
+                        T.Suelo: {p.variables.temperatura_suelo !== null ? `${Number(p.variables.temperatura_suelo).toFixed(1)}°` : 'N/A'}
+                      </span>
+                    </div>
+
+                    <div className="text-[11px]">
+                      {p.ejecutado ? (
+                        detalles ? (
+                          <span className="inline-flex items-center gap-1 text-emerald-400 font-medium">
+                            ✅ Riego: {detalles.cantidad_agua_litros !== null ? `${detalles.cantidad_agua_litros}L` : '--'} / {detalles.duracion_segundos !== null ? `${Math.round(detalles.duracion_segundos / 60)}m` : '--'}
+                            {detalles.motivo_cierre && ` (${detalles.motivo_cierre})`}
+                          </span>
+                        ) : (
+                          <span className="text-emerald-400 font-medium">✅ Orden de Riego Enviada</span>
+                        )
+                      ) : esRiego ? (
+                        <span className="text-rose-400 font-medium">❌ Riego abortado</span>
+                      ) : (
+                        <span className="text-slate-500 font-mono text-[10px]">Sin acción requerida</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* VISTA ESCRITORIO: Tabla compacta (>= 768px) */}
+            <div className="hidden md:block">
+              <ScrollArea scrollbars="horizontal" style={{ width: '100%' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--border-mockup)' }}>
+                      <th style={{ padding: '8px 10px', color: '#9ca3af', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Hora</th>
+                      <th style={{ padding: '8px 10px', color: '#9ca3af', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Variables de Entrada</th>
+                      <th style={{ padding: '8px 10px', color: '#9ca3af', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Recomendación</th>
+                      <th style={{ padding: '8px 10px', color: '#9ca3af', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Confianza</th>
+                      <th style={{ padding: '8px 10px', color: '#9ca3af', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Resultado en Campo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {predicciones.slice((currentPageInferences - 1) * pageSizeInferences, currentPageInferences * pageSizeInferences).map((p: any) => {
+                      const esRiego = p.recomendacion === 'regar';
+                      const detalles = p.riego_detalles;
+                      
+                      return (
+                        <tr key={p.id} style={{ borderBottom: '1px solid var(--border-mockup)', transition: 'background-color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                          <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}>
+                            <Text size="1" color="gray" style={{ fontFamily: 'monospace' }}>
+                              {p.fecha} {p.hora}
+                            </Text>
+                          </td>
+                          <td style={{ padding: '8px 10px' }}>
+                            <Flex gap="1.5" wrap="wrap">
+                              <Badge color="green" variant="soft" size="1">
+                                H.Suelo: {p.variables.humedad_suelo !== null ? `${Number(p.variables.humedad_suelo).toFixed(1)}%` : 'N/A'}
+                              </Badge>
+                              <Badge color="blue" variant="soft" size="1">
+                                H.Amb: {p.variables.humedad_ambiente !== null ? `${Number(p.variables.humedad_ambiente).toFixed(1)}%` : 'N/A'}
+                              </Badge>
+                              <Badge color="orange" variant="soft" size="1">
+                                T.Amb: {p.variables.temperatura_ambiente !== null ? `${Number(p.variables.temperatura_ambiente).toFixed(1)}%` : 'N/A'}
+                              </Badge>
+                              <Badge color="sky" variant="soft" size="1">
+                                T.Suelo: {p.variables.temperatura_suelo !== null ? `${Number(p.variables.temperatura_suelo).toFixed(1)}%` : 'N/A'}
+                              </Badge>
+                            </Flex>
+                          </td>
+                          <td style={{ padding: '8px 10px' }}>
+                            <Badge color={esRiego ? 'purple' : 'gray'} variant="solid" size="1" style={{ borderRadius: '6px', padding: '2px 8px' }}>
+                              {esRiego ? '💧 Regar' : '🚫 No regar'}
                             </Badge>
-                            <Badge color="blue" variant="soft" style={{ fontSize: '0.75rem' }}>
-                              H.Amb: {p.variables.humedad_ambiente !== null ? `${Number(p.variables.humedad_ambiente).toFixed(1)}%` : 'N/A'}
-                            </Badge>
-                            <Badge color="orange" variant="soft" style={{ fontSize: '0.75rem' }}>
-                              T.Amb: {p.variables.temperatura_ambiente !== null ? `${Number(p.variables.temperatura_ambiente).toFixed(1)}%` : 'N/A'}
-                            </Badge>
-                            <Badge color="sky" variant="soft" style={{ fontSize: '0.75rem' }}>
-                              T.Suelo: {p.variables.temperatura_suelo !== null ? `${Number(p.variables.temperatura_suelo).toFixed(1)}%` : 'N/A'}
-                            </Badge>
-                          </Flex>
-                        </td>
-                        
-                        {/* 3. Recomendación */}
-                        <td style={{ padding: '14px 8px' }}>
-                          <Badge color={esRiego ? 'purple' : 'gray'} variant="solid" style={{ borderRadius: '6px', padding: '3px 8px' }}>
-                            {esRiego ? '💧 Regar' : '🚫 No regar'}
-                          </Badge>
-                        </td>
-                        
-                        {/* 4. Confianza */}
-                        <td style={{ padding: '14px 8px' }}>
-                          <Text size="2" weight="bold" color={esRiego ? 'purple' : 'gray'} style={{ fontFamily: 'monospace' }}>
-                            {p.probabilidad !== null ? `${(p.probabilidad * 100).toFixed(1)}%` : '—'}
-                          </Text>
-                        </td>
-                        
-                        {/* 5. Riego detalles */}
-                        <td style={{ padding: '14px 8px' }}>
-                          {p.ejecutado ? (
-                            detalles ? (
-                              <Badge color={detalles.estado ? "green" : "orange"} variant="outline" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                {detalles.estado ? '✅ Riego: ' : '⌛ Riego en curso: '}
-                                {detalles.cantidad_agua_litros !== null ? `${detalles.cantidad_agua_litros}L` : '--'} / {detalles.duracion_segundos !== null ? `${Math.round(detalles.duracion_segundos / 60)}min` : '--'}
-                                {detalles.motivo_cierre && ` (${detalles.motivo_cierre})`}
+                          </td>
+                          <td style={{ padding: '8px 10px' }}>
+                            <Text size="1" weight="bold" color={esRiego ? 'purple' : 'gray'} style={{ fontFamily: 'monospace' }}>
+                              {p.probabilidad !== null ? `${(p.probabilidad * 100).toFixed(1)}%` : '—'}
+                            </Text>
+                          </td>
+                          <td style={{ padding: '8px 10px' }}>
+                            {p.ejecutado ? (
+                              detalles ? (
+                                <Badge color={detalles.estado ? "green" : "orange"} variant="outline" size="1" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                  {detalles.estado ? '✅ Riego: ' : '⌛ Riego en curso: '}
+                                  {detalles.cantidad_agua_litros !== null ? `${detalles.cantidad_agua_litros}L` : '--'} / {detalles.duracion_segundos !== null ? `${Math.round(detalles.duracion_segundos / 60)}min` : '--'}
+                                  {detalles.motivo_cierre && ` (${detalles.motivo_cierre})`}
+                                </Badge>
+                              ) : (
+                                <Badge color="green" variant="outline" size="1">
+                                  ✅ Orden Enviada
+                                </Badge>
+                              )
+                            ) : esRiego ? (
+                              <Badge color="red" variant="outline" size="1">
+                                ❌ Riego no ejecutado
                               </Badge>
                             ) : (
-                              <Badge color="green" variant="outline">
-                                ✅ Orden de Riego Enviada
-                              </Badge>
-                            )
-                          ) : esRiego ? (
-                            <Badge color="red" variant="outline">
-                              ❌ Riego abortado / no ejecutado
-                            </Badge>
-                          ) : (
-                            <Text size="2" color="gray">—</Text>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </ScrollArea>
+                              <Text size="1" color="gray">—</Text>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </ScrollArea>
+            </div>
 
-            {/* Controles de Paginación para Inferencias */}
+            {/* Paginación compacta */}
             {predicciones.length > pageSizeInferences && (
-              <Flex justify="between" align="center" mt="4" px="2">
-                <Text size="2" color="gray">
-                  Mostrando {Math.min((currentPageInferences - 1) * pageSizeInferences + 1, predicciones.length)} a {Math.min(currentPageInferences * pageSizeInferences, predicciones.length)} de {predicciones.length} registros
-                </Text>
-                <Flex gap="1">
-                  <Button 
-                    size="1" 
-                    variant="soft" 
-                    color="gray" 
-                    onClick={() => setCurrentPageInferences(1)} 
-                    disabled={currentPageInferences === 1}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    «
-                  </Button>
-                  <Button 
-                    size="1" 
-                    variant="soft" 
-                    color="gray" 
-                    onClick={() => setCurrentPageInferences(prev => Math.max(prev - 1, 1))} 
-                    disabled={currentPageInferences === 1}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    ‹
-                  </Button>
-                  <Flex align="center" px="2" style={{ background: '#1e293b', borderRadius: '4px', height: '24px' }}>
-                    <Text size="1" weight="bold" style={{ color: 'white' }}>
-                      {currentPageInferences} / {Math.ceil(predicciones.length / pageSizeInferences)}
-                    </Text>
-                  </Flex>
-                  <Button 
-                    size="1" 
-                    variant="soft" 
-                    color="gray" 
-                    onClick={() => setCurrentPageInferences(prev => Math.min(prev + 1, Math.ceil(predicciones.length / pageSizeInferences)))} 
-                    disabled={currentPageInferences === Math.ceil(predicciones.length / pageSizeInferences)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    ›
-                  </Button>
-                  <Button 
-                    size="1" 
-                    variant="soft" 
-                    color="gray" 
-                    onClick={() => setCurrentPageInferences(Math.ceil(predicciones.length / pageSizeInferences))} 
-                    disabled={currentPageInferences === Math.ceil(predicciones.length / pageSizeInferences)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    »
-                  </Button>
-                </Flex>
-              </Flex>
+              <div className="flex justify-between items-center mt-3 pt-2 border-t border-slate-800/70 text-xs text-slate-400">
+                <span className="text-[11px]">
+                  {Math.min((currentPageInferences - 1) * pageSizeInferences + 1, predicciones.length)}–{Math.min(currentPageInferences * pageSizeInferences, predicciones.length)} de {predicciones.length}
+                </span>
+                <div className="flex gap-1">
+                  <Button size="1" variant="soft" color="gray" onClick={() => setCurrentPageInferences(1)} disabled={currentPageInferences === 1}>«</Button>
+                  <Button size="1" variant="soft" color="gray" onClick={() => setCurrentPageInferences(prev => Math.max(prev - 1, 1))} disabled={currentPageInferences === 1}>‹</Button>
+                  <span className="px-2 py-0.5 bg-slate-800 text-white rounded text-xs font-bold self-center">
+                    {currentPageInferences} / {Math.ceil(predicciones.length / pageSizeInferences)}
+                  </span>
+                  <Button size="1" variant="soft" color="gray" onClick={() => setCurrentPageInferences(prev => Math.min(prev + 1, Math.ceil(predicciones.length / pageSizeInferences)))} disabled={currentPageInferences === Math.ceil(predicciones.length / pageSizeInferences)}>›</Button>
+                  <Button size="1" variant="soft" color="gray" onClick={() => setCurrentPageInferences(Math.ceil(predicciones.length / pageSizeInferences))} disabled={currentPageInferences === Math.ceil(predicciones.length / pageSizeInferences)}>»</Button>
+                </div>
+              </div>
             )}
           </>
         )}
       </Card>
 
       {/* COMPARATIVA DE MODELOS DE MACHINE LEARNING Y RENDIMIENTO */}
-      <Card size="3" mt="6" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '16px' }}>
-        <Flex justify="between" align="center" mb="4" wrap="wrap" gap="2">
-          <Box>
-            <Flex align="center" gap="2" mb="1">
-              <Text size="4" weight="bold" color="indigo">Comparativa de Modelos de Machine Learning</Text>
-              <Badge color="purple" variant="soft" size="2">
-                {modelosCompatibles.length} {modelosCompatibles.length === 1 ? 'modelo compatible' : 'modelos compatibles'}
+      <Card size={{ initial: "2", sm: "3" }} mt={{ initial: "3", sm: "5" }} style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '16px' }}>
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <div>
+            <div className="flex items-center gap-2 mb-0.5">
+              <h3 className="text-xs sm:text-sm font-bold text-indigo-400">Comparativa de Modelos ML</h3>
+              <Badge color="purple" variant="soft" size="1">
+                {modelosCompatibles.length} {modelosCompatibles.length === 1 ? 'modelo' : 'modelos'}
               </Badge>
-            </Flex>
-            <Text size="2" color="gray">
-              Evaluación comparativa de precisión, balance y métricas de inferencia entre algoritmos entrenados para este cultivo.
-            </Text>
-          </Box>
-        </Flex>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Evaluación de precisión y métricas de inferencia entre algoritmos entrenados.
+            </p>
+          </div>
+        </div>
         
         {/* Modelos en Comparativa */}
-        <Grid columns={{ initial: '1', md: modelosCompatibles.length > 1 ? '2' : '1' }} gap="4">
+        <Grid columns={{ initial: '1', md: modelosCompatibles.length > 1 ? '2' : '1' }} gap="3">
           {modelosCompatibles.map((m: any) => {
             const isActivo = m.activo || (modelo && m.id_modelo === modelo.id_modelo);
             const accuracy = m.precision_modelo ?? (m.precision_score ? m.precision_score : 90);
             const f1 = m.f1_score ?? 90;
             const recall = m.recall_score ?? 90;
-            const prec = m.precision_score ?? accuracy;
             const mae = m.mae ?? Math.max(0, Number((100 - accuracy).toFixed(1)));
 
             return (
@@ -592,26 +613,26 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
                   background: isActivo ? 'rgba(99, 102, 241, 0.05)' : 'var(--surface2-mockup)',
                   border: isActivo ? '1px solid rgba(99, 102, 241, 0.4)' : '1px solid var(--border-mockup)',
                   borderRadius: '12px',
-                  padding: '16px',
+                  padding: '12px 14px',
                   position: 'relative'
                 }}
               >
-                <Flex justify="between" align="center" mb="3">
+                <Flex justify="between" align="center" mb="2">
                   <Box>
                     <Flex align="center" gap="2">
-                      <Text size="3" weight="bold" style={{ color: isActivo ? '#818cf8' : 'white' }}>
+                      <Text size="2" weight="bold" style={{ color: isActivo ? '#818cf8' : 'white' }}>
                         {m.nombre_modelo}
                       </Text>
                       <Badge color={m.algoritmo?.toLowerCase().includes('random') ? 'plum' : 'cyan'} variant="surface" size="1">
                         {m.algoritmo}
                       </Badge>
                     </Flex>
-                    <Text size="1" color="gray" style={{ fontFamily: 'var(--font-mono)', marginTop: '2px', display: 'block' }}>
-                      Versión {m.version} · {m.descripcion || 'Modelo clasificador de riego'}
+                    <Text size="1" color="gray" style={{ fontFamily: 'var(--font-mono)', marginTop: '2px', display: 'block', fontSize: '10px' }}>
+                      Versión {m.version} · {m.descripcion || 'Modelo clasificador'}
                     </Text>
                   </Box>
                   {isActivo ? (
-                    <Badge color="green" variant="solid" size="2" style={{ padding: '4px 8px', borderRadius: '6px' }}>
+                    <Badge color="green" variant="solid" size="1" style={{ padding: '3px 8px', borderRadius: '4px' }}>
                       ⚡ Activo
                     </Badge>
                   ) : (
@@ -621,56 +642,56 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
                       color="indigo"
                       disabled={loading}
                       onClick={() => handleSelectModel(m.id_modelo.toString())}
-                      style={{ cursor: 'pointer', borderRadius: '6px' }}
+                      style={{ cursor: 'pointer', borderRadius: '6px', fontSize: '11px' }}
                     >
-                      Activar modelo
+                      Activar
                     </Button>
                   )}
                 </Flex>
 
                 {/* Métricas de rendimiento con barras */}
-                <Box mt="3">
+                <Box mt="2">
                   {/* Accuracy */}
-                  <Box mb="2">
-                    <Flex justify="between" mb="1" style={{ fontSize: '11px' }}>
+                  <Box mb="1.5">
+                    <Flex justify="between" mb="0.5" style={{ fontSize: '10px' }}>
                       <Text color="gray" style={{ fontFamily: 'var(--font-mono)' }}>Precisión Global (Accuracy)</Text>
                       <Text weight="bold" style={{ color: 'var(--green)', fontFamily: 'var(--font-mono)' }}>{Number(accuracy).toFixed(1)}%</Text>
                     </Flex>
-                    <div style={{ height: '7px', background: 'var(--dim-mockup)', borderRadius: '4px', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${Math.min(100, Math.max(0, accuracy))}%`, background: 'var(--green)', borderRadius: '4px' }} />
+                    <div style={{ height: '5px', background: 'var(--dim-mockup)', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${Math.min(100, Math.max(0, accuracy))}%`, background: 'var(--green)', borderRadius: '3px' }} />
                     </div>
                   </Box>
 
                   {/* F1-Score */}
-                  <Box mb="2">
-                    <Flex justify="between" mb="1" style={{ fontSize: '11px' }}>
+                  <Box mb="1.5">
+                    <Flex justify="between" mb="0.5" style={{ fontSize: '10px' }}>
                       <Text color="gray" style={{ fontFamily: 'var(--font-mono)' }}>F1-Score (Equilibrio)</Text>
                       <Text weight="bold" style={{ color: '#818cf8', fontFamily: 'var(--font-mono)' }}>{Number(f1).toFixed(1)}%</Text>
                     </Flex>
-                    <div style={{ height: '7px', background: 'var(--dim-mockup)', borderRadius: '4px', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${Math.min(100, Math.max(0, f1))}%`, background: '#818cf8', borderRadius: '4px' }} />
+                    <div style={{ height: '5px', background: 'var(--dim-mockup)', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${Math.min(100, Math.max(0, f1))}%`, background: '#818cf8', borderRadius: '3px' }} />
                     </div>
                   </Box>
 
                   {/* Recall */}
-                  <Box mb="2">
-                    <Flex justify="between" mb="1" style={{ fontSize: '11px' }}>
+                  <Box mb="1.5">
+                    <Flex justify="between" mb="0.5" style={{ fontSize: '10px' }}>
                       <Text color="gray" style={{ fontFamily: 'var(--font-mono)' }}>Sensibilidad (Recall)</Text>
                       <Text weight="bold" style={{ color: '#38bdf8', fontFamily: 'var(--font-mono)' }}>{Number(recall).toFixed(1)}%</Text>
                     </Flex>
-                    <div style={{ height: '7px', background: 'var(--dim-mockup)', borderRadius: '4px', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${Math.min(100, Math.max(0, recall))}%`, background: '#38bdf8', borderRadius: '4px' }} />
+                    <div style={{ height: '5px', background: 'var(--dim-mockup)', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${Math.min(100, Math.max(0, recall))}%`, background: '#38bdf8', borderRadius: '3px' }} />
                     </div>
                   </Box>
 
                   {/* MAE */}
                   <Box>
-                    <Flex justify="between" mb="1" style={{ fontSize: '11px' }}>
+                    <Flex justify="between" mb="0.5" style={{ fontSize: '10px' }}>
                       <Text color="gray" style={{ fontFamily: 'var(--font-mono)' }}>Tasa de Error / MAE</Text>
                       <Text weight="bold" style={{ color: 'var(--amber)', fontFamily: 'var(--font-mono)' }}>{Number(mae).toFixed(1)}%</Text>
                     </Flex>
-                    <div style={{ height: '7px', background: 'var(--dim-mockup)', borderRadius: '4px', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${Math.min(100, Math.max(0, mae))}%`, background: 'var(--amber)', borderRadius: '4px' }} />
+                    <div style={{ height: '5px', background: 'var(--dim-mockup)', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${Math.min(100, Math.max(0, mae))}%`, background: 'var(--amber)', borderRadius: '3px' }} />
                     </div>
                   </Box>
                 </Box>
@@ -680,40 +701,40 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
         </Grid>
 
         {/* Resumen de Rendimiento del Riego Autónomo ML */}
-        <Grid columns={{ initial: '1', sm: '2', md: '4' }} gap="3" mt="5">
-          <div style={{ padding: '12px', background: 'var(--greenbg)', border: '1px solid var(--greenbrd)', borderRadius: '8px', textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--green)' }}>
+        <Grid columns={{ initial: '2', sm: '2', md: '4' }} gap="2.5" mt="4">
+          <div style={{ padding: '10px', background: 'var(--greenbg)', border: '1px solid var(--greenbrd)', borderRadius: '8px', textAlign: 'center' }}>
+            <div className="text-base sm:text-lg font-bold font-mono" style={{ color: 'var(--green)' }}>
               {compModelos?.ahorro_estimado_pct ?? 28.5}%
             </div>
             <div style={{ fontSize: '9px', color: 'var(--green)', fontFamily: 'var(--font-mono)', marginTop: '2px', lineHeight: '1.2' }}>
-              Ahorro de agua estimado<br/>ML vs Riego Convencional
+              Ahorro de agua est.<br/>vs Riego Manual
             </div>
           </div>
 
-          <div style={{ padding: '12px', background: 'var(--purplebg)', border: '1px solid var(--purplebrd)', borderRadius: '8px', textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--purple)' }}>
+          <div style={{ padding: '10px', background: 'var(--purplebg)', border: '1px solid var(--purplebrd)', borderRadius: '8px', textAlign: 'center' }}>
+            <div className="text-base sm:text-lg font-bold font-mono" style={{ color: 'var(--purple)' }}>
               {compModelos?.tiempo_optimo_pct ?? 100}%
             </div>
             <div style={{ fontSize: '9px', color: 'var(--purple)', fontFamily: 'var(--font-mono)', marginTop: '2px', lineHeight: '1.2' }}>
-              Humedad en rango óptimo<br/>Control autónomo por IA
+              Humedad en rango ópt.<br/>Control autónomo
             </div>
           </div>
 
-          <div style={{ padding: '12px', background: 'rgba(56, 189, 248, 0.08)', border: '1px solid rgba(56, 189, 248, 0.25)', borderRadius: '8px', textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: '#38bdf8' }}>
+          <div style={{ padding: '10px', background: 'rgba(56, 189, 248, 0.08)', border: '1px solid rgba(56, 189, 248, 0.25)', borderRadius: '8px', textAlign: 'center' }}>
+            <div className="text-base sm:text-lg font-bold font-mono" style={{ color: '#38bdf8' }}>
               {compModelos?.promedio_litros_riego ?? 0.0} L
             </div>
             <div style={{ fontSize: '9px', color: '#38bdf8', fontFamily: 'var(--font-mono)', marginTop: '2px', lineHeight: '1.2' }}>
-              Consumo promedio<br/>por evento de riego ML
+              Consumo promedio<br/>por evento de riego
             </div>
           </div>
 
-          <div style={{ padding: '12px', background: 'var(--amberbg)', border: '1px solid var(--amberbrd)', borderRadius: '8px', textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--amber)' }}>
+          <div style={{ padding: '10px', background: 'var(--amberbg)', border: '1px solid var(--amberbrd)', borderRadius: '8px', textAlign: 'center' }}>
+            <div className="text-base sm:text-lg font-bold font-mono" style={{ color: 'var(--amber)' }}>
               {(modelo?.mae || (modelosCompatibles.find((m: any) => m.activo)?.mae) || 5.5).toFixed(1)}%
             </div>
             <div style={{ fontSize: '9px', color: 'var(--amber)', fontFamily: 'var(--font-mono)', marginTop: '2px', lineHeight: '1.2' }}>
-              MAE del modelo activo<br/>en validación
+              MAE modelo activo<br/>en validación
             </div>
           </div>
         </Grid>

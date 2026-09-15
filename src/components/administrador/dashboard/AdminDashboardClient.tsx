@@ -204,7 +204,7 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
     <Box style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* HEADER */}
       <Flex direction="column" gap="1">
-        <Text size="6" weight="bold" color="indigo" as="div">
+        <Text size={{ initial: "5", sm: "6" }} weight="bold" color="indigo" as="div">
           Resumen General del Sistema
         </Text>
         <Text size="2" color="gray" style={{ fontFamily: 'monospace' }}>
@@ -213,10 +213,10 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
       </Flex>
 
       {/* FILTER BAR */}
-      <Card size="2" style={{ background: '#111827', borderColor: '#1f2937' }}>
-        <Flex direction={{ initial: 'column', sm: 'row' }} gap="4" align={{ sm: 'center' }}>
+      <Card size={{ initial: "1", sm: "2" }} style={{ background: '#111827', borderColor: '#1f2937' }}>
+        <Flex direction={{ initial: 'column', sm: 'row' }} gap="3" align={{ sm: 'center' }}>
           <Flex align="center" gap="2" style={{ color: '#818cf8' }}>
-            <Filter size={16} />
+            <Filter size={15} />
             <Text size="2" weight="bold">Filtros Globales:</Text>
           </Flex>
 
@@ -256,63 +256,63 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
       </Card>
 
       {/* METRIC CARDS */}
-      <Grid columns={{ initial: '1', sm: '2', md: '4' }} gap="4">
+      <Grid columns={{ initial: '2', sm: '2', md: '4' }} gap={{ initial: "2", sm: "3" }}>
         {/* Usuarios */}
-        <Card size="2" style={{ background: '#111827', borderColor: '#1f2937' }}>
-          <Flex align="center" gap="3">
-            <Box style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '10px', borderRadius: '12px' }}>
-              <Users size={24} color="#3b82f6" />
+        <Card size="1" style={{ background: '#111827', borderColor: '#1f2937' }}>
+          <Flex align="center" gap="2.5">
+            <Box style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '8px', borderRadius: '10px' }}>
+              <Users size={20} color="#3b82f6" />
             </Box>
             <Box>
-              <Text size="1" color="gray" weight="medium">Usuarios del Sistema</Text>
-              <Text size="5" weight="bold" style={{ color: 'white', display: 'block' }}>{metricas.total_usuarios}</Text>
+              <Text size="1" color="gray" weight="medium">Usuarios</Text>
+              <Text size={{ initial: "4", sm: "5" }} weight="bold" style={{ color: 'white', display: 'block' }}>{metricas.total_usuarios}</Text>
             </Box>
           </Flex>
         </Card>
 
         {/* Dispositivos */}
-        <Card size="2" style={{ background: '#111827', borderColor: '#1f2937' }}>
-          <Flex align="center" gap="3">
-            <Box style={{ background: 'rgba(168, 85, 247, 0.1)', padding: '10px', borderRadius: '12px' }}>
-              <Cpu size={24} color="#a855f7" />
+        <Card size="1" style={{ background: '#111827', borderColor: '#1f2937' }}>
+          <Flex align="center" gap="2.5">
+            <Box style={{ background: 'rgba(168, 85, 247, 0.1)', padding: '8px', borderRadius: '10px' }}>
+              <Cpu size={20} color="#a855f7" />
             </Box>
             <Box>
-              <Text size="1" color="gray" weight="medium">Dispositivos en Red</Text>
-              <Flex gap="2" align="baseline">
-                <Text size="5" weight="bold" style={{ color: 'white' }}>{metricas.total_dispositivos}</Text>
-                <Text size="1" color="gray">({metricas.total_dispositivos_activos} activos)</Text>
+              <Text size="1" color="gray" weight="medium">Dispositivos</Text>
+              <Flex gap="1.5" align="baseline">
+                <Text size={{ initial: "4", sm: "5" }} weight="bold" style={{ color: 'white' }}>{metricas.total_dispositivos}</Text>
+                <Text size="1" color="gray">({metricas.total_dispositivos_activos} act.)</Text>
               </Flex>
             </Box>
           </Flex>
         </Card>
 
         {/* Cultivos */}
-        <Card size="2" style={{ background: '#111827', borderColor: '#1f2937' }}>
-          <Flex align="center" gap="3">
-            <Box style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '10px', borderRadius: '12px' }}>
-              <Leaf size={24} color="#10b981" />
+        <Card size="1" style={{ background: '#111827', borderColor: '#1f2937' }}>
+          <Flex align="center" gap="2.5">
+            <Box style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '8px', borderRadius: '10px' }}>
+              <Leaf size={20} color="#10b981" />
             </Box>
             <Box>
-              <Text size="1" color="gray" weight="medium">Cultivos en Campo</Text>
-              <Text size="5" weight="bold" style={{ color: 'white', display: 'block' }}>{metricas.total_cultivos_activos}</Text>
+              <Text size="1" color="gray" weight="medium">Cultivos</Text>
+              <Text size={{ initial: "4", sm: "5" }} weight="bold" style={{ color: 'white', display: 'block' }}>{metricas.total_cultivos_activos}</Text>
             </Box>
           </Flex>
         </Card>
 
         {/* Alertas */}
-        <Card size="2" style={{ background: '#111827', borderColor: '#1f2937' }}>
-          <Flex align="center" gap="3">
+        <Card size="1" style={{ background: '#111827', borderColor: '#1f2937' }}>
+          <Flex align="center" gap="2.5">
             <Box style={{ 
               background: metricas.alertas_pendientes > 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(148, 163, 184, 0.1)', 
-              padding: '10px', 
-              borderRadius: '12px' 
+              padding: '8px', 
+              borderRadius: '10px' 
             }}>
-              <AlertTriangle size={24} color={metricas.alertas_pendientes > 0 ? "#ef4444" : "#94a3b8"} />
+              <AlertTriangle size={20} color={metricas.alertas_pendientes > 0 ? "#ef4444" : "#94a3b8"} />
             </Box>
             <Box>
-              <Text size="1" color="gray" weight="medium">Alertas Activas</Text>
-              <Badge color={metricas.alertas_pendientes > 0 ? "red" : "gray"} variant="soft" mt="1">
-                {metricas.alertas_pendientes} pendientes
+              <Text size="1" color="gray" weight="medium">Alertas</Text>
+              <Badge color={metricas.alertas_pendientes > 0 ? "red" : "gray"} variant="soft" size="1" mt="0.5">
+                {metricas.alertas_pendientes} pend.
               </Badge>
             </Box>
           </Flex>
@@ -320,29 +320,29 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
       </Grid>
 
       {/* CHARTS CONTAINER */}
-      <Grid columns={{ initial: '1', lg: '3' }} gap="4">
+      <Grid columns={{ initial: '1', lg: '3' }} gap={{ initial: "3", sm: "4" }}>
         {/* Consumo Semanal */}
-        <Card size="3" style={{ background: '#111827', borderColor: '#1f2937', gridColumn: 'span 2' }}>
-          <Flex direction="column" gap="2" mb="4">
+        <Card size={{ initial: "2", sm: "3" }} className="col-span-1 lg:col-span-2" style={{ background: '#111827', borderColor: '#1f2937' }}>
+          <Flex direction="column" gap="2" mb="3">
             <Flex align="center" gap="2">
               <Activity size={18} color="#3b82f6" />
-              <Text size="3" weight="bold" style={{ color: 'white' }}>Monitoreo Semanal de Riego (Global)</Text>
+              <Text size={{ initial: "2", sm: "3" }} weight="bold" style={{ color: 'white' }}>Monitoreo Semanal de Riego (Global)</Text>
             </Flex>
             <Text size="1" color="gray">Consumo total de agua en litros y número de riegos automáticos ejecutados.</Text>
           </Flex>
 
-          <Box style={{ width: '100%', minWidth: 0, height: '300px' }}>
-            <ResponsiveContainer width="100%" height={300} minWidth={0}>
-              <BarChart data={consumo_semanal} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+          <Box style={{ width: '100%', minWidth: 0, height: '260px' }}>
+            <ResponsiveContainer width="100%" height={260} minWidth={0}>
+              <BarChart data={consumo_semanal} margin={{ top: 10, right: 10, left: -5, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-                <XAxis dataKey="fecha" stroke="#94a3b8" fontSize={11} />
-                <YAxis yAxisId="left" stroke="#3b82f6" fontSize={11} label={{ value: 'Litros', angle: -90, position: 'insideLeft', fill: '#3b82f6', style: {fontSize: 11} }} />
-                <YAxis yAxisId="right" orientation="right" stroke="#10b981" fontSize={11} label={{ value: 'Riegos', angle: 90, position: 'insideRight', fill: '#10b981', style: {fontSize: 11} }} />
+                <XAxis dataKey="fecha" stroke="#94a3b8" fontSize={10} />
+                <YAxis yAxisId="left" stroke="#3b82f6" fontSize={10} label={{ value: 'Litros', angle: -90, position: 'insideLeft', fill: '#3b82f6', style: {fontSize: 10} }} />
+                <YAxis yAxisId="right" orientation="right" stroke="#10b981" fontSize={10} label={{ value: 'Riegos', angle: 90, position: 'insideRight', fill: '#10b981', style: {fontSize: 10} }} />
                 <Tooltip 
                   contentStyle={{ background: '#1f2937', borderColor: '#374151', color: 'white' }}
                   labelStyle={{ fontWeight: 'bold', color: '#818cf8' }}
                 />
-                <Legend wrapperStyle={{ fontSize: 12, paddingTop: 10 }} />
+                <Legend wrapperStyle={{ fontSize: 11, paddingTop: 6 }} />
                 <Bar yAxisId="left" dataKey="litros" name="Agua Consumida (L)" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                 <Bar yAxisId="right" dataKey="riegos" name="Acciones de Riego" fill="#10b981" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -351,7 +351,7 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
         </Card>
 
         {/* ML Summary stats */}
-        <Card size="3" style={{ background: '#111827', borderColor: '#1f2937' }}>
+        <Card size={{ initial: "2", sm: "3" }} style={{ background: '#111827', borderColor: '#1f2937' }}>
           <Flex direction="column" gap="2" mb="3">
             <Flex align="center" gap="2">
               <Brain size={18} color="#a855f7" />
@@ -414,34 +414,37 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
       {/* TABS FOR DETAILS */}
       <Tabs.Root defaultValue="auditoria">
         <Tabs.List style={{ 
-          marginBottom: '1.5rem', 
+          marginBottom: '1.25rem', 
           background: '#111827', 
           borderRadius: '12px', 
-          padding: '6px', 
-          border: '1px solid #1f2937' 
+          padding: '4px', 
+          border: '1px solid #1f2937',
+          overflowX: 'auto',
+          whiteSpace: 'nowrap',
+          maxWidth: '100%'
         }}>
-          <Tabs.Trigger value="auditoria" style={{ cursor: 'pointer', padding: '8px 16px', fontSize: '0.85rem' }}>
-            📜 Bitácora de Auditoría
+          <Tabs.Trigger value="auditoria" style={{ cursor: 'pointer', padding: '6px 12px', fontSize: '0.8rem' }}>
+            📜 Auditoría
           </Tabs.Trigger>
-          <Tabs.Trigger value="ml_preds" style={{ cursor: 'pointer', padding: '8px 16px', fontSize: '0.85rem' }}>
-            🤖 Historial de Predicciones ML
+          <Tabs.Trigger value="ml_preds" style={{ cursor: 'pointer', padding: '6px 12px', fontSize: '0.8rem' }}>
+            🤖 Predicciones ML
           </Tabs.Trigger>
-          <Tabs.Trigger value="ml_models" style={{ cursor: 'pointer', padding: '8px 16px', fontSize: '0.85rem' }}>
-            ⚙️ Modelos Entrenados
+          <Tabs.Trigger value="ml_models" style={{ cursor: 'pointer', padding: '6px 12px', fontSize: '0.8rem' }}>
+            ⚙️ Modelos ML
           </Tabs.Trigger>
         </Tabs.List>
 
         <Box pt="1">
           {/* TAB 1: AUDITORÍA */}
           <Tabs.Content value="auditoria">
-            <Card size="3" style={{ background: '#111827', borderColor: '#1f2937', borderRadius: '16px' }}>
-              <Flex justify="between" align="center" mb="4" gap="4">
-                <Text size="3" weight="bold" color="indigo">Logs de Auditoría del Sistema</Text>
+            <Card size={{ initial: "2", sm: "3" }} style={{ background: '#111827', borderColor: '#1f2937', borderRadius: '16px' }}>
+              <Flex justify="between" align={{ initial: 'stretch', sm: 'center' }} direction={{ initial: 'column', sm: 'row' }} mb="4" gap="3">
+                <Text size={{ initial: "2", sm: "3" }} weight="bold" color="indigo">Logs de Auditoría del Sistema</Text>
                 <TextField.Root 
                   placeholder="Buscar por usuario o acción..." 
                   value={logSearch}
                   onChange={(e) => { setLogSearch(e.target.value); setCurrentPageLogs(1); }}
-                  style={{ background: '#1e293b', width: '280px', color: 'white' }}
+                  style={{ background: '#1e293b', width: '100%', maxWidth: '300px', color: 'white' }}
                 >
                   <TextField.Slot>
                     <Search size={14} color="#94a3b8" />
@@ -558,14 +561,14 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
 
           {/* TAB 2: PREDICCIONES */}
           <Tabs.Content value="ml_preds">
-            <Card size="3" style={{ background: '#111827', borderColor: '#1f2937', borderRadius: '16px' }}>
-              <Flex justify="between" align="center" mb="4" gap="4">
-                <Text size="3" weight="bold" color="indigo">Predicciones de Riego Recientes</Text>
+            <Card size={{ initial: "2", sm: "3" }} style={{ background: '#111827', borderColor: '#1f2937', borderRadius: '16px' }}>
+              <Flex justify="between" align={{ initial: 'stretch', sm: 'center' }} direction={{ initial: 'column', sm: 'row' }} mb="4" gap="3">
+                <Text size={{ initial: "2", sm: "3" }} weight="bold" color="indigo">Predicciones de Riego Recientes</Text>
                 <TextField.Root 
                   placeholder="Buscar por usuario o cultivo..." 
                   value={predSearch}
                   onChange={(e) => { setPredSearch(e.target.value); setCurrentPagePreds(1); }}
-                  style={{ background: '#1e293b', width: '280px', color: 'white' }}
+                  style={{ background: '#1e293b', width: '100%', maxWidth: '300px', color: 'white' }}
                 >
                   <TextField.Slot>
                     <Search size={14} color="#94a3b8" />
@@ -685,61 +688,63 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
 
           {/* TAB 3: MODELOS */}
           <Tabs.Content value="ml_models">
-            <Card size="3" style={{ background: '#111827', borderColor: '#1f2937', borderRadius: '16px' }}>
-              <Text size="3" weight="bold" color="indigo" mb="4" as="div">Modelos de Aprendizaje Automático Disponibles</Text>
+            <Card size={{ initial: "2", sm: "3" }} style={{ background: '#111827', borderColor: '#1f2937', borderRadius: '16px' }}>
+              <Text size={{ initial: "2", sm: "3" }} weight="bold" color="indigo" mb="4" as="div">Modelos de Aprendizaje Automático Disponibles</Text>
 
-              <Table.Root variant="surface" style={{ background: 'transparent' }}>
-                <Table.Header>
-                  <Table.Row>
-                    <Table.ColumnHeaderCell>Nombre del Modelo</Table.ColumnHeaderCell>
-                    <Table.ColumnHeaderCell>Algoritmo</Table.ColumnHeaderCell>
-                    <Table.ColumnHeaderCell>MAE (Error)</Table.ColumnHeaderCell>
-                    <Table.ColumnHeaderCell>Precision Score</Table.ColumnHeaderCell>
-                    <Table.ColumnHeaderCell>F1 Score</Table.ColumnHeaderCell>
-                    <Table.ColumnHeaderCell>Recall</Table.ColumnHeaderCell>
-                    <Table.ColumnHeaderCell>Por Defecto</Table.ColumnHeaderCell>
-                    <Table.ColumnHeaderCell>Total Predicciones</Table.ColumnHeaderCell>
-                  </Table.Row>
-                </Table.Header>
-
-                <Table.Body>
-                  {modelos.slice((currentPageModels - 1) * pageSizeModels, currentPageModels * pageSizeModels).map((m) => (
-                    <Table.Row key={m.id}>
-                      <Table.RowHeaderCell>
-                        <Flex align="center" gap="2">
-                          <Database size={14} color="#a855f7" />
-                          <Text size="2" weight="bold" style={{ color: 'white' }}>{m.nombre_modelo}</Text>
-                        </Flex>
-                      </Table.RowHeaderCell>
-                      <Table.Cell style={{ fontFamily: 'monospace', fontSize: '11px' }}>{m.algoritmo}</Table.Cell>
-                      <Table.Cell>
-                        <Text style={{ color: '#f43f5e' }} weight="bold">
-                          {m.precision_modelo !== null ? `${m.precision_modelo.toFixed(2)} %` : '--'}
-                        </Text>
-                      </Table.Cell>
-                      <Table.Cell>
-                        <Text style={{ color: '#38bdf8' }} weight="medium">
-                          {m.precision_score !== null ? m.precision_score.toFixed(4) : '--'}
-                        </Text>
-                      </Table.Cell>
-                      <Table.Cell>
-                        {m.f1_score !== null ? m.f1_score.toFixed(4) : '--'}
-                      </Table.Cell>
-                      <Table.Cell>
-                        {m.recall_score !== null ? m.recall_score.toFixed(4) : '--'}
-                      </Table.Cell>
-                      <Table.Cell>
-                        <Badge color={m.es_default ? 'green' : 'gray'} variant="soft">
-                          {m.es_default ? 'SÍ' : 'NO'}
-                        </Badge>
-                      </Table.Cell>
-                      <Table.Cell>
-                        <Text weight="bold" style={{ color: 'white' }}>{m.predicciones_totales}</Text>
-                      </Table.Cell>
+              <ScrollArea style={{ height: '350px' }}>
+                <Table.Root variant="surface" style={{ background: 'transparent' }}>
+                  <Table.Header>
+                    <Table.Row>
+                      <Table.ColumnHeaderCell>Nombre del Modelo</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell>Algoritmo</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell>MAE (Error)</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell>Precision Score</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell>F1 Score</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell>Recall</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell>Por Defecto</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell>Total Predicciones</Table.ColumnHeaderCell>
                     </Table.Row>
-                  ))}
-                </Table.Body>
-              </Table.Root>
+                  </Table.Header>
+
+                  <Table.Body>
+                    {modelos.slice((currentPageModels - 1) * pageSizeModels, currentPageModels * pageSizeModels).map((m) => (
+                      <Table.Row key={m.id}>
+                        <Table.RowHeaderCell>
+                          <Flex align="center" gap="2">
+                            <Database size={14} color="#a855f7" />
+                            <Text size="2" weight="bold" style={{ color: 'white' }}>{m.nombre_modelo}</Text>
+                          </Flex>
+                        </Table.RowHeaderCell>
+                        <Table.Cell style={{ fontFamily: 'monospace', fontSize: '11px' }}>{m.algoritmo}</Table.Cell>
+                        <Table.Cell>
+                          <Text style={{ color: '#f43f5e' }} weight="bold">
+                            {m.precision_modelo !== null ? `${m.precision_modelo.toFixed(2)} %` : '--'}
+                          </Text>
+                        </Table.Cell>
+                        <Table.Cell>
+                          <Text style={{ color: '#38bdf8' }} weight="medium">
+                            {m.precision_score !== null ? m.precision_score.toFixed(4) : '--'}
+                          </Text>
+                        </Table.Cell>
+                        <Table.Cell>
+                          {m.f1_score !== null ? m.f1_score.toFixed(4) : '--'}
+                        </Table.Cell>
+                        <Table.Cell>
+                          {m.recall_score !== null ? m.recall_score.toFixed(4) : '--'}
+                        </Table.Cell>
+                        <Table.Cell>
+                          <Badge color={m.es_default ? 'green' : 'gray'} variant="soft">
+                            {m.es_default ? 'SÍ' : 'NO'}
+                          </Badge>
+                        </Table.Cell>
+                        <Table.Cell>
+                          <Text weight="bold" style={{ color: 'white' }}>{m.predicciones_totales}</Text>
+                        </Table.Cell>
+                      </Table.Row>
+                    ))}
+                  </Table.Body>
+                </Table.Root>
+              </ScrollArea>
 
               {/* Controles de Paginación para Modelos */}
               {modelos.length > pageSizeModels && (

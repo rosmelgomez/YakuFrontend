@@ -3,11 +3,9 @@
 import { useState, useTransition, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, Text, Flex, Grid, Select, Card, Badge, Progress, Switch, Separator, Button, Dialog, TextField, ScrollArea } from '@radix-ui/themes';
-import nextDynamic from 'next/dynamic';
-
-const DashboardHistoryChart = nextDynamic(() => import('@/components/charts/DashboardHistoryChart'), { ssr: false });
-const DashboardConsumptionChart = nextDynamic(() => import('@/components/charts/DashboardConsumptionChart'), { ssr: false });
-const DashboardHealthGauge = nextDynamic(() => import('@/components/charts/DashboardHealthGauge'), { ssr: false });
+import DashboardHistoryChart from '@/components/charts/DashboardHistoryChart';
+import DashboardConsumptionChart from '@/components/charts/DashboardConsumptionChart';
+import DashboardHealthGauge from '@/components/charts/DashboardHealthGauge';
 import NoCropsEmptyState from '@/components/layout/NoCropsEmptyState';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 import CountdownTimer from './CountdownTimer';
@@ -549,8 +547,8 @@ const SensorCard = ({ sensor, type }: { sensor: SensorData; type: 'soil_moisture
         <Box>
           <Text size="2" color="gray" mb="1" as="div" style={{ textTransform: 'uppercase', letterSpacing: '1px' }}>{metricaNombre}</Text>
           <Flex align="baseline" gap="1">
-            <Text size="8" weight="bold" style={{ color: valueColor }}>{sensor.valor.toFixed(1)}</Text>
-            <Text size="4" style={{ color: valueColor }} weight="medium">{metricaUnidad}</Text>
+            <Text size={{ initial: "6", sm: "7", md: "8" }} weight="bold" style={{ color: valueColor }}>{sensor.valor.toFixed(1)}</Text>
+            <Text size={{ initial: "3", sm: "4" }} style={{ color: valueColor }} weight="medium">{metricaUnidad}</Text>
           </Flex>
         </Box>
 
@@ -938,7 +936,7 @@ const ResumenDiaCard = ({
     <Card size="3" style={{ background: '#111827', borderColor: '#1f2937', borderRadius: '16px', height: '100%' }}>
       <Text size="3" weight="bold" color="indigo" mb="3" as="div">Resumen del día</Text>
 
-      <Flex direction="column" align="center" mb="2" style={{ position: 'relative', minWidth: 0, height: '110px' }}>
+      <Flex direction="column" align="center" mb="2" style={{ position: 'relative', width: '100%', minWidth: 0, height: '110px' }}>
         {!isClientMounted ? (
           <Flex align="center" justify="center" style={{ width: '100%', height: '110px' }}>
             <Text color="gray">Cargando gráfico...</Text>

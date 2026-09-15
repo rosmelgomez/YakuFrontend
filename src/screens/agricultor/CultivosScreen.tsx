@@ -388,16 +388,16 @@ export default function CultivosScreen() {
   };
 
   return (
-    <div className="page-content w-full px-4 sm:px-5 md:px-6 py-4 sm:py-5 md:py-6 space-y-6">
+    <div className="page-content w-full px-2 sm:px-4 md:px-6 py-3 sm:py-4 md:py-5 space-y-4 sm:space-y-6">
       {/* Header with Title and Actions */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-              <Sprout size={24} />
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+              <Sprout className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Mis Cultivos</h2>
+              <h2 className="text-base sm:text-xl md:text-2xl font-bold text-white tracking-tight">Mis Cultivos</h2>
               <p className="text-slate-400 text-xs sm:text-sm">
                 {crops.length} cultivo{crops.length !== 1 ? "s" : ""} registrado{crops.length !== 1 ? "s" : ""} · {totalAreaM2.toLocaleString("es-PE")} m² totales
               </p>
@@ -498,34 +498,34 @@ export default function CultivosScreen() {
             return (
               <div
                 key={crop.idCultivo}
-                className="bg-slate-900/85 border border-slate-800/90 hover:border-slate-700/80 transition-all rounded-2xl p-5 shadow-lg flex flex-col justify-between"
+                className="bg-slate-900/85 border border-slate-800/90 hover:border-slate-700/80 transition-all rounded-2xl p-3.5 sm:p-5 shadow-lg flex flex-col justify-between"
               >
                 <div>
-                  <div className="flex items-start justify-between gap-2 mb-3">
+                  <div className="flex items-start justify-between gap-2 mb-2.5 sm:mb-3">
                     <div className="min-w-0">
-                      <h3 className="font-bold text-white text-base truncate">{crop.nombreCultivo}</h3>
+                      <h3 className="font-bold text-white text-sm sm:text-base truncate">{crop.nombreCultivo}</h3>
                       <p className="text-slate-400 text-xs mt-0.5 flex items-center gap-1 truncate">
                         <Leaf size={12} className="text-emerald-400 shrink-0" />
                         {crop.conceptoPlanta} {crop.lugar ? `· ${crop.lugar}` : ""}
                       </p>
                     </div>
                     <span
-                      className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border shrink-0 ${badge.bg} ${badge.text} ${badge.border}`}
+                      className={`px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-[11px] font-semibold border shrink-0 ${badge.bg} ${badge.text} ${badge.border}`}
                     >
                       {crop.etapaCrecimiento}
                     </span>
                   </div>
 
                   {/* 4 Stats Grid */}
-                  <div className="grid grid-cols-2 gap-2.5 mb-4 text-xs bg-slate-950/40 p-3 rounded-xl border border-slate-800/50">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-2.5 mb-3 sm:mb-4 text-[11px] sm:text-xs bg-slate-950/40 p-2.5 sm:p-3 rounded-xl border border-slate-800/50">
                     <div>
-                      <span className="text-slate-400 block mb-0.5">Superficie</span>
+                      <span className="text-[10px] text-slate-400 block mb-0.5">Superficie</span>
                       <span className="font-semibold text-slate-200 font-mono">
                         {crop.area !== null ? `${crop.area.toLocaleString("es-PE")} m²` : "No registrada"}
                       </span>
                     </div>
                     <div>
-                      <span className="text-slate-400 block mb-0.5">Fecha Siembra</span>
+                      <span className="text-[10px] text-slate-400 block mb-0.5">Fecha Siembra</span>
                       <span className="font-semibold text-slate-200">
                         {crop.fechaSiembra
                           ? new Date(crop.fechaSiembra).toLocaleDateString("es-PE", {
@@ -537,7 +537,7 @@ export default function CultivosScreen() {
                       </span>
                     </div>
                     <div>
-                      <span className="text-slate-400 block mb-0.5">Sensores IoT</span>
+                      <span className="text-[10px] text-slate-400 block mb-0.5">Sensores IoT</span>
                       <span className="font-semibold text-slate-200 flex items-center gap-1">
                         <Activity size={12} className="text-sky-400" />
                         {crop.sensoresCount} vinculado{crop.sensoresCount !== 1 ? "s" : ""}
@@ -545,7 +545,7 @@ export default function CultivosScreen() {
                     </div>
                     <div>
                       <div className="flex items-center gap-1 mb-0.5">
-                        <span className="text-slate-400">Días en campo</span>
+                        <span className="text-[10px] text-slate-400">Días en campo</span>
                         <span
                           className="text-[10px] text-slate-500 cursor-help"
                           title="Días transcurridos desde la fecha de siembra registrada (edad del cultivo)"
@@ -560,20 +560,20 @@ export default function CultivosScreen() {
                   </div>
 
                   {/* Registro de Riegos Ejecutados */}
-                  <div className="mb-4 bg-slate-950/60 p-3 rounded-xl border border-slate-800/60 space-y-2">
+                  <div className="mb-3 sm:mb-4 bg-slate-950/60 p-2.5 sm:p-3 rounded-xl border border-slate-800/60 space-y-1.5 sm:space-y-2">
                     <div className="flex items-center justify-between text-xs text-slate-400">
                       <span className="flex items-center gap-1.5 font-medium text-slate-300">
                         <Droplets size={13} className="text-sky-400" />
-                        Riegos ejecutados hoy:
+                        Riegos hoy:
                       </span>
                       <span className="text-slate-200 font-mono font-semibold">
                         {crop.riegosHoy > 0
-                          ? `${crop.riegosHoy} evento${crop.riegosHoy !== 1 ? "s" : ""} (${crop.litrosHoy.toFixed(1)} L)`
+                          ? `${crop.riegosHoy} (${crop.litrosHoy.toFixed(1)} L)`
                           : "0 hoy (0.0 L)"}
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1.5 border-t border-slate-800/60">
+                    <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-slate-400 pt-1.5 border-t border-slate-800/60">
                       <span>Último riego:</span>
                       <span className="text-slate-300">
                         {crop.ultimoRiego
@@ -589,54 +589,54 @@ export default function CultivosScreen() {
                   </div>
 
                   {/* Umbrales de Sensores para las 4 Variables */}
-                  <div className="mb-4 bg-slate-950/50 p-3 rounded-xl border border-slate-800/60 space-y-2">
+                  <div className="mb-3 sm:mb-4 bg-slate-950/50 p-2.5 sm:p-3 rounded-xl border border-slate-800/60 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                        🌱 Umbrales (4 Variables)
+                      <span className="text-[11px] sm:text-xs font-semibold text-slate-300 flex items-center gap-1">
+                        🌱 Umbrales
                       </span>
                       <button
                         onClick={() => handleOpenUmbralesModal(crop)}
-                        className="text-[11px] text-emerald-400 hover:text-emerald-300 hover:underline font-medium flex items-center gap-1"
+                        className="text-[10px] sm:text-[11px] text-emerald-400 hover:text-emerald-300 hover:underline font-medium flex items-center gap-1"
                       >
                         <Sliders size={12} />
                         Configurar
                       </button>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="bg-slate-900/70 p-2 rounded-lg border border-slate-800/60">
-                        <span className="text-[10px] text-slate-400 block mb-0.5">💧 Hum. Suelo</span>
-                        <span className="font-mono font-semibold text-emerald-400">
+                    <div className="grid grid-cols-2 gap-1.5 sm:gap-2 text-[11px] sm:text-xs">
+                      <div className="bg-slate-900/70 p-1.5 sm:p-2 rounded-lg border border-slate-800/60">
+                        <span className="text-[9px] sm:text-[10px] text-slate-400 block mb-0.5">💧 Hum. Suelo</span>
+                        <span className="font-mono font-semibold text-emerald-400 text-[11px] sm:text-xs">
                           {crop.umbrales?.humedadSuelo
-                            ? `${crop.umbrales.humedadSuelo.min}% – ${crop.umbrales.humedadSuelo.max}%`
-                            : "35% – 75%"}
+                            ? `${crop.umbrales.humedadSuelo.min}%–${crop.umbrales.humedadSuelo.max}%`
+                            : "35%–75%"}
                         </span>
                       </div>
 
-                      <div className="bg-slate-900/70 p-2 rounded-lg border border-slate-800/60">
-                        <span className="text-[10px] text-slate-400 block mb-0.5">🌡️ Temp. Suelo</span>
-                        <span className="font-mono font-semibold text-amber-400">
+                      <div className="bg-slate-900/70 p-1.5 sm:p-2 rounded-lg border border-slate-800/60">
+                        <span className="text-[9px] sm:text-[10px] text-slate-400 block mb-0.5">🌡️ Temp. Suelo</span>
+                        <span className="font-mono font-semibold text-amber-400 text-[11px] sm:text-xs">
                           {crop.umbrales?.temperaturaSuelo
-                            ? `${crop.umbrales.temperaturaSuelo.min}°C – ${crop.umbrales.temperaturaSuelo.max}°C`
-                            : "18°C – 26°C"}
+                            ? `${crop.umbrales.temperaturaSuelo.min}°–${crop.umbrales.temperaturaSuelo.max}°`
+                            : "18°–26°"}
                         </span>
                       </div>
 
-                      <div className="bg-slate-900/70 p-2 rounded-lg border border-slate-800/60">
-                        <span className="text-[10px] text-slate-400 block mb-0.5">🌫️ Hum. Ambiente</span>
-                        <span className="font-mono font-semibold text-sky-400">
+                      <div className="bg-slate-900/70 p-1.5 sm:p-2 rounded-lg border border-slate-800/60">
+                        <span className="text-[9px] sm:text-[10px] text-slate-400 block mb-0.5">🌫️ Hum. Amb.</span>
+                        <span className="font-mono font-semibold text-sky-400 text-[11px] sm:text-xs">
                           {crop.umbrales?.humedadAmbiente
-                            ? `${crop.umbrales.humedadAmbiente.min}% – ${crop.umbrales.humedadAmbiente.max}%`
-                            : "40% – 80%"}
+                            ? `${crop.umbrales.humedadAmbiente.min}%–${crop.umbrales.humedadAmbiente.max}%`
+                            : "40%–80%"}
                         </span>
                       </div>
 
-                      <div className="bg-slate-900/70 p-2 rounded-lg border border-slate-800/60">
-                        <span className="text-[10px] text-slate-400 block mb-0.5">☀️ Temp. Ambiente</span>
-                        <span className="font-mono font-semibold text-orange-400">
+                      <div className="bg-slate-900/70 p-1.5 sm:p-2 rounded-lg border border-slate-800/60">
+                        <span className="text-[9px] sm:text-[10px] text-slate-400 block mb-0.5">☀️ Temp. Amb.</span>
+                        <span className="font-mono font-semibold text-orange-400 text-[11px] sm:text-xs">
                           {crop.umbrales?.temperaturaAmbiente
-                            ? `${crop.umbrales.temperaturaAmbiente.min}°C – ${crop.umbrales.temperaturaAmbiente.max}°C`
-                            : "18°C – 30°C"}
+                            ? `${crop.umbrales.temperaturaAmbiente.min}°–${crop.umbrales.temperaturaAmbiente.max}°`
+                            : "18°–30°"}
                         </span>
                       </div>
                     </div>

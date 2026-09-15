@@ -5,7 +5,11 @@ const ts = require('typescript');
 const source = fs.readFileSync('src/lib/firmware/esp-flasher.ts', 'utf8');
 const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
 const mod = { exports: {} };
-new Function('require', 'exports', 'setTimeout', js)(() => ({}), mod.exports, (fn, ms) => setTimeout(fn, ms === 12000 ? 30 : ms));
+new Function('require', 'exports', 'setTimeout', js)((moduleName) => (
+  moduleName === '@/lib/api/client'
+    ? { fetchFromFastAPI: (...args) => globalThis.fetch(...args) }
+    : {}
+), mod.exports, (fn, ms) => setTimeout(fn, ms === 12000 ? 30 : ms));
 const { EspFlasher } = mod.exports;
 function fake(response, failWrite = false) {
   let sent = '';
@@ -47,4 +51,36 @@ test('requires the firmware baud rate', async () => {
   const { flasher } = fake(null);
   flasher.monitorBaudRate = 9600;
   await assert.rejects(flasher.sendProvisioning({}), /115200/);
+});
+
+test('downloads firmware segments from the FastAPI versions endpoint', async () => {
+  const originalFetch = globalThis.fetch;
+  const content = new TextEncoder().encode('firmware');
+  const digest = await crypto.subtle.digest('SHA-256', content);
+  const sha256 = Buffer.from(digest).toString('hex');
+  let requestedUrl = '';
+  globalThis.fetch = async (url) => {
+    requestedUrl = url;
+    return new Response(content);
+  };
+
+  try {
+    const flasher = new EspFlasher(() => {});
+    flasher.loader = {
+      writeFlash: async ({ fileArray }) => assert.equal(fileArray.length, 1),
+      after: async () => {},
+    };
+    await flasher.flash(7, [{
+      nombre: 'esp32_s3.ino.bootloader.bin',
+      direccion: 0,
+      sha256,
+      tamano: content.length,
+    }], () => {});
+    assert.equal(
+      requestedUrl,
+      '/firmware/versions/7/files/esp32_s3.ino.bootloader.bin',
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });

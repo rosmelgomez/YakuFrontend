@@ -68,6 +68,7 @@ export interface ControlData {
   };
   riegoActivo?: RiegoActivoInfo | null;
   ultimoRiegoFechaFin?: string | null;
+  tiempoDesdeUltimoRiegoSeg?: number | null;
   cooldownMinutos?: number;
 }
 

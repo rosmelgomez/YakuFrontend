@@ -38,14 +38,14 @@ export default function WarehousesScreen() {
 
   if (loading) {
     return (
-      <Box className="page-content" px={{ initial: "4", sm: "5", md: "6" }} py={{ initial: "4", sm: "5", md: "6" }}>
+      <Box className="page-content" px={{ initial: "2", sm: "4", md: "6" }} py={{ initial: "3", sm: "4", md: "5" }}>
         <DashboardSkeleton variant="admin" />
       </Box>
     );
   }
 
   return (
-    <Box className="page-content" px={{ initial: "4", sm: "5", md: "6" }} py={{ initial: "4", sm: "5", md: "6" }}>
+    <Box className="page-content" px={{ initial: "2", sm: "4", md: "6" }} py={{ initial: "3", sm: "4", md: "5" }}>
       <AlmacenesClient
         initialAlmacenes={data.almacenes}
         initialDevices={data.devices}

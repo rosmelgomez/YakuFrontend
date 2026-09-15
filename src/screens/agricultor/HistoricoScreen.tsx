@@ -58,7 +58,7 @@ export default function HistoricoScreen() {
 
   if (loading) {
     return (
-      <Box className="page-content" px={{ initial: "4", sm: "5", md: "6" }} py={{ initial: "4", sm: "5", md: "6" }}>
+      <Box className="page-content" px={{ initial: "2", sm: "4", md: "6" }} py={{ initial: "3", sm: "4", md: "5" }}>
         <DashboardSkeleton variant="chart" />
       </Box>
     );
@@ -70,7 +70,7 @@ export default function HistoricoScreen() {
 
   if (cultivosBase.length === 0) {
     return (
-      <Box className="page-content" px={{ initial: "4", sm: "5", md: "6" }} py={{ initial: "4", sm: "5", md: "6" }}>
+      <Box className="page-content" px={{ initial: "2", sm: "4", md: "6" }} py={{ initial: "3", sm: "4", md: "5" }}>
         <NoCropsEmptyState
           title="No tienes historial de telemetría"
           description="Para visualizar los gráficos históricos de humedad de suelo, humedad ambiente y temperatura, primero debes registrar tu cultivo."
@@ -82,7 +82,7 @@ export default function HistoricoScreen() {
   const selectedCultivoId = cultivosBase[0].id;
 
   return (
-    <Box className="page-content" px={{ initial: "4", sm: "5", md: "6" }} py={{ initial: "4", sm: "5", md: "6" }}>
+    <Box className="page-content" px={{ initial: "2", sm: "4", md: "6" }} py={{ initial: "3", sm: "4", md: "5" }}>
       <HistoricoMultiChart
         userId={userId}
         cultivos={cultivosBase}

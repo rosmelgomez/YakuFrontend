@@ -4,9 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 
 import { Box, Text, Flex, Card, Button, Grid, ScrollArea, Select, TextField } from '@radix-ui/themes';
-import nextDynamic from 'next/dynamic';
-
-const HistoricoMultiLineChart = nextDynamic(() => import('@/components/charts/HistoricoMultiLineChart'), { ssr: false });
+import HistoricoMultiLineChart from '@/components/charts/HistoricoMultiLineChart';
 import type { HistoricoResponse } from '@/services/historico';
 import { obtenerDatosHistoricoPorCultivo } from '@/actions/historico';
 import SearchableSelect from '@/components/ui/SearchableSelect';
@@ -304,48 +302,29 @@ const [filterMode, setFilterMode] = useState<FilterMode>('relative');
       </Flex>
 
       {/* TARJETA 1: Gráfico Macro */}
-      <Card size="4" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '16px', minHeight: '500px' }}>
-        <Flex justify="between" align="center" mb="6" wrap="wrap" gap="4">
+      <Card size={{ initial: "2", sm: "3", md: "4" }} style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '16px' }}>
+        <Flex justify="between" align="center" mb="4" wrap="wrap" gap="3">
           <Box>
-            <Text size="4" weight="bold" color="indigo" mb="1" as="div">
+            <Text size={{ initial: "3", sm: "4" }} weight="bold" color="indigo" mb="1" as="div">
               Historial de Parámetros
             </Text>
             <Text size="2" color="gray" as="div">
               Mostrando datos de las {rango === 0 ? 'últimas 6 horas' : rango === 1 ? 'últimas 24 horas' : `últimos ${rango} días`}
             </Text>
           </Box>
-
-          {false && <Flex gap="2" style={{ background: 'var(--bg-mockup)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-mockup)' }}>
-            {[
-              { label: '6h', value: 0 },
-              { label: '24h', value: 1 },
-              { label: '7d', value: 7 }
-            ].map((option) => (
-              <Button 
-                key={option.value} 
-                variant={rango === option.value ? "solid" : "ghost"} 
-                color="green"
-                disabled={!isRelativeMode}
-                onClick={() => handleRangoChange(option.value)}
-                style={{ cursor: isRelativeMode ? 'pointer' : 'default', borderRadius: '6px', opacity: isRelativeMode ? 1 : 0.45 }}
-              >
-                {option.label}
-              </Button>
-            ))}
-          </Flex>}
         </Flex>
 
-        <Box style={{ width: '100%', minWidth: 0, height: '380px' }}>
+        <Box className="w-full min-w-0 h-[240px] sm:h-[320px] md:h-[380px]">
           <HistoricoMultiLineChart filteredChartData={filteredChartData} />
         </Box>
       </Card>
 
-      <Grid columns={{ initial: '1', lg: '2' }} gap="5">
+      <Grid columns={{ initial: '1', lg: '2' }} gap="4">
         
         {/* TARJETA 2: Estadísticas */}
         {activeStats && (
-          <Card size="4" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '16px', height: '100%' }}>
-            <Text size="4" weight="bold" color="indigo" mb="5" as="div">
+          <Card size={{ initial: "2", sm: "3", md: "4" }} style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '16px', height: '100%' }}>
+            <Text size={{ initial: "3", sm: "4" }} weight="bold" color="indigo" mb="4" as="div">
               Estadísticas del período — {rango === 0 ? '6 horas' : rango === 1 ? '24 horas' : `${rango} días`}
             </Text>
             <ScrollArea scrollbars="horizontal" style={{ width: '100%' }}>
@@ -369,7 +348,7 @@ const [filterMode, setFilterMode] = useState<FilterMode>('relative');
         )}
 
         {/* TARJETA 3: Log de Riegos */}
-        <Card size="4" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '16px', height: '100%' }}>
+        <Card size={{ initial: "2", sm: "3", md: "4" }} style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '16px', height: '100%' }}>
           <Text size="4" weight="bold" color="indigo" mb="5" as="div">
             Log de riegos
           </Text>
