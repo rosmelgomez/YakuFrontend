@@ -3,10 +3,13 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import FloatingToast from '@/components/ui/FloatingToast';
 import { useAuth } from '@/context/AuthContext';
+import { AppNotification } from '@/lib/notifications';
 import {
-  AppNotification,
-  DEFAULT_AGRICULTOR_NOTIFICATIONS,
-} from '@/lib/notifications';
+  getNotificaciones,
+  marcarNotificacionLeida,
+  marcarTodasLeidas,
+  limpiarNotificaciones,
+} from '@/services/notificaciones';
 
 export type { AppNotification };
 
@@ -41,58 +44,42 @@ const NotificationContext = createContext<NotificationContextType>({
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const isAdmin = user?.rol === 'administrador' || (user as any)?.id_rol === 1;
-  const storageKey = 'yaku_notifications_agricultor';
 
   const [activeAlert, setActiveAlert] = useState<Alerta | null>(null);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
-  const getInitialNotifications = useCallback((): AppNotification[] => {
-    if (isAdmin) return [];
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem(storageKey);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        }
-      } catch {}
+  // El backend es la única fuente de verdad: así el estado leído/eliminado
+  // queda igual en todos los dispositivos de la misma cuenta.
+  const fetchNotificaciones = useCallback(async () => {
+    if (isAdmin) {
+      setNotifications([]);
+      return;
     }
-    return DEFAULT_AGRICULTOR_NOTIFICATIONS;
+    try {
+      setNotifications(await getNotificaciones());
+    } catch {}
   }, [isAdmin]);
 
-  const [notifications, setNotifications] = useState<AppNotification[]>(getInitialNotifications);
-
   useEffect(() => {
-    setNotifications(getInitialNotifications());
-  }, [getInitialNotifications]);
+    fetchNotificaciones();
+  }, [fetchNotificaciones]);
 
   const markAsRead = (id: string) => {
     if (isAdmin) return;
-    setNotifications((prev) => {
-      const updated = prev.map((n) => (n.id === id ? { ...n, leida: true } : n));
-      try {
-        localStorage.setItem(storageKey, JSON.stringify(updated));
-      } catch {}
-      return updated;
-    });
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, leida: true } : n)));
+    marcarNotificacionLeida(id).catch(() => {});
   };
 
   const markAllAsRead = () => {
     if (isAdmin) return;
-    setNotifications((prev) => {
-      const updated = prev.map((n) => ({ ...n, leida: true }));
-      try {
-        localStorage.setItem(storageKey, JSON.stringify(updated));
-      } catch {}
-      return updated;
-    });
+    setNotifications((prev) => prev.map((n) => ({ ...n, leida: true })));
+    marcarTodasLeidas().catch(() => {});
   };
 
   const clearNotifications = () => {
     if (isAdmin) return;
     setNotifications([]);
-    try {
-      localStorage.removeItem(storageKey);
-    } catch {}
+    limpiarNotificaciones().catch(() => {});
   };
 
   const addNotification = useCallback((notif: Omit<AppNotification, 'id' | 'timestamp' | 'leida'> & { id?: string }) => {
@@ -108,13 +95,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       origen: notif.origen,
       rolDestino: 'agricultor',
     };
-    setNotifications((prev) => {
-      const updated = [newNotif, ...prev.filter((n) => n.id !== newNotif.id)].slice(0, 30);
-      try {
-        localStorage.setItem(storageKey, JSON.stringify(updated));
-      } catch {}
-      return updated;
-    });
+    setNotifications((prev) => [newNotif, ...prev.filter((n) => n.id !== newNotif.id)].slice(0, 30));
   }, [isAdmin]);
 
   const unreadCount = isAdmin ? 0 : notifications.filter((n) => !n.leida).length;
@@ -309,6 +290,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                 window.dispatchEvent(new CustomEvent('yaku:control_update', { detail: payload }));
               }
             }
+            if (payload.tipo === 'notificaciones_sync') {
+              if (!isAdmin) void fetchNotificaciones();
+              return;
+            }
             if (!isAdmin && (payload.severidad || payload.titulo)) {
               const alerta = payload as Alerta;
               setActiveAlert(alerta);
@@ -359,7 +344,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       if (reconnectTimeout) clearTimeout(reconnectTimeout);
       if (autoHideTimeout) clearTimeout(autoHideTimeout);
     };
-  }, [isAdmin, addNotification]);
+  }, [isAdmin, addNotification, fetchNotificaciones]);
 
   return (
     <NotificationContext.Provider

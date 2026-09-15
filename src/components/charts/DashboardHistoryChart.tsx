@@ -19,24 +19,22 @@ export default function DashboardHistoryChart({ chartData, config, umbralVisual 
 
   // Dominio Y seguro para evitar división por cero (NaN) cuando todos los valores son idénticos
   const yDomain = useMemo(() => {
-    if (config?.isPercentage) return [0, 100];
-    return [
-      (dataMin: number) => {
-        const val = Number.isFinite(dataMin) ? dataMin : 15;
-        const ref = umbralVisual !== null && Number.isFinite(umbralVisual) ? umbralVisual - 5 : val - 5;
-        return Math.floor(Math.min(val, ref, 0));
-      },
-      (dataMax: number) => {
-        const val = Number.isFinite(dataMax) ? dataMax : 30;
-        const ref = umbralVisual !== null && Number.isFinite(umbralVisual) ? umbralVisual + 5 : val + 5;
-        return Math.ceil(Math.max(val, ref, 35));
-      }
-    ];
+    if (config?.isPercentage) return [0, 100] as [number, number];
+    return ([dataMin, dataMax]: readonly [number | 'auto', number | 'auto']) => {
+      const min = typeof dataMin === 'number' && Number.isFinite(dataMin) ? dataMin : 15;
+      const max = typeof dataMax === 'number' && Number.isFinite(dataMax) ? dataMax : 30;
+      const minReference = umbralVisual !== null && Number.isFinite(umbralVisual) ? umbralVisual - 5 : min - 5;
+      const maxReference = umbralVisual !== null && Number.isFinite(umbralVisual) ? umbralVisual + 5 : max + 5;
+      return [
+        Math.floor(Math.min(min, minReference, 0)),
+        Math.ceil(Math.max(max, maxReference, 35))
+      ] as [number, number];
+    };
   }, [config?.isPercentage, umbralVisual]);
 
   return (
-    <div style={{ width: '100%', height: '250px', minHeight: '220px', position: 'relative' }}>
-      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
+    <div style={{ width: '100%', minWidth: '1px', height: '250px', minHeight: '220px', position: 'relative' }}>
+      <ResponsiveContainer width="100%" height={250} minWidth={1} minHeight={200} initialDimension={{ width: 600, height: 250 }}>
         <LineChart data={safeData} margin={{ top: 10, right: 12, left: -6, bottom: 4 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#334155" strokeOpacity={0.5} vertical={false} />
           <XAxis 

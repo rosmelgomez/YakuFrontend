@@ -450,17 +450,6 @@ input, select, textarea {
   }
 }
 
-/* Reglas globales de fluidez para Recharts y visualización de gráficos */
-.recharts-responsive-container,
-.recharts-wrapper {
-  max-width: 100% !important;
-  min-width: 0 !important;
-}
-
-.recharts-surface {
-  max-width: 100% !important;
-}
-
 @media (max-width: 639px) {
   .recharts-legend-wrapper {
     font-size: 11px !important;

@@ -389,6 +389,47 @@ export default function CultivosScreen() {
 
   return (
     <div className="page-content w-full px-2 sm:px-4 md:px-6 py-3 sm:py-4 md:py-5 space-y-4 sm:space-y-6">
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            .umbral-range-slider {
+              -webkit-appearance: none;
+              appearance: none;
+              width: 100%;
+              height: 28px;
+              background: transparent;
+              touch-action: none;
+            }
+            .umbral-range-slider::-webkit-slider-runnable-track {
+              height: 6px;
+              border-radius: 9999px;
+              background: rgba(30, 41, 59, 0.9);
+            }
+            .umbral-range-slider::-webkit-slider-thumb {
+              -webkit-appearance: none;
+              appearance: none;
+              width: 22px;
+              height: 22px;
+              margin-top: -8px;
+              border-radius: 9999px;
+              background: #10b981;
+              border: 2px solid #022c22;
+            }
+            .umbral-range-slider::-moz-range-track {
+              height: 6px;
+              border-radius: 9999px;
+              background: rgba(30, 41, 59, 0.9);
+            }
+            .umbral-range-slider::-moz-range-thumb {
+              width: 22px;
+              height: 22px;
+              border-radius: 9999px;
+              background: #10b981;
+              border: 2px solid #022c22;
+            }
+          `,
+        }}
+      />
       {/* Header with Title and Actions */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
         <div>
@@ -924,23 +965,23 @@ export default function CultivosScreen() {
         >
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-5 sm:p-6 text-white shadow-2xl space-y-5 my-8">
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+            <div className="flex items-start justify-between gap-3 pb-4 border-b border-slate-800">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
                   <Sliders size={20} />
                 </div>
-                <div>
-                  <h3 className="font-bold text-lg text-white flex items-center gap-1.5">
+                <div className="min-w-0">
+                  <h3 className="font-bold text-base sm:text-lg text-white flex items-center gap-1.5">
                     🌱 Configuración de Umbrales
                   </h3>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-400 truncate">
                     Rangos operativos para <strong className="text-emerald-400">{selectedCropForUmbrales.nombreCultivo}</strong>
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsUmbralesModalOpen(false)}
-                className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+                className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors shrink-0"
               >
                 <X size={18} />
               </button>
@@ -986,14 +1027,14 @@ export default function CultivosScreen() {
                       key={u.id}
                       className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3.5 space-y-3"
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-base">{icon}</span>
-                          <span className="font-semibold text-white text-xs sm:text-sm">
+                      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-base shrink-0">{icon}</span>
+                          <span className="font-semibold text-white text-xs sm:text-sm truncate">
                             {u.nombre}
                           </span>
                         </div>
-                        <span className="font-mono text-xs font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800/60">
+                        <span className="font-mono text-xs font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800/60 shrink-0 whitespace-nowrap">
                           {u.min} {u.unidad} – {u.max} {u.unidad}
                         </span>
                       </div>
@@ -1029,27 +1070,27 @@ export default function CultivosScreen() {
                       </div>
 
                       {/* Sliders */}
-                      <div className="space-y-1.5 pt-1">
+                      <div className="space-y-1 pt-1">
                         <div className="flex items-center gap-2 text-[10px] text-slate-400">
-                          <span>Ajuste rápido Mín:</span>
+                          <span className="w-24 sm:w-auto shrink-0">Ajuste rápido Mín:</span>
                           <input
                             type="range"
                             min={0}
                             max={maxLimit}
                             value={u.min}
                             onChange={(e) => handleUmbralChange(u.id, "min", Number(e.target.value))}
-                            className="flex-1 accent-emerald-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
+                            className="umbral-range-slider flex-1 cursor-pointer"
                           />
                         </div>
                         <div className="flex items-center gap-2 text-[10px] text-slate-400">
-                          <span>Ajuste rápido Máx:</span>
+                          <span className="w-24 sm:w-auto shrink-0">Ajuste rápido Máx:</span>
                           <input
                             type="range"
                             min={0}
                             max={maxLimit}
                             value={u.max}
                             onChange={(e) => handleUmbralChange(u.id, "max", Number(e.target.value))}
-                            className="flex-1 accent-emerald-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
+                            className="umbral-range-slider flex-1 cursor-pointer"
                           />
                         </div>
                       </div>

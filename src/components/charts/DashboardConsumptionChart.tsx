@@ -20,8 +20,8 @@ export default function DashboardConsumptionChart({ chartData, config, limite }:
   }, [safeData, limite]);
 
   return (
-    <div style={{ width: '100%', height: '250px', minHeight: '220px', position: 'relative' }}>
-      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
+    <div style={{ width: '100%', minWidth: '1px', height: '250px', minHeight: '220px', position: 'relative' }}>
+      <ResponsiveContainer width="100%" height={250} minWidth={1} minHeight={200} initialDimension={{ width: 600, height: 250 }}>
         <LineChart data={safeData} margin={{ top: 10, right: 12, left: -6, bottom: 4 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#334155" strokeOpacity={0.5} vertical={false} />
           <XAxis 
