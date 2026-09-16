@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { apiClient, ApiError } from "@/services/apiClient";
 import type { ControlData } from "../types";
 
 interface UseControlDataOptions {
@@ -45,34 +46,24 @@ export function useControlData({
     abortControllerRef.current = controller;
 
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("yaku_token") : null;
-      const headers: Record<string, string> = {
-        "Cache-Control": "no-cache",
-      };
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-
-      let res = await fetch(`/api/control/${targetCropId}`, {
-        method: "GET",
-        signal: controller.signal,
-        headers,
-      });
-
-      if (!res.ok) {
-        res = await fetch(`/api/control/data?idCultivo=${targetCropId}`, {
-          method: "GET",
+      let json: any;
+      try {
+        json = await apiClient(`/control/${targetCropId}`, {
           signal: controller.signal,
-          headers,
+          headers: { "Cache-Control": "no-cache" },
         });
+      } catch (err) {
+        if (err instanceof ApiError) {
+          json = await apiClient(`/control/data?idCultivo=${targetCropId}`, {
+            signal: controller.signal,
+            headers: { "Cache-Control": "no-cache" },
+          });
+        } else {
+          throw err;
+        }
       }
 
-      if (!res.ok) {
-        throw new Error(`HTTP error ${res.status}`);
-      }
-
-      const json = await res.json();
-      const resolvedData = json.data ?? (json.bomba || json.valvula ? json : null);
+      const resolvedData = json?.data ?? (json?.bomba || json?.valvula ? json : null);
       if (resolvedData && cropIdRef.current === targetCropId) {
         setControlData(resolvedData);
       }

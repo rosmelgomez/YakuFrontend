@@ -386,16 +386,7 @@ export async function actualizarAsignacionComponente(asignacionId: number, paylo
 }
 
 export async function desvincularComponenteDeDispositivo(dispositivoId: number, componenteId: number) {
-  const res = await fetchFromFastAPI(`/dispositivos/admin/desvincular-componente/${dispositivoId}/${componenteId}`, {
-    method: "POST",
-  });
-  if (!res.ok) {
-    throw new Error(await res.text() || "Error al desvincular componente del dispositivo");
-  }
-  revalidatePath('/dashboard/administrador/dispositivos');
-  revalidatePath('/dashboard/agricultor/control');
-  revalidatePath('/dashboard/agricultor');
-  return res.json();
+  return liberarComponenteAStock(componenteId);
 }
 
 export async function cambiarEstadoDispositivoStock(dispositivoId: number, nuevoEstado: string) {

@@ -93,8 +93,9 @@ export async function calibrarSensor(dispositivoId: number, pinGpio: number, off
       const errorText = await res.text();
       throw new Error(errorText || "Error en comunicación con backend FastAPI");
     }
+    const data = await res.json();
     revalidatePath('/dashboard/agricultor/control');
-    return { success: true };
+    return { success: true, data };
   } catch (error: any) {
     return { success: false, error: error.message || "Error al calibrar" };
   }

@@ -30,11 +30,18 @@ export function SensoresPanel({
   const [calibSensorName, setCalibSensorName] = useState<string>("");
   const [calibOffset, setCalibOffset] = useState<string>("0.0");
 
+  const OFFSET_MIN = -50;
+  const OFFSET_MAX = 50;
+
   const handleCalibrateSubmit = async () => {
     if (calibDevId === null || calibPin === null) return;
     const offsetVal = parseFloat(calibOffset);
     if (isNaN(offsetVal)) {
       alert("Por favor ingrese un offset numérico válido.");
+      return;
+    }
+    if (offsetVal < OFFSET_MIN || offsetVal > OFFSET_MAX) {
+      alert(`El offset debe estar entre ${OFFSET_MIN} y ${OFFSET_MAX}.`);
       return;
     }
     await onCalibrarSensor(calibDevId, calibPin, offsetVal);
@@ -43,6 +50,56 @@ export function SensoresPanel({
 
   return (
     <Flex direction="column" gap="5">
+      {/* Ayuda memoria: cómo calibrar un sensor */}
+      <Card
+        size="2"
+        style={{
+          background: "rgba(59, 130, 246, 0.06)",
+          borderColor: "rgba(59, 130, 246, 0.25)",
+          borderRadius: "12px",
+          padding: "16px",
+        }}
+      >
+        <Flex gap="3" align="start">
+          <Text size="5" style={{ marginTop: "-2px" }}>
+            ℹ️
+          </Text>
+          <Box>
+            <Text size="2" weight="bold" style={{ color: "#93c5fd" }} as="div">
+              Ayuda memoria: ¿cómo calibro un sensor?
+            </Text>
+            <Text
+              size="1"
+              color="gray"
+              style={{ display: "block", marginTop: "4px", lineHeight: "1.5" }}
+            >
+              Compare la lectura que muestra el sistema para este sensor con una medición de
+              referencia (un higrómetro/termómetro de mano, o el dato real que usted observa en el
+              cultivo). El offset es la diferencia que hay que sumarle a la lectura del sistema
+              para que coincida con la realidad:
+            </Text>
+            <Text
+              size="1"
+              style={{ display: "block", marginTop: "6px", color: "#c7d2fe", fontFamily: "monospace" }}
+            >
+              offset = valor real observado − valor mostrado por el sistema
+            </Text>
+            <Text
+              size="1"
+              color="gray"
+              style={{ display: "block", marginTop: "6px", lineHeight: "1.5" }}
+            >
+              Ejemplo: si el sistema marca 45% de humedad de suelo pero al comprobarlo
+              físicamente el suelo está en 50%, ingrese <strong>+5</strong>. Si el sistema marca
+              55% y en realidad es 50%, ingrese <strong>-5</strong>. El ajuste se aplica de
+              inmediato a todas las lecturas nuevas de ese sensor (incluyendo las que usa el
+              modelo predictivo ML), y puede reabrir "Calibrar" en cualquier momento para afinarlo
+              o volver a 0.
+            </Text>
+          </Box>
+        </Flex>
+      </Card>
+
       <Card
         size={{ initial: "2", sm: "3" }}
         style={{
@@ -107,25 +164,33 @@ export function SensoresPanel({
                             (GPIO {s.pin})
                           </span>
                         </div>
-                        <Button
-                          size="1"
-                          variant="ghost"
-                          color="indigo"
-                          onClick={() => {
-                            setCalibDevId(dev.id);
-                            setCalibPin(s.pin);
-                            setCalibSensorName(s.nombre);
-                            setCalibOffset("0.0");
-                          }}
-                          style={{
-                            cursor: "pointer",
-                            height: "22px",
-                            padding: "0 6px",
-                            fontSize: "0.72rem",
-                          }}
-                        >
-                          ⚙️ Calibrar
-                        </Button>
+                        <Flex align="center" gap="2" style={{ flexShrink: 0 }}>
+                          {!!s.offsetCalibracion && (
+                            <Badge color="amber" variant="soft" size="1">
+                              Offset: {s.offsetCalibracion > 0 ? "+" : ""}
+                              {s.offsetCalibracion}
+                            </Badge>
+                          )}
+                          <Button
+                            size="1"
+                            variant="ghost"
+                            color="indigo"
+                            onClick={() => {
+                              setCalibDevId(dev.id);
+                              setCalibPin(s.pin);
+                              setCalibSensorName(s.nombre);
+                              setCalibOffset(String(s.offsetCalibracion ?? 0));
+                            }}
+                            style={{
+                              cursor: "pointer",
+                              height: "22px",
+                              padding: "0 6px",
+                              fontSize: "0.72rem",
+                            }}
+                          >
+                            ⚙️ Calibrar
+                          </Button>
+                        </Flex>
                       </div>
                     ))}
                   </div>
@@ -164,7 +229,7 @@ export function SensoresPanel({
           <Flex direction="column" gap="3" mt="3">
             <label>
               <Text color="gray" size="2">
-                Offset de Compensación
+                Offset de Compensación ({OFFSET_MIN} a {OFFSET_MAX})
               </Text>
             </label>
             <TextField.Root
@@ -179,8 +244,8 @@ export function SensoresPanel({
               }}
             />
             <Text size="1" color="gray" style={{ fontStyle: "italic" }}>
-              Nota: Este valor se enviará al firmware del ESP32 vía MQTT para sumar/restar a la
-              lectura bruta.
+              Este valor se suma automáticamente a cada lectura que reporte este sensor a partir
+              de ahora (efecto inmediato en el servidor, no depende del firmware del dispositivo).
             </Text>
           </Flex>
 

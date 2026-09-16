@@ -438,8 +438,9 @@ export function ControlPanel({
       const res = await calibrarSensor(devId, pin, offset);
       if (res.success) {
         alert(
-          `✅ Calibración de offset ${offset} enviada con éxito para GPIO ${pin}.`
+          `✅ Calibración aplicada: las próximas lecturas del sensor en GPIO ${pin} sumarán ${offset}.`
         );
+        await refresh();
       } else {
         alert(`❌ Error al calibrar: ${res.error}`);
       }
