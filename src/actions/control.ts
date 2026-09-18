@@ -143,6 +143,107 @@ export async function ejecutarPrediccionEnVivo(userId: number, idCultivo: number
   }
 }
 
+export async function listarHorariosRiego(idAsignacion: number) {
+  try {
+    const res = await fetchFromFastAPI(`/horarios-riego?id_asignacion=${idAsignacion}`);
+    if (!res.ok) {
+      const errorMsg = await parseErrorText(res);
+      return { success: false, error: errorMsg };
+    }
+    return { success: true, data: await res.json() };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Error al listar los horarios" };
+  }
+}
+
+export async function crearHorarioRiego(payload: {
+  idAsignacion: number;
+  horaInicio: string;
+  duracionSegundos: number;
+  diasSemana: number[];
+  activo?: boolean;
+}) {
+  try {
+    const res = await fetchFromFastAPI(`/horarios-riego`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id_asignacion: payload.idAsignacion,
+        hora_inicio: payload.horaInicio,
+        duracion_segundos: payload.duracionSegundos,
+        dias_semana: payload.diasSemana,
+        activo: payload.activo ?? true,
+      }),
+    });
+    if (!res.ok) {
+      const errorMsg = await parseErrorText(res);
+      return { success: false, error: errorMsg };
+    }
+    return { success: true, data: await res.json() };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Error al crear el horario" };
+  }
+}
+
+export async function actualizarHorarioRiego(idHorario: number, payload: Partial<{
+  horaInicio: string;
+  duracionSegundos: number;
+  diasSemana: number[];
+  activo: boolean;
+}>) {
+  try {
+    const body: Record<string, any> = {};
+    if (payload.horaInicio !== undefined) body.hora_inicio = payload.horaInicio;
+    if (payload.duracionSegundos !== undefined) body.duracion_segundos = payload.duracionSegundos;
+    if (payload.diasSemana !== undefined) body.dias_semana = payload.diasSemana;
+    if (payload.activo !== undefined) body.activo = payload.activo;
+
+    const res = await fetchFromFastAPI(`/horarios-riego/${idHorario}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const errorMsg = await parseErrorText(res);
+      return { success: false, error: errorMsg };
+    }
+    return { success: true, data: await res.json() };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Error al actualizar el horario" };
+  }
+}
+
+export async function eliminarHorarioRiego(idHorario: number) {
+  try {
+    const res = await fetchFromFastAPI(`/horarios-riego/${idHorario}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      const errorMsg = await parseErrorText(res);
+      return { success: false, error: errorMsg };
+    }
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Error al eliminar el horario" };
+  }
+}
+
+export async function diagnosticarSensor(idAsignacion: number) {
+  try {
+    const res = await fetchFromFastAPI(`/dispositivos/asignaciones/${idAsignacion}/diagnostico`, {
+      method: "GET"
+    });
+    if (!res.ok) {
+      const errorMsg = await parseErrorText(res);
+      return { success: false, error: errorMsg };
+    }
+    const data = await res.json();
+    return { success: true, data };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Error al diagnosticar el sensor" };
+  }
+}
+
 export async function detenerRiego(idCultivo: number, motivo: string = "cronometro_completado") {
   try {
     const res = await fetchFromFastAPI("/control/riego/detener", {

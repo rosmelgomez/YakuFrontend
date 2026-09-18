@@ -23,6 +23,8 @@ import {
   MapPin,
   Warehouse,
   Database,
+  Radio,
+  Wrench,
   LogOut,
   MoreHorizontal,
   PanelLeftClose,
@@ -74,6 +76,7 @@ const adminNavEntries: NavEntry[] = [
   { type: 'item', id: 'admin-components', label: 'Componentes', href: '/dashboard/administrador/componentes', icon: Layers },
   { type: 'item', id: 'admin-assign-device', label: 'Asignar dispositivo', href: '/dashboard/administrador/asignar-dispositivo', icon: Link2 },
   { type: 'item', id: 'admin-firmware', label: 'Firmware', href: '/dashboard/administrador/firmware', icon: HardDriveUpload, mobilePrimary: true },
+  { type: 'item', id: 'admin-maintenance', label: 'Mantenimiento', href: '/dashboard/administrador/mantenimiento', icon: Wrench },
 
   { type: 'section', id: 'sec-catalogos', title: 'Catálogos' },
   { type: 'item', id: 'admin-catalogs', label: 'Catálogos', href: '/dashboard/administrador/catalogo', icon: MapPin },
@@ -81,6 +84,7 @@ const adminNavEntries: NavEntry[] = [
 
   { type: 'section', id: 'sec-config', title: 'Configuración' },
   { type: 'item', id: 'admin-feedback', label: 'Preguntas feedback', href: '/dashboard/administrador/feedback', icon: MessageSquareText },
+  { type: 'item', id: 'admin-mqtt', label: 'Configuración MQTT', href: '/dashboard/administrador/mqtt-config', icon: Radio },
   { type: 'item', id: 'admin-backup', label: 'Respaldo de datos', href: '/dashboard/administrador/respaldo', icon: Database },
 ];
 

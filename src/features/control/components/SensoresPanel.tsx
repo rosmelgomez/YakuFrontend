@@ -13,6 +13,7 @@ import {
   TextField,
 } from "@radix-ui/themes";
 import type { DispositivoItem } from "../types";
+import { diagnosticarSensor } from "@/actions/control";
 
 interface SensoresPanelProps {
   dispositivosSensores: DispositivoItem[];
@@ -29,6 +30,19 @@ export function SensoresPanel({
   const [calibPin, setCalibPin] = useState<number | null>(null);
   const [calibSensorName, setCalibSensorName] = useState<string>("");
   const [calibOffset, setCalibOffset] = useState<string>("0.0");
+  const [diagLoadingId, setDiagLoadingId] = useState<number | null>(null);
+  const [diagResults, setDiagResults] = useState<Record<number, any>>({});
+
+  const handleDiagnosticar = async (idAsignacion: number) => {
+    setDiagLoadingId(idAsignacion);
+    const res = await diagnosticarSensor(idAsignacion);
+    setDiagLoadingId(null);
+    if (res.success) {
+      setDiagResults((prev) => ({ ...prev, [idAsignacion]: res.data }));
+    } else {
+      alert(`❌ Error al diagnosticar: ${res.error}`);
+    }
+  };
 
   const OFFSET_MIN = -50;
   const OFFSET_MAX = 50;
@@ -152,10 +166,12 @@ export function SensoresPanel({
                 {/* SECCIÓN INFERIOR: Lista de Sensores Vinculados */}
                 {dev.sensores && dev.sensores.length > 0 && (
                   <div className="mt-2.5 space-y-1.5 pl-2 border-l-2 border-slate-800">
-                    {dev.sensores.map((s: any, index: number) => (
+                    {dev.sensores.map((s: any, index: number) => {
+                      const diag = s.idAsignacion ? diagResults[s.idAsignacion] : null;
+                      return (
                       <div
                         key={`sensor-${dev.id}-${s.id}-${index}`}
-                        className="flex items-center justify-between gap-2 py-0.5"
+                        className="flex items-center justify-between gap-2 py-0.5 flex-wrap"
                       >
                         <div className="min-w-0 flex-1 text-xs text-slate-300">
                           <span className="text-slate-500 mr-1.5">•</span>
@@ -163,6 +179,11 @@ export function SensoresPanel({
                           <span className="text-slate-500 font-mono text-[11px]">
                             (GPIO {s.pin})
                           </span>
+                          {diag && (
+                            <div className="mt-1 text-[10.5px]" style={{ color: diag.estado === "Ok" ? "#4ade80" : "#f87171" }}>
+                              {diag.estado === "Ok" ? "✅" : "⚠️"} {diag.estado}: {diag.motivo}
+                            </div>
+                          )}
                         </div>
                         <Flex align="center" gap="2" style={{ flexShrink: 0 }}>
                           {!!s.offsetCalibracion && (
@@ -170,6 +191,23 @@ export function SensoresPanel({
                               Offset: {s.offsetCalibracion > 0 ? "+" : ""}
                               {s.offsetCalibracion}
                             </Badge>
+                          )}
+                          {s.idAsignacion && (
+                            <Button
+                              size="1"
+                              variant="ghost"
+                              color="gray"
+                              disabled={diagLoadingId === s.idAsignacion}
+                              onClick={() => handleDiagnosticar(s.idAsignacion)}
+                              style={{
+                                cursor: "pointer",
+                                height: "22px",
+                                padding: "0 6px",
+                                fontSize: "0.72rem",
+                              }}
+                            >
+                              {diagLoadingId === s.idAsignacion ? "..." : "🩺 Diagnosticar"}
+                            </Button>
                           )}
                           <Button
                             size="1"
@@ -192,7 +230,8 @@ export function SensoresPanel({
                           </Button>
                         </Flex>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

@@ -37,6 +37,8 @@ const FeedbackQuestionsScreen = lazy(() => import('@/screens/administrador/Feedb
 const WarehousesScreen = lazy(() => import('@/screens/administrador/WarehousesScreen'));
 const BackupScreen = lazy(() => import('@/screens/administrador/BackupScreen'));
 const AdminPerfilScreen = lazy(() => import('@/screens/administrador/AdminPerfilScreen'));
+const MqttConfigScreen = lazy(() => import('@/screens/administrador/MqttConfigScreen'));
+const MaintenanceHistoryScreen = lazy(() => import('@/screens/administrador/MaintenanceHistoryScreen'));
 const NotificacionesHistoryScreen = lazy(() => import('@/screens/common/NotificacionesHistoryScreen'));
 
 function SuspenseWrapper({ children, variant = 'dashboard' }: { children: React.ReactNode; variant?: 'dashboard' | 'chart' | 'control' | 'admin' | 'form' }) {
@@ -268,6 +270,22 @@ export default function AppRoutes() {
             element={
               <ProtectedRoute allowedRole="administrador">
                 <SuspenseWrapper variant="admin"><WarehousesScreen /></SuspenseWrapper>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="administrador/mqtt-config"
+            element={
+              <ProtectedRoute allowedRole="administrador">
+                <SuspenseWrapper variant="admin"><MqttConfigScreen /></SuspenseWrapper>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="administrador/mantenimiento"
+            element={
+              <ProtectedRoute allowedRole="administrador">
+                <SuspenseWrapper variant="admin"><MaintenanceHistoryScreen /></SuspenseWrapper>
               </ProtectedRoute>
             }
           />

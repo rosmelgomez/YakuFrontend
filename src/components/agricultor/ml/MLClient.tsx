@@ -240,6 +240,46 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
         </div>
       </Card>
 
+      {/* HU-24: VARIABLES INFLUYENTES EN LA PREDICCIÓN (FEATURE IMPORTANCE) */}
+      <Card size={{ initial: "2", sm: "3" }} mt={{ initial: "3", sm: "5" }} style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '16px' }}>
+        <div className="mb-3">
+          <h3 className="text-xs sm:text-sm font-bold text-indigo-400">Variables influyentes en la predicción</h3>
+          <p className="text-[11px] text-slate-400 mt-0.5">
+            Peso de cada variable en la decisión del modelo activo (importancia de características).
+          </p>
+        </div>
+        {modelo?.importancias_features && Object.keys(modelo.importancias_features).length > 0 ? (
+          <Box>
+            {Object.entries(modelo.importancias_features as Record<string, number>)
+              .sort((a, b) => b[1] - a[1])
+              .map(([feature, valor]) => {
+                const etiquetas: Record<string, string> = {
+                  humedad_suelo: 'Humedad de suelo',
+                  humedad_ambiente: 'Humedad ambiente',
+                  temperatura_ambiente: 'Temperatura ambiente',
+                  temperatura_suelo: 'Temperatura de suelo',
+                };
+                const pct = Math.round(valor * 100);
+                return (
+                  <Box key={feature} mb="2">
+                    <Flex justify="between" mb="1" style={{ fontSize: '11px' }}>
+                      <Text color="gray">{etiquetas[feature] || feature}</Text>
+                      <Text weight="bold" style={{ color: '#818cf8', fontFamily: 'var(--font-mono)' }}>{pct}%</Text>
+                    </Flex>
+                    <div style={{ height: '6px', background: 'var(--dim-mockup)', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${Math.min(100, Math.max(0, pct))}%`, background: '#818cf8', borderRadius: '3px' }} />
+                    </div>
+                  </Box>
+                );
+              })}
+          </Box>
+        ) : (
+          <Text size="1" color="gray">
+            Este modelo aún no tiene importancia de variables calculada. Entrena o reentrena el modelo para generarla.
+          </Text>
+        )}
+      </Card>
+
       {/* SIMULADOR DE INFERENCIA MANUAL */}
       <Card size={{ initial: "2", sm: "3" }} mt={{ initial: "3", sm: "5" }} style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '16px' }}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 mb-3">

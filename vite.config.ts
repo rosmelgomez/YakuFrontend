@@ -26,6 +26,7 @@ export default defineConfig(({ mode }) => {
   },
   server: {
     port: 3000,
+    allowedHosts: ['fhqtsh2x-300.brs.devtunnels.ms'],
     proxy: {
       '/api': {
         target: env.VITE_FASTAPI_URL,

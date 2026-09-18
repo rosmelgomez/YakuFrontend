@@ -16,6 +16,7 @@ import {
 import SearchableSelect from "@/components/ui/SearchableSelect";
 import { SensoresPanel } from "./SensoresPanel";
 import { ActuadoresPanel } from "./ActuadoresPanel";
+import { HorarioRiegoPanel } from "./HorarioRiegoPanel";
 import { useControlData } from "../hooks/useControlData";
 import { useControlEvents } from "../hooks/useControlEvents";
 import {
@@ -670,6 +671,21 @@ export function ControlPanel({
             >
               ⚡ Actuadores <span className="hidden sm:inline">Físicos</span>
             </Tabs.Trigger>
+            <Tabs.Trigger
+              value="horarios"
+              style={{
+                cursor: "pointer",
+                padding: "8px 12px",
+                fontSize: "clamp(0.8rem, 2.5vw, 0.9rem)",
+                flex: 1,
+                textAlign: "center",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              ⏰ Horarios <span className="hidden sm:inline">Fijos</span>
+            </Tabs.Trigger>
           </Tabs.List>
 
           <Tabs.Content value="sensores">
@@ -678,6 +694,10 @@ export function ControlPanel({
               onToggleCaptura={handleToggleCaptura}
               onCalibrarSensor={handleCalibrarSensor}
             />
+          </Tabs.Content>
+
+          <Tabs.Content value="horarios">
+            <HorarioRiegoPanel idAsignacion={controlData.bomba?.id} />
           </Tabs.Content>
 
           <Tabs.Content value="actuadores">
