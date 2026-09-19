@@ -987,7 +987,7 @@ export default function CultivosScreen() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm overflow-y-auto"
           onClick={(e) => e.target === e.currentTarget && setIsUmbralesModalOpen(false)}
         >
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-5 sm:p-6 text-white shadow-2xl space-y-5 my-8">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-5 sm:p-6 text-white shadow-2xl space-y-5 my-8">
             {/* Modal Header */}
             <div className="flex items-start justify-between gap-3 pb-4 border-b border-slate-800">
               <div className="flex items-center gap-2.5 min-w-0">
@@ -1033,7 +1033,7 @@ export default function CultivosScreen() {
                 Cargando umbrales del cultivo...
               </div>
             ) : (
-              <div className="space-y-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 {umbralesItems.map((u) => {
                   const isTemp = u.unidad === "°C" || u.codigo?.includes("TEMP");
                   const maxLimit = isTemp ? 60 : 100;
@@ -1096,7 +1096,7 @@ export default function CultivosScreen() {
                       {/* Sliders */}
                       <div className="space-y-1 pt-1">
                         <div className="flex items-center gap-2 text-[10px] text-slate-400">
-                          <span className="w-24 sm:w-auto shrink-0">Ajuste rápido Mín:</span>
+                          <span className="w-8 shrink-0" title="Ajuste rápido Mínimo">Mín:</span>
                           <input
                             type="range"
                             min={0}
@@ -1107,7 +1107,7 @@ export default function CultivosScreen() {
                           />
                         </div>
                         <div className="flex items-center gap-2 text-[10px] text-slate-400">
-                          <span className="w-24 sm:w-auto shrink-0">Ajuste rápido Máx:</span>
+                          <span className="w-8 shrink-0" title="Ajuste rápido Máximo">Máx:</span>
                           <input
                             type="range"
                             min={0}
