@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Box, Card, Flex, Text, Badge, TextField, Button, ScrollArea } from "@radix-ui/themes";
 import { Wrench, Search } from "lucide-react";
 import { listarLogsSistema } from "@/actions/logs";
+import { useAuth } from "@/context/AuthContext";
 
 const MODULOS_RAPIDOS = [
   { label: "Todos", value: "" },
@@ -15,6 +16,8 @@ const MODULOS_RAPIDOS = [
 ];
 
 export default function MaintenanceHistoryClient() {
+  const { user } = useAuth();
+  const esAdminReal = user?.rol === "administrador";
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,8 +69,9 @@ export default function MaintenanceHistoryClient() {
         <Box>
           <Text size={{ initial: "5", sm: "6" }} weight="bold" color="indigo" as="div">Auditoría y mantenimiento</Text>
           <Text size={{ initial: "1", sm: "2" }} color="gray">
-            Bitácora completa del sistema: mantenimiento técnico (calibraciones, desconexiones),
-            inicios de sesión, cambios de rol/permisos y errores de red del broker MQTT.
+            {esAdminReal
+              ? "Bitácora completa del sistema: mantenimiento técnico (calibraciones, desconexiones), inicios de sesión, cambios de rol/permisos y errores de red del broker MQTT."
+              : "Bitácora de tu propia actividad: acciones, inicios de sesión y eventos relacionados con tu cuenta (no incluye actividad de otros usuarios)."}
           </Text>
         </Box>
       </Flex>
