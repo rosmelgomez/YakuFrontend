@@ -67,6 +67,61 @@ export default function MqttConfigClient() {
         </Box>
       </Flex>
 
+      {/* Ayuda memoria: cómo configurar el broker MQTT */}
+      <Card
+        size="2"
+        mb="4"
+        style={{
+          background: "rgba(59, 130, 246, 0.06)",
+          borderColor: "rgba(59, 130, 246, 0.25)",
+          borderRadius: "12px",
+          padding: "16px",
+        }}
+      >
+        <Flex gap="3" align="start">
+          <Text size="5" style={{ marginTop: "-2px" }}>
+            ℹ️
+          </Text>
+          <Box>
+            <Text size="2" weight="bold" style={{ color: "#93c5fd" }} as="div">
+              Ayuda memoria: ¿cómo configuro el broker MQTT?
+            </Text>
+            <Text size="1" color="gray" style={{ display: "block", marginTop: "4px", lineHeight: "1.5" }}>
+              Estos son los datos de conexión del servidor MQTT (por ejemplo HiveMQ Cloud) al
+              que se conectan todos los nodos ESP32 para enviar telemetría y recibir órdenes.
+              Complete cada campo con los datos que le entregó su proveedor del broker:
+            </Text>
+            <Text size="1" color="gray" style={{ display: "block", marginTop: "8px", lineHeight: "1.5" }}>
+              <strong style={{ color: "#c7d2fe" }}>Host:</strong> la dirección del servidor, sin
+              "https://" (ej: <span style={{ fontFamily: "monospace" }}>xxxxxx.s1.eu.hivemq.cloud</span>).
+            </Text>
+            <Text size="1" color="gray" style={{ display: "block", marginTop: "4px", lineHeight: "1.5" }}>
+              <strong style={{ color: "#c7d2fe" }}>Puerto:</strong> normalmente <span style={{ fontFamily: "monospace" }}>8883</span> si usa TLS (recomendado), o <span style={{ fontFamily: "monospace" }}>1883</span> sin cifrado.
+            </Text>
+            <Text size="1" color="gray" style={{ display: "block", marginTop: "4px", lineHeight: "1.5" }}>
+              <strong style={{ color: "#c7d2fe" }}>Usuario / Contraseña:</strong> las credenciales
+              del broker. Si deja la contraseña vacía al guardar, se conserva la que ya estaba
+              guardada (no se borra).
+            </Text>
+            <Text size="1" color="gray" style={{ display: "block", marginTop: "4px", lineHeight: "1.5" }}>
+              <strong style={{ color: "#c7d2fe" }}>TLS:</strong> manténgalo activado salvo que su
+              broker sea local/de pruebas sin cifrado.
+            </Text>
+            <Text
+              size="1"
+              color="gray"
+              style={{ display: "block", marginTop: "8px", lineHeight: "1.5", fontStyle: "italic" }}
+            >
+              Al presionar "Guardar y reconectar", el backend se desconecta del broker actual y
+              se vuelve a conectar de inmediato con los nuevos datos — los nodos ESP32 que usen
+              credenciales distintas dejarán de comunicarse hasta que también se actualicen.
+              Verifique los datos antes de guardar: un valor incorrecto puede dejar a todos los
+              dispositivos sin conexión hasta que se corrija.
+            </Text>
+          </Box>
+        </Flex>
+      </Card>
+
       <Card size={{ initial: "2", sm: "3" }} style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
         {loading ? (
           <Text color="gray" size="2">Cargando configuración...</Text>

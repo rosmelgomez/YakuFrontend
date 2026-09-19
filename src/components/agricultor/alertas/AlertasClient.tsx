@@ -70,7 +70,6 @@ function ensureValidConfigs(configs: any[]) {
       nombre: tipo.titulo,
       canal_email: false,
       canal_push: false,
-      canal_dashboard: true,
       recordatorio_minutos: 15,
     };
   });
@@ -260,7 +259,6 @@ export default function AlertasClient({
         id_tipo_alerta: c.id_tipo_alerta,
         canal_email: false,
         canal_push: Boolean(c.canal_push),
-        canal_dashboard: true,
         recordatorio_minutos: c.recordatorio_minutos || 15,
       }));
       await guardarNotifConfig(updates);
@@ -385,7 +383,6 @@ export default function AlertasClient({
                   {TIPOS_NOTIFICACION.map((tipo) => {
                     const config = notifConfigs.find((c: any) => c.id_tipo_alerta === tipo.id_tipo_alerta) || {
                       id_tipo_alerta: tipo.id_tipo_alerta,
-                      canal_dashboard: true,
                       canal_push: false,
                       recordatorio_minutos: 15,
                     };

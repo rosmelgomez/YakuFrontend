@@ -258,7 +258,7 @@ export default function AppRoutes() {
           <Route
             path="administrador/respaldo"
             element={
-              <ProtectedRoute allowedRole="administrador">
+              <ProtectedRoute allowedRole="administrador" requiredPermission="GESTIONAR_RESPALDOS">
                 <SuspenseWrapper variant="admin"><BackupScreen /></SuspenseWrapper>
               </ProtectedRoute>
             }
@@ -282,7 +282,7 @@ export default function AppRoutes() {
           <Route
             path="administrador/mantenimiento"
             element={
-              <ProtectedRoute allowedRole="administrador">
+              <ProtectedRoute allowedRole="administrador" requiredPermission="VER_AUDITORIA">
                 <SuspenseWrapper variant="admin"><MaintenanceHistoryScreen /></SuspenseWrapper>
               </ProtectedRoute>
             }

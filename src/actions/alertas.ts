@@ -21,7 +21,7 @@ export async function guardarUmbrales(userId: number, idCultivo: number, updates
   }
 }
 
-export async function guardarNotifConfig(updates: { id_tipo_alerta: number, canal_email?: boolean, canal_push?: boolean, canal_dashboard: boolean, recordatorio_minutos: number }[]) {
+export async function guardarNotifConfig(updates: { id_tipo_alerta: number, canal_email?: boolean, canal_push?: boolean, recordatorio_minutos: number }[]) {
   try {
     const res = await fetchFromFastAPI("/dashboard/alertas/config", {
       method: "POST",

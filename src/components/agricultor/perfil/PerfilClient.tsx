@@ -1,13 +1,43 @@
 "use client";
 
 import React, { useState, useTransition, useEffect } from 'react';
-import { Box, Card, Grid, Flex, Text, Button, TextField, Badge, Separator } from '@radix-ui/themes';
+import { Box, Card, Flex, Text, Button, TextField, Badge, Switch } from '@radix-ui/themes';
 import {
   User, Mail, Lock, Shield, CheckCircle, AlertCircle,
   Bell, Smartphone, Laptop, Tablet, AlertTriangle, Trash2, Monitor
 } from 'lucide-react';
 import { actualizarPerfil } from '@/actions/profile';
+import {
+  guardarNotifConfig,
+  obtenerNotifConfig,
+  getVapidPublicKey,
+  registrarSuscripcionPush,
+} from '@/actions/alertas';
 import { signOut } from 'next-auth/react';
+
+// Los únicos tipos de alerta con respaldo real en la tabla
+// configuracion_notificaciones (ver AlertasClient.tsx, misma fuente de verdad).
+const TIPOS_NOTIFICACION = [
+  {
+    id_tipo_alerta: 11,
+    codigo: 'RIEGO_ML',
+    titulo: 'Riego activado por IA',
+    descripcion: 'Aviso de inicio de riego con las lecturas de sensores, y de finalización con los litros consumidos.',
+  },
+  {
+    id_tipo_alerta: 12,
+    codigo: 'PROBLEMA_RIEGO',
+    titulo: 'Incidencias y problemas de riego',
+    descripcion: 'Alerta inmediata ante fallas, interrupciones o paradas sin confirmar durante el riego.',
+  },
+];
+
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  return Uint8Array.from([...rawData].map((character) => character.charCodeAt(0)));
+}
 
 interface RealSession {
   id: string;
@@ -116,21 +146,17 @@ export default function PerfilClient({ user }: { user: any }) {
   const [direccion, setDireccion] = useState(user.direccion || "");
   const [zonaHoraria, setZonaHoraria] = useState(user.zona_horaria || "America/Lima");
 
-  // 2. Preferencias de Notificaciones (solo para agricultor)
-  // Todas desactivadas por defecto: el usuario debe activarlas explícitamente.
-  const [notifPrefs, setNotifPrefs] = useState({
-    criticas: true, // Alerta crítica de seguridad, no se puede desactivar.
-    advertencias: false,
-    riegoInicio: false,
-    riegoProblema: false,
-    riegoFin: false,
-    hardwareFirmware: false,
-    recomendacionesIA: false,
-    resumenDiario: false,
-    novedadesYaku: false,
-    canalEmail: false,
-    canalApp: false,
-  });
+  // 2. Preferencias de Notificaciones (solo para agricultor). Se guardan en
+  // configuracion_notificaciones (misma configuración en todos los
+  // dispositivos de la cuenta) y el push real depende de que ESTE navegador
+  // haya concedido permiso y quede registrado en suscripciones_push.
+  const [notifConfigs, setNotifConfigs] = useState<any[]>(() =>
+    TIPOS_NOTIFICACION.map((t) => ({ id_tipo_alerta: t.id_tipo_alerta, canal_push: false }))
+  );
+  const [isLoadingNotifConfig, setIsLoadingNotifConfig] = useState(true);
+  const [pushStatus, setPushStatus] = useState<'checking' | 'not-supported' | 'default' | 'granted' | 'denied'>('checking');
+  const [isSubscribing, setIsSubscribing] = useState(false);
+  const [isSecure, setIsSecure] = useState(true);
 
   // 3. Seguridad y Sesiones REALES
   const [showPassForm, setShowPassForm] = useState(false);
@@ -145,9 +171,6 @@ export default function PerfilClient({ user }: { user: any }) {
     if (typeof window === 'undefined') return;
 
     try {
-      const savedNotifs = localStorage.getItem(`yaku_notif_prefs_${userId}`);
-      if (savedNotifs) setNotifPrefs(JSON.parse(savedNotifs));
-
       // Detección real del dispositivo actual
       const realInfo = detectRealDevice();
       let sessId = localStorage.getItem('yaku_device_session_id');
@@ -212,49 +235,103 @@ export default function PerfilClient({ user }: { user: any }) {
     setTimeout(() => setSuccessMsg(null), 3500);
   };
 
-  const handleToggleNotifPref = (key: keyof typeof notifPrefs, checked: boolean) => {
-    setNotifPrefs((prev) => ({ ...prev, [key]: checked }));
-  };
+  // Cargar las preferencias reales del usuario (iguales en todos sus
+  // dispositivos) y detectar el estado de permiso de push de ESTE navegador.
+  useEffect(() => {
+    if (isAdmin || typeof window === 'undefined') return;
 
-  const notifPrefLabels: Record<keyof typeof notifPrefs, string> = {
-    criticas: 'Alertas críticas',
-    advertencias: 'Alertas de advertencia',
-    riegoInicio: 'Notificación de riego iniciado',
-    riegoProblema: 'Problemas durante el riego',
-    riegoFin: 'Confirmación de riego finalizado',
-    hardwareFirmware: 'Hardware y firmware',
-    recomendacionesIA: 'Recomendaciones de IA predictiva',
-    resumenDiario: 'Resumen diario del sistema',
-    novedadesYaku: 'Novedades de Yaku',
-    canalEmail: 'Canal: Correo electrónico',
-    canalApp: 'Canal: Notificación en la app',
-  };
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+      setPushStatus('not-supported');
+    } else {
+      setIsSecure(window.isSecureContext);
+      setPushStatus(Notification.permission as any);
+    }
 
-  // Al guardar, se solicita permiso de notificaciones del navegador (si aún
-  // no fue concedido) y se dispara un push mostrando lo que quedó activado.
-  const sendActivationPush = (prefs: typeof notifPrefs) => {
-    if (typeof window === 'undefined' || !('Notification' in window)) return;
-
-    const activeLabels = (Object.keys(prefs) as (keyof typeof notifPrefs)[])
-      .filter((k) => prefs[k])
-      .map((k) => notifPrefLabels[k]);
-
-    if (activeLabels.length === 0) return;
-
-    const showPush = () => {
-      try {
-        new Notification('Preferencias de notificaciones actualizadas', {
-          body: `Activado: ${activeLabels.join(', ')}`,
+    let cancelled = false;
+    obtenerNotifConfig()
+      .then((res: any) => {
+        if (cancelled) return;
+        const raw = (res?.success && res?.data?.configs) ? res.data.configs : [];
+        const merged = TIPOS_NOTIFICACION.map((tipo) => {
+          const existing = raw.find((c: any) => c.id_tipo_alerta === tipo.id_tipo_alerta);
+          return {
+            id_tipo_alerta: tipo.id_tipo_alerta,
+            canal_push: Boolean(existing?.canal_push),
+          };
         });
-      } catch {}
-    };
-
-    if (Notification.permission === 'granted') {
-      showPush();
-    } else if (Notification.permission === 'default') {
-      Notification.requestPermission().then((perm) => {
-        if (perm === 'granted') showPush();
+        setNotifConfigs(merged);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingNotifConfig(false);
       });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdmin]);
+
+  // Solicita el permiso real del navegador y registra la suscripción push en
+  // suscripciones_push. Si el usuario no concede permiso, no queda registro
+  // y este dispositivo nunca recibirá notificaciones.
+  const handleRequestPush = async () => {
+    if (
+      typeof window === 'undefined' ||
+      !('Notification' in window) ||
+      !('serviceWorker' in navigator) ||
+      !('PushManager' in window)
+    ) {
+      setPushStatus('not-supported');
+      return;
+    }
+
+    setIsSubscribing(true);
+    try {
+      const permission = await Notification.requestPermission();
+      setPushStatus(permission as any);
+
+      if (permission === 'granted') {
+        const reg = await navigator.serviceWorker.register('/sw.js');
+        const resKey = await getVapidPublicKey();
+        if (resKey.success && resKey.publicKey) {
+          const applicationServerKey = urlBase64ToUint8Array(resKey.publicKey);
+          const existingSubscription = await reg.pushManager.getSubscription();
+          const subscription = existingSubscription || await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey,
+          });
+          const result = await registrarSuscripcionPush(subscription.toJSON());
+          if (!result.success) throw new Error(result.error);
+          showNotificationSuccess("✓ Notificaciones push activadas en este navegador.");
+        }
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || "No se pudo activar el push en este navegador.");
+    } finally {
+      setIsSubscribing(false);
+    }
+  };
+
+  // Cada cambio se guarda de inmediato en configuracion_notificaciones, así
+  // queda igual para cualquier dispositivo donde el usuario abra la cuenta.
+  const handlePushToggle = async (id_tipo_alerta: number) => {
+    const updated = notifConfigs.map((c) =>
+      c.id_tipo_alerta === id_tipo_alerta ? { ...c, canal_push: !c.canal_push } : c
+    );
+    setNotifConfigs(updated);
+
+    try {
+      const updates = updated.map((c) => ({
+        id_tipo_alerta: c.id_tipo_alerta,
+        canal_email: false,
+        canal_push: Boolean(c.canal_push),
+        recordatorio_minutos: 15,
+      }));
+      const res = await guardarNotifConfig(updates);
+      if (!res.success) throw new Error(res.error);
+      showNotificationSuccess("✓ Preferencia de notificación actualizada.");
+    } catch (err: any) {
+      setErrorMsg(err.message || "No se pudo guardar la preferencia.");
+      setNotifConfigs(notifConfigs);
     }
   };
 
@@ -290,18 +367,6 @@ export default function PerfilClient({ user }: { user: any }) {
         setErrorMsg(err.message || "Ocurrió un error al actualizar el perfil.");
       }
     });
-  };
-
-  // Guardar Preferencias de Notificaciones
-  const handleSaveNotifications = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    try {
-      localStorage.setItem(`yaku_notif_prefs_${userId}`, JSON.stringify(notifPrefs));
-      showNotificationSuccess("✓ Preferencias de notificaciones actualizadas.");
-      sendActivationPush(notifPrefs);
-    } catch {
-      setErrorMsg("No se pudieron guardar las preferencias.");
-    }
   };
 
   // Actualizar Contraseña
@@ -600,164 +665,74 @@ export default function PerfilClient({ user }: { user: any }) {
 
           {/* TAB 2: NOTIFICACIONES (SOLO AGRICULTOR) */}
           {activeTab === 'notifications' && !isAdmin && (
-            <Card size={{ initial: "2", sm: "3" }} style={{ background: '#0b1329', borderColor: '#1e293b', borderRadius: '16px' }}>
-              <form onSubmit={handleSaveNotifications}>
-                <Flex direction="column" gap="4">
+            <Flex direction="column" gap="4">
+              {/* Notificaciones del navegador: permiso real + suscripción push */}
+              <Card size={{ initial: "2", sm: "3" }} style={{ background: '#0b1329', borderColor: '#1e293b', borderRadius: '16px' }}>
+                <Flex justify="between" align={{ initial: 'start', sm: 'center' }} direction={{ initial: 'column', sm: 'row' }} gap="3">
                   <div>
-                    <Text size={{ initial: "3", sm: "4" }} weight="bold" style={{ color: 'white' }}>
-                      Preferencias de Notificaciones
+                    <Text size={{ initial: "3", sm: "4" }} weight="bold" style={{ color: 'white' }} as="div">
+                      Notificaciones del navegador
                     </Text>
-                    <Text size="2" color="gray">
-                      Personalice qué avisos desea recibir en tiempo real sobre riego, incidencias y hardware.
-                    </Text>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {pushStatus === 'granted' && 'Activadas: este navegador está registrado para recibir push.'}
+                      {pushStatus === 'default' && 'Actívalas para recibir avisos aunque el panel no esté abierto.'}
+                      {pushStatus === 'denied' && 'Bloqueadas por el navegador. Habilítalas desde los permisos del sitio.'}
+                      {pushStatus === 'not-supported' && 'Este navegador no admite notificaciones push.'}
+                      {pushStatus === 'checking' && 'Comprobando compatibilidad…'}
+                      {!isSecure && ' Se requiere HTTPS o localhost.'}
+                    </p>
                   </div>
-
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 pt-2">
-                    {/* Alertas críticas */}
-                    <div className="flex items-start justify-between gap-4 p-3.5 rounded-xl bg-slate-900/60 border border-slate-800">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-200">Alertas críticas (errores y fallos)</p>
-                        <p className="text-xs text-slate-400 mt-0.5">Siempre activo por seguridad. No se puede desactivar.</p>
-                      </div>
-                      <span className="px-2.5 py-1 text-xs font-bold rounded bg-emerald-950 border border-emerald-800 text-emerald-400">
-                        ACTIVO
-                      </span>
-                    </div>
-
-                    {/* Alertas de advertencia */}
-                    <div className="flex items-start justify-between gap-4 p-3.5 rounded-xl bg-slate-900/40 border border-slate-800">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-200">Alertas de advertencia (batería, umbrales de sensores)</p>
-                        <p className="text-xs text-slate-400 mt-0.5">Aviso ante baja batería o lecturas fuera de rango óptimo.</p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={notifPrefs.advertencias}
-                        onChange={(e) => handleToggleNotifPref('advertencias', e.target.checked)}
-                        className="w-5 h-5 accent-emerald-500 rounded cursor-pointer mt-1"
-                      />
-                    </div>
-
-                    {/* Opciones personales de Riego */}
-                    <div className="flex items-start justify-between gap-4 p-3.5 rounded-xl bg-slate-900/40 border border-blue-900/30">
-                      <div>
-                        <p className="text-sm font-semibold text-blue-300">🔔 Notificación cuando el riego comenzó</p>
-                        <p className="text-xs text-slate-400 mt-0.5">Aviso instantáneo al activarse electroválvula o bomba en su parcela.</p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={notifPrefs.riegoInicio}
-                        onChange={(e) => handleToggleNotifPref('riegoInicio', e.target.checked)}
-                        className="w-5 h-5 accent-blue-500 rounded cursor-pointer mt-1"
-                      />
-                    </div>
-
-                    <div className="flex items-start justify-between gap-4 p-3.5 rounded-xl bg-slate-900/40 border border-amber-900/30">
-                      <div>
-                        <p className="text-sm font-semibold text-amber-300">⚠️ Problemas durante el riego</p>
-                        <p className="text-xs text-slate-400 mt-0.5">Alerta inmediata ante ausencia de flujo, caída de presión o bloqueo.</p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={notifPrefs.riegoProblema}
-                        onChange={(e) => handleToggleNotifPref('riegoProblema', e.target.checked)}
-                        className="w-5 h-5 accent-amber-500 rounded cursor-pointer mt-1"
-                      />
-                    </div>
-
-                    <div className="flex items-start justify-between gap-4 p-3.5 rounded-xl bg-slate-900/40 border border-emerald-900/30">
-                      <div>
-                        <p className="text-sm font-semibold text-emerald-300">✅ Confirmación de riego finalizado</p>
-                        <p className="text-xs text-slate-400 mt-0.5">Resumen con litros aplicados y tiempo transcurrido al terminar el ciclo.</p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={notifPrefs.riegoFin}
-                        onChange={(e) => handleToggleNotifPref('riegoFin', e.target.checked)}
-                        className="w-5 h-5 accent-emerald-500 rounded cursor-pointer mt-1"
-                      />
-                    </div>
-
-                    {/* Hardware y Firmware */}
-                    <div className="flex items-start justify-between gap-4 p-3.5 rounded-xl bg-slate-900/40 border border-slate-800">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-200">Asignación de hardware y actualización de firmware</p>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          Aviso cuando el administrador te vincule un nodo o actualice su firmware.
-                        </p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={notifPrefs.hardwareFirmware}
-                        onChange={(e) => handleToggleNotifPref('hardwareFirmware', e.target.checked)}
-                        className="w-5 h-5 accent-emerald-500 rounded cursor-pointer mt-1"
-                      />
-                    </div>
-
-                    {/* Recomendaciones IA */}
-                    <div className="flex items-start justify-between gap-4 p-3.5 rounded-xl bg-slate-900/40 border border-slate-800">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-200">Recomendaciones del modelo de IA predictiva</p>
-                        <p className="text-xs text-slate-400 mt-0.5">Sugerencias predictivas sobre probabilidad de riego según humedad y clima.</p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={notifPrefs.recomendacionesIA}
-                        onChange={(e) => handleToggleNotifPref('recomendacionesIA', e.target.checked)}
-                        className="w-5 h-5 accent-emerald-500 rounded cursor-pointer mt-1"
-                      />
-                    </div>
-
-                    {/* Resumen diario */}
-                    <div className="flex items-start justify-between gap-4 p-3.5 rounded-xl bg-slate-900/40 border border-slate-800">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-200">Resumen diario del sistema</p>
-                        <p className="text-xs text-slate-400 mt-0.5">Consumo total acumulado de agua y estado general de los nodos.</p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={notifPrefs.resumenDiario}
-                        onChange={(e) => handleToggleNotifPref('resumenDiario', e.target.checked)}
-                        className="w-5 h-5 accent-emerald-500 rounded cursor-pointer mt-1"
-                      />
-                    </div>
-                  </div>
-
-                  <Separator size="4" style={{ background: '#1e293b', margin: '8px 0' }} />
-
-                  {/* Canales de notificación */}
-                  <div>
-                    <p className="text-sm font-semibold text-slate-200 mb-3">Canales de Notificación Activos</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl bg-slate-900/40 border border-slate-800 hover:bg-slate-900/60 transition-colors">
-                        <input
-                          type="checkbox"
-                          checked={notifPrefs.canalEmail}
-                          onChange={(e) => handleToggleNotifPref('canalEmail', e.target.checked)}
-                          className="w-4 h-4 accent-emerald-500 rounded"
-                        />
-                        <span className="text-sm text-slate-300">📧 Correo electrónico ({correo})</span>
-                      </label>
-                      <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl bg-slate-900/40 border border-slate-800 hover:bg-slate-900/60 transition-colors">
-                        <input
-                          type="checkbox"
-                          checked={notifPrefs.canalApp}
-                          onChange={(e) => handleToggleNotifPref('canalApp', e.target.checked)}
-                          className="w-4 h-4 accent-emerald-500 rounded"
-                        />
-                        <span className="text-sm text-slate-300">🔔 Notificación en la app (campana superior y alertas flotantes)</span>
-                      </label>
-                    </div>
-                  </div>
-
-                  <Flex justify="end" mt="3">
-                    <Button type="submit" color="indigo" size={{ initial: "2", sm: "3" }} style={{ cursor: 'pointer', borderRadius: '8px', padding: '0 20px', fontWeight: 'bold' }}>
-                      💾 Guardar Preferencias
+                  {pushStatus === 'default' && isSecure && (
+                    <Button size="2" color="indigo" onClick={handleRequestPush} disabled={isSubscribing} style={{ cursor: 'pointer' }}>
+                      {isSubscribing ? 'Activando…' : 'Activar notificaciones'}
                     </Button>
-                  </Flex>
+                  )}
+                  {pushStatus === 'granted' && (
+                    <span className="px-2.5 py-1 text-xs font-bold rounded bg-emerald-950 border border-emerald-800 text-emerald-400 shrink-0">
+                      ACTIVO
+                    </span>
+                  )}
                 </Flex>
-              </form>
-            </Card>
+              </Card>
+
+              {/* Preferencias por tipo de alerta: guardado real en configuracion_notificaciones */}
+              <Card size={{ initial: "2", sm: "3" }} style={{ background: '#0b1329', borderColor: '#1e293b', borderRadius: '16px' }}>
+                <div>
+                  <Text size={{ initial: "3", sm: "4" }} weight="bold" style={{ color: 'white' }}>
+                    Preferencias de Notificaciones
+                  </Text>
+                  <Text size="2" color="gray">
+                    Se guardan en su cuenta: son las mismas en todos los dispositivos donde inicie sesión.
+                  </Text>
+                </div>
+
+                {isLoadingNotifConfig ? (
+                  <Flex align="center" justify="center" p="5" style={{ minHeight: '120px' }}>
+                    <Text size="2" color="gray">Cargando preferencias...</Text>
+                  </Flex>
+                ) : (
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 pt-4">
+                    {TIPOS_NOTIFICACION.map((tipo) => {
+                      const config = notifConfigs.find((c) => c.id_tipo_alerta === tipo.id_tipo_alerta);
+                      return (
+                        <div key={tipo.codigo} className="flex items-start justify-between gap-4 p-3.5 rounded-xl bg-slate-900/40 border border-slate-800">
+                          <div>
+                            <p className="text-sm font-semibold text-slate-200">{tipo.titulo}</p>
+                            <p className="text-xs text-slate-400 mt-0.5">{tipo.descripcion}</p>
+                          </div>
+                          <Switch
+                            checked={Boolean(config?.canal_push)}
+                            onCheckedChange={() => handlePushToggle(tipo.id_tipo_alerta)}
+                            color="indigo"
+                            style={{ cursor: 'pointer', flexShrink: 0, marginTop: 2 }}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </Card>
+            </Flex>
           )}
 
           {/* TAB 3: SEGURIDAD (CON CAPTURA DE DATOS REALES DE DISPOSITIVOS) */}

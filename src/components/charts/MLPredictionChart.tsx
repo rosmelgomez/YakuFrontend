@@ -4,25 +4,14 @@ import React, { useMemo } from 'react';
 import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ReferenceLine, Line } from 'recharts';
 
 export default function MLPredictionChart({ historial, umbral }: any) {
+  const hasRealData = Boolean(historial && Array.isArray(historial) && historial.length > 0);
+
   // Asegurar normalización completa para que Recharts siempre trace las líneas
   const chartData = useMemo(() => {
-    let source = historial && Array.isArray(historial) && historial.length > 0 ? historial : null;
-    
-    // Si no hay datos en BD, generar curva de proyección estimada
-    if (!source || source.length === 0) {
-      const baseHum = umbral ? Number(umbral) + 8 : 42;
-      source = [
-        { hora: '10:00', humSuelo: Number((baseHum + 4).toFixed(1)), humAmb: 68.0, tempAmb: 21.5, tempSuelo: 19.0 },
-        { hora: '10:30', humSuelo: Number((baseHum + 2.5).toFixed(1)), humAmb: 66.0, tempAmb: 22.8, tempSuelo: 19.8 },
-        { hora: '11:00', humSuelo: Number((baseHum + 1.2).toFixed(1)), humAmb: 64.0, tempAmb: 24.0, tempSuelo: 20.5 },
-        { hora: '11:30', humSuelo: Number(baseHum.toFixed(1)), humAmb: 62.0, tempAmb: 25.2, tempSuelo: 21.0 },
-        { hora: '12:00', humSuelo: Number((baseHum - 1.5).toFixed(1)), humAmb: 60.5, tempAmb: 26.0, tempSuelo: 21.5 },
-        { hora: '12:30', humSuelo: Number((baseHum - 2.8).toFixed(1)), humAmb: 58.0, tempAmb: 26.8, tempSuelo: 22.0 },
-        { hora: '13:00 (pred)', humSuelo: Number((baseHum - 4.2).toFixed(1)), humAmb: 56.5, tempAmb: 27.5, tempSuelo: 22.4 },
-        { hora: '13:30 (pred)', humSuelo: Number((baseHum - 5.8).toFixed(1)), humAmb: 55.0, tempAmb: 28.0, tempSuelo: 22.8 },
-      ];
-    }
-    
+    if (!hasRealData) return [];
+
+    let source = historial;
+
     // Si solo hay un punto registrado, extenderlo para trazar la línea
     if (source.length === 1) {
       const p = source[0];
@@ -41,19 +30,21 @@ export default function MLPredictionChart({ historial, umbral }: any) {
       tempAmb: Number(item.tempAmb ?? item.temperaturaAmbiente ?? item.temperatura_ambiente ?? 24),
       tempSuelo: Number(item.tempSuelo ?? item.temperaturaSuelo ?? item.temperatura_suelo ?? 20),
     }));
-  }, [historial, umbral]);
+  }, [historial, hasRealData]);
 
-  const hasRealData = Boolean(historial && Array.isArray(historial) && historial.length > 0);
+  if (!hasRealData) {
+    return (
+      <div className="w-full h-full min-w-0 flex flex-col items-center justify-center gap-1 text-center" style={{ minHeight: '230px' }}>
+        <span className="text-sm text-gray-400 font-medium">Sin datos suficientes para predecir</span>
+        <span className="text-xs text-gray-500 max-w-xs">
+          Este cultivo no tiene dispositivos asignados o aún no ha registrado lecturas. Asigna un dispositivo para generar predicciones.
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full min-w-0 flex flex-col justify-between" style={{ minHeight: '230px' }}>
-      {!hasRealData && (
-        <div className="flex items-center justify-end mb-1">
-          <span className="text-[10px] text-indigo-400 bg-indigo-950/70 border border-indigo-800/60 px-2 py-0.5 rounded-md font-mono">
-            Proyección predictiva estimada
-          </span>
-        </div>
-      )}
       <div className="w-full flex-1 min-w-0" style={{ height: '220px', minHeight: '200px' }}>
         <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={190}>
           <LineChart data={chartData} margin={{ top: 8, right: 10, left: -10, bottom: 2 }}>

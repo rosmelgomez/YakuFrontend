@@ -66,6 +66,22 @@ const farmerNavEntries: NavEntry[] = [
   { type: 'item', id: 'farmer-feedback', label: 'Valoraciones', href: '/dashboard/agricultor/feedback', icon: MessageSquareText },
 ];
 
+// Pantallas de administrador que un agricultor puede ver si se le otorgó el
+// permiso granular correspondiente (HU-31), sin necesitar el rol completo.
+const DELEGABLE_NAV_ITEMS: (NavItem & { permiso: string })[] = [
+  { type: 'item', id: 'delegated-backup', label: 'Respaldo de datos', href: '/dashboard/administrador/respaldo', icon: Database, permiso: 'GESTIONAR_RESPALDOS' },
+  { type: 'item', id: 'delegated-audit', label: 'Auditoría', href: '/dashboard/administrador/mantenimiento', icon: Wrench, permiso: 'VER_AUDITORIA' },
+];
+
+function buildDelegatedEntries(permisos: string[]): NavEntry[] {
+  const items = DELEGABLE_NAV_ITEMS.filter((item) => permisos.includes(item.permiso));
+  if (items.length === 0) return [];
+  return [
+    { type: 'section', id: 'sec-delegado', title: 'Delegado por admin' },
+    ...items.map(({ permiso, ...item }) => item),
+  ];
+}
+
 const adminNavEntries: NavEntry[] = [
   { type: 'section', id: 'sec-supervision', title: 'Supervisión' },
   { type: 'item', id: 'admin-dashboard', label: 'Panel global', href: '/dashboard/administrador', icon: LayoutDashboard, mobilePrimary: true },
@@ -76,7 +92,7 @@ const adminNavEntries: NavEntry[] = [
   { type: 'item', id: 'admin-components', label: 'Componentes', href: '/dashboard/administrador/componentes', icon: Layers },
   { type: 'item', id: 'admin-assign-device', label: 'Asignar dispositivo', href: '/dashboard/administrador/asignar-dispositivo', icon: Link2 },
   { type: 'item', id: 'admin-firmware', label: 'Firmware', href: '/dashboard/administrador/firmware', icon: HardDriveUpload, mobilePrimary: true },
-  { type: 'item', id: 'admin-maintenance', label: 'Mantenimiento', href: '/dashboard/administrador/mantenimiento', icon: Wrench },
+  { type: 'item', id: 'admin-maintenance', label: 'Auditoría', href: '/dashboard/administrador/mantenimiento', icon: Wrench },
 
   { type: 'section', id: 'sec-catalogos', title: 'Catálogos' },
   { type: 'item', id: 'admin-catalogs', label: 'Catálogos', href: '/dashboard/administrador/catalogo', icon: MapPin },
@@ -157,7 +173,9 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
   const userName = user?.name || (isAdmin ? 'Administrador Yaku' : 'Agricultor Yaku');
   const profileHref = isAdmin ? '/dashboard/administrador/perfil' : '/dashboard/agricultor/perfil';
 
-  const navEntries = isAdmin ? adminNavEntries : farmerNavEntries;
+  const navEntries = isAdmin
+    ? adminNavEntries
+    : [...farmerNavEntries, ...buildDelegatedEntries(user?.permisos || [])];
 
   const isRouteActive = (href: string) => {
     if (!pathname) return false;

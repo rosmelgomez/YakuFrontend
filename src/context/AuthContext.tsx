@@ -7,6 +7,7 @@ export interface User {
   name: string;
   email: string;
   rol: 'agricultor' | 'administrador' | string;
+  permisos: string[];
 }
 
 export interface AuthContextType {
@@ -54,6 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           name: perfil.nombre ? `${perfil.nombre}${perfil.apellido ? ` ${perfil.apellido}` : ''}`.trim() : perfil.correo,
           email: perfil.correo,
           rol: normalizedRole,
+          permisos: perfil.permisos || [],
         };
         setUser(updatedUser);
         localStorage.setItem('yaku_user', JSON.stringify(updatedUser));
@@ -86,6 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           name: verifyRes.name,
           email: verifyRes.email,
           rol: verifyRes.rol,
+          permisos: verifyRes.permisos || [],
         };
         setUser(u);
         localStorage.setItem('yaku_user', JSON.stringify(u));
@@ -109,6 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         name: verifyRes.name,
         email: verifyRes.email,
         rol: verifyRes.rol,
+        permisos: verifyRes.permisos || [],
       };
 
       setUser(u);

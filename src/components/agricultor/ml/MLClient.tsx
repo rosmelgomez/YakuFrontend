@@ -121,17 +121,24 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
     }
   };
 
+  const tieneHistorialReal = Boolean(historial && historial.length > 0);
+
   const handleFastAPIRequest = async () => {
+    if (!tieneHistorialReal) {
+      alert("❌ No hay lecturas registradas para este cultivo. Asigna un dispositivo y espera a que reporte datos antes de solicitar una predicción.");
+      return;
+    }
+
     setLoading(true);
     setPrediction(null);
 
-    // Obtener las últimas lecturas como variables de entrada
-    const ultimoRegistro = historial && historial.length > 0 ? historial[historial.length - 1] : null;
+    // Obtener la última lectura real como variables de entrada
+    const ultimoRegistro = historial[historial.length - 1];
     const payload = {
-      humedad_suelo: ultimoRegistro ? Number(ultimoRegistro.humSuelo) : 45.0,
-      humedad_ambiente: ultimoRegistro ? Number(ultimoRegistro.humAmb) : 60.0,
-      temperatura_ambiente: ultimoRegistro ? Number(ultimoRegistro.tempAmb) : 22.0,
-      temperatura_suelo: ultimoRegistro ? Number(ultimoRegistro.tempSuelo) : 18.0
+      humedad_suelo: Number(ultimoRegistro.humSuelo),
+      humedad_ambiente: Number(ultimoRegistro.humAmb),
+      temperatura_ambiente: Number(ultimoRegistro.tempAmb),
+      temperatura_suelo: Number(ultimoRegistro.tempSuelo)
     };
 
     const res = await solicitarPrediccionML(payload);
@@ -197,8 +204,8 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
       {/* GRÁFICO PRINCIPAL */}
       <Card size={{ initial: "2", sm: "3" }} style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '16px' }}>
         <div className="flex items-center justify-between gap-2 mb-2">
-          <Text size={{ initial: "2", sm: "3" }} weight="bold" color="indigo">Predicción y telemetría de parámetros</Text>
-          <Text size="1" color="gray">Próximas 2 horas (FastAPI)</Text>
+          <Text size={{ initial: "2", sm: "3" }} weight="bold" color="indigo">Telemetría y evaluación del modelo</Text>
+          <Text size="1" color="gray">Lectura actual (FastAPI)</Text>
         </div>
 
         <Box ref={chartContainerRef} className="w-full h-[210px] sm:h-[270px] md:h-[320px] min-w-0 relative">
@@ -221,7 +228,11 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
                 </p>
               ) : (
                 <p className="text-[11px] text-slate-400 mt-0.5 leading-tight">
-                  {loading ? 'Consultando al microservicio de FastAPI en tiempo real...' : 'Generar proyecciones futuras y evaluar estrés hídrico mediante el BFF.'}
+                  {loading
+                    ? 'Consultando al microservicio de FastAPI en tiempo real...'
+                    : tieneHistorialReal
+                      ? 'Evaluar la última lectura registrada y decidir si activar el riego, mediante el BFF.'
+                      : 'Sin lecturas registradas: asigna un dispositivo a este cultivo para poder predecir.'}
                 </p>
               )}
             </div>
@@ -231,7 +242,7 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
             variant="soft"
             size="2"
             onClick={handleFastAPIRequest}
-            disabled={loading}
+            disabled={loading || !tieneHistorialReal}
             className="w-full sm:w-auto shrink-0 cursor-pointer font-semibold text-xs"
             style={{ borderRadius: '8px', minHeight: '2.25rem' }}
           >

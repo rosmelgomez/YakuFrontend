@@ -6,10 +6,11 @@ import YakuLoader from '@/components/layout/YakuLoader';
 
 interface ProtectedRouteProps {
   allowedRole?: 'agricultor' | 'administrador';
+  requiredPermission?: string;
   children?: React.ReactNode;
 }
 
-export default function ProtectedRoute({ allowedRole, children }: ProtectedRouteProps) {
+export default function ProtectedRoute({ allowedRole, requiredPermission, children }: ProtectedRouteProps) {
   const { user, isLoading, isAuthenticated } = useAuth();
 
   // Mientras se verifica la sesion con el backend (/auth/perfil), si ya hay
@@ -26,7 +27,11 @@ export default function ProtectedRoute({ allowedRole, children }: ProtectedRoute
     return <Navigate to="/auth/login" replace />;
   }
 
-  if (allowedRole && user.rol !== allowedRole) {
+  // Un usuario no-administrador con un permiso granular delegado (HU-31)
+  // puede entrar a una pantalla de administrador puntual sin tener el rol.
+  const tienePermisoDelegado = !!requiredPermission && (user.permisos || []).includes(requiredPermission);
+
+  if (allowedRole && user.rol !== allowedRole && !tienePermisoDelegado) {
     if (user.rol === 'administrador') {
       return <Navigate to="/dashboard/administrador" replace />;
     }

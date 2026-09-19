@@ -390,10 +390,14 @@ button, .button {
   touch-action: manipulation;
 }
 
+/* :not(.rt-TextFieldInput) excluye el input interno de Radix TextField.Root:
+   ese componente ya gestiona su propia altura via su wrapper .rt-TextFieldRoot,
+   y forzar min-height aquí solo hace que el input interno se desborde por
+   debajo del recuadro visible, descentrando el texto. */
 button:where(:not([role="switch"]):not([role="checkbox"]):not(.btn-compact)),
-input:not([type="checkbox"]):not([type="radio"]),
+input:not([type="checkbox"]):not([type="radio"]):not(.rt-TextFieldInput),
 select,
-textarea {
+textarea:not(.rt-TextAreaInput) {
   min-height: 2.75rem;
 }
 

@@ -5,6 +5,15 @@ import { Box, Card, Flex, Text, Badge, TextField, Button, ScrollArea } from "@ra
 import { Wrench, Search } from "lucide-react";
 import { listarLogsSistema } from "@/actions/logs";
 
+const MODULOS_RAPIDOS = [
+  { label: "Todos", value: "" },
+  { label: "Hardware", value: "hardware" },
+  { label: "Autenticación", value: "Autenticación" },
+  { label: "Permisos", value: "Permisos" },
+  { label: "Usuarios", value: "Usuarios" },
+  { label: "Red MQTT", value: "Red MQTT" },
+];
+
 export default function MaintenanceHistoryClient() {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,6 +30,11 @@ export default function MaintenanceHistoryClient() {
     } else {
       setError(res.error);
     }
+  };
+
+  const handleFiltroRapido = (valor: string) => {
+    setModulo(valor);
+    cargar(valor);
   };
 
   useEffect(() => {
@@ -41,14 +55,29 @@ export default function MaintenanceHistoryClient() {
     <Box>
       <Flex direction="column" gap="4" mb="5">
         <Box>
-          <Text size={{ initial: "5", sm: "6" }} weight="bold" color="indigo" as="div">Historial de mantenimiento</Text>
+          <Text size={{ initial: "5", sm: "6" }} weight="bold" color="indigo" as="div">Auditoría y mantenimiento</Text>
           <Text size={{ initial: "1", sm: "2" }} color="gray">
-            Bitácora técnica del sistema: calibraciones, desconexiones y desactivaciones de dispositivos.
+            Bitácora completa del sistema: mantenimiento técnico (calibraciones, desconexiones),
+            inicios de sesión, cambios de rol/permisos y errores de red del broker MQTT.
           </Text>
         </Box>
       </Flex>
 
       <Card size={{ initial: "2", sm: "3" }} mb="4" style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
+        <Flex gap="1.5" wrap="wrap" mb="3">
+          {MODULOS_RAPIDOS.map((m) => (
+            <Button
+              key={m.value}
+              size="1"
+              variant={modulo === m.value ? "solid" : "soft"}
+              color={modulo === m.value ? "indigo" : "gray"}
+              onClick={() => handleFiltroRapido(m.value)}
+              style={{ cursor: "pointer" }}
+            >
+              {m.label}
+            </Button>
+          ))}
+        </Flex>
         <Flex gap="3" wrap="wrap" align="end">
           <Box style={{ flex: "1 1 220px" }}>
             <Text size="1" color="gray" as="div" mb="1">Buscar</Text>
@@ -84,7 +113,7 @@ export default function MaintenanceHistoryClient() {
         ) : filtrados.length === 0 ? (
           <Flex direction="column" align="center" gap="2" py="6">
             <Wrench className="w-10 h-10 text-slate-500" />
-            <Text color="gray" size="2">No hay registros de mantenimiento.</Text>
+            <Text color="gray" size="2">No hay registros de auditoría para este filtro.</Text>
           </Flex>
         ) : (
           <ScrollArea scrollbars="horizontal" style={{ width: "100%" }}>

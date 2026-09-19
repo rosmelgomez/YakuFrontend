@@ -1,15 +1,21 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
-import { Badge, Box, Button, Card, Dialog, Flex, Grid, ScrollArea, Select, Table, Text, TextField } from "@radix-ui/themes";
-import { Plus, Power, RefreshCw, Shield, User } from "lucide-react";
+import { Badge, Box, Button, Card, Checkbox, Dialog, Flex, Grid, ScrollArea, Select, Table, Text, TextField } from "@radix-ui/themes";
+import { KeyRound, Plus, Power, RefreshCw, Shield, User } from "lucide-react";
 import { cambiarEstadoUsuario, cambiarRolUsuario, registrarUsuario } from "@/actions/admin";
+import { listarCatalogoPermisos, listarPermisosUsuario, asignarPermisosUsuario } from "@/actions/permisos";
 
 export default function UsuariosClient({ initialUsers = [], initialDevices = [], initialCrops = [] }: any) {
   const [users, setUsers] = useState(initialUsers);
   const [currentPage, setCurrentPage] = useState(1);
   const [isPending, startTransition] = useTransition();
   const [isOpenRegisterUser, setIsOpenRegisterUser] = useState(false);
+  const [permisosUserId, setPermisosUserId] = useState<number | null>(null);
+  const [catalogoPermisos, setCatalogoPermisos] = useState<any[]>([]);
+  const [codigosSeleccionados, setCodigosSeleccionados] = useState<string[]>([]);
+  const [loadingPermisos, setLoadingPermisos] = useState(false);
+  const [savingPermisos, setSavingPermisos] = useState(false);
   const [newUserNombre, setNewUserNombre] = useState("");
   const [newUserApellido, setNewUserApellido] = useState("");
   const [newUserCorreo, setNewUserCorreo] = useState("");
@@ -53,6 +59,40 @@ export default function UsuariosClient({ initialUsers = [], initialDevices = [],
         alert(`Error: ${err.message}`);
       }
     });
+  };
+
+  const handleAbrirPermisos = async (userId: number) => {
+    setPermisosUserId(userId);
+    setLoadingPermisos(true);
+    const [catalogoRes, asignadosRes] = await Promise.all([
+      listarCatalogoPermisos(),
+      listarPermisosUsuario(userId),
+    ]);
+    setLoadingPermisos(false);
+    if (catalogoRes.success) setCatalogoPermisos(catalogoRes.data || []);
+    if (asignadosRes.success) {
+      setCodigosSeleccionados((asignadosRes.data || []).map((p: any) => p.codigo));
+    } else {
+      setCodigosSeleccionados([]);
+    }
+  };
+
+  const handleTogglePermiso = (codigo: string) => {
+    setCodigosSeleccionados((prev) =>
+      prev.includes(codigo) ? prev.filter((c) => c !== codigo) : [...prev, codigo]
+    );
+  };
+
+  const handleGuardarPermisos = async () => {
+    if (permisosUserId === null) return;
+    setSavingPermisos(true);
+    const res = await asignarPermisosUsuario(permisosUserId, codigosSeleccionados);
+    setSavingPermisos(false);
+    if (res.success) {
+      setPermisosUserId(null);
+    } else {
+      alert(`❌ Error al guardar permisos: ${res.error}`);
+    }
   };
 
   const handleRegisterUserSubmit = async (e: React.FormEvent) => {
@@ -205,6 +245,11 @@ export default function UsuariosClient({ initialUsers = [], initialDevices = [],
                         <Button size="1" color="gray" variant="outline" onClick={() => handleToggleRolUser(u.id, u.id_rol)} style={{ cursor: "pointer" }}>
                           <RefreshCw size={12} style={{ marginRight: "4px" }} /> Cambiar Rol
                         </Button>
+                        {!isAdmin && (
+                          <Button size="1" color="indigo" variant="outline" onClick={() => handleAbrirPermisos(u.id)} style={{ cursor: "pointer" }}>
+                            <KeyRound size={12} style={{ marginRight: "4px" }} /> Permisos
+                          </Button>
+                        )}
                       </Flex>
                     </Table.Cell>
                   </Table.Row>
@@ -319,6 +364,41 @@ export default function UsuariosClient({ initialUsers = [], initialDevices = [],
               <Button type="submit" color="green" disabled={!newUserNombre || !newUserCorreo || !newUserContrasena}>Crear Usuario</Button>
             </Flex>
           </form>
+        </Dialog.Content>
+      </Dialog.Root>
+
+      <Dialog.Root open={permisosUserId !== null} onOpenChange={(open) => !open && setPermisosUserId(null)}>
+        <Dialog.Content aria-describedby={undefined} style={{ maxWidth: 460, width: "92vw", background: "var(--surface-mockup)", border: "1px solid var(--border-mockup)" }}>
+          <Dialog.Title style={{ color: "white" }}>Permisos granulares</Dialog.Title>
+          <Text size="2" color="gray" mb="3" as="div">
+            Otorga capacidades administrativas puntuales a este usuario sin convertirlo en administrador.
+          </Text>
+          {loadingPermisos ? (
+            <Text color="gray" size="2">Cargando...</Text>
+          ) : (
+            <Flex direction="column" gap="3">
+              {catalogoPermisos.map((p: any) => (
+                <label key={p.codigo} style={{ display: "flex", gap: "10px", alignItems: "flex-start", cursor: "pointer" }}>
+                  <Checkbox
+                    checked={codigosSeleccionados.includes(p.codigo)}
+                    onCheckedChange={() => handleTogglePermiso(p.codigo)}
+                  />
+                  <Box>
+                    <Text size="2" weight="bold" style={{ color: "white", display: "block" }}>{p.nombre}</Text>
+                    {p.descripcion && <Text size="1" color="gray">{p.descripcion}</Text>}
+                  </Box>
+                </label>
+              ))}
+            </Flex>
+          )}
+          <Flex gap="3" mt="5" justify="end">
+            <Dialog.Close>
+              <Button variant="soft" color="gray" style={{ cursor: "pointer" }}>Cancelar</Button>
+            </Dialog.Close>
+            <Button color="indigo" onClick={handleGuardarPermisos} disabled={savingPermisos || loadingPermisos} style={{ cursor: "pointer" }}>
+              {savingPermisos ? "Guardando..." : "Guardar permisos"}
+            </Button>
+          </Flex>
         </Dialog.Content>
       </Dialog.Root>
     </Box>

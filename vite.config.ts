@@ -26,7 +26,7 @@ export default defineConfig(({ mode }) => {
   },
   server: {
     port: 3000,
-    allowedHosts: ['app.yaku-peru.site'],
+    allowedHosts: ['app.yaku-peru.site','localhost:8000','http://127.0.0.1:8000','https://fhqtsh2x-3000.brs.devtunnels.ms'],
     proxy: {
       '/api': {
         target: env.VITE_FASTAPI_URL,
