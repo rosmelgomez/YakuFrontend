@@ -602,19 +602,57 @@ const HistoricoSensoresCard = ({
     return dateMatchesCalendarFilters(date, calendarFilters);
   });
 
+  // Intervalo entre puntos generados por rango: 6h -> cada 15 min, 24h -> cada hora, 7d -> cada día
+  const BUCKET_MS: Record<HistoryRange, number> = {
+    '6h': 15 * 60 * 1000,
+    '24h': 60 * 60 * 1000,
+    '7d': 24 * 60 * 60 * 1000,
+  };
+
+  // Valor interpolado linealmente entre las lecturas reales más cercanas a targetMs
+  const interpolateAt = (sorted: HistoricoPunto[], targetMs: number): number | null => {
+    if (sorted.length === 0) return null;
+    const firstMs = new Date(sorted[0].fecha).getTime();
+    const lastMs = new Date(sorted[sorted.length - 1].fecha).getTime();
+    if (targetMs <= firstMs) return sorted[0].valor;
+    if (targetMs >= lastMs) return sorted[sorted.length - 1].valor;
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const t1 = new Date(sorted[i].fecha).getTime();
+      const t2 = new Date(sorted[i + 1].fecha).getTime();
+      if (targetMs >= t1 && targetMs <= t2) {
+        if (t2 === t1) return sorted[i].valor;
+        const ratio = (targetMs - t1) / (t2 - t1);
+        return sorted[i].valor + (sorted[i + 1].valor - sorted[i].valor) * ratio;
+      }
+    }
+    return sorted[sorted.length - 1].valor;
+  };
+
   const filterDataByTime = (data: HistoricoPunto[], range: HistoryRange) => {
     if (data.length === 0) return [];
     const now = new Date().getTime();
     const limits = { '6h': 6 * 60 * 60 * 1000, '24h': 24 * 60 * 60 * 1000, '7d': 7 * 24 * 60 * 60 * 1000 };
     const cutoff = now - limits[range];
-    
-    return data.filter(d => new Date(d.fecha).getTime() >= cutoff).map(d => {
-      const dateObj = new Date(d.fecha);
-      const xLabel = range === '7d' 
+
+    const inRange = data.filter(d => new Date(d.fecha).getTime() >= cutoff);
+    if (inRange.length === 0) return [];
+
+    const sorted = [...inRange].sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
+    const bucketMs = BUCKET_MS[range];
+
+    // Genera un punto por cada intervalo del rango, interpolando cuando no hay lectura exacta,
+    // para que el gráfico muestre información continua en vez de solo las lecturas dispersas.
+    const buckets: (HistoricoPunto & { xLabel: string; valorReal: number })[] = [];
+    for (let t = cutoff; t <= now; t += bucketMs) {
+      const valor = interpolateAt(sorted, t);
+      if (valor === null) continue;
+      const dateObj = new Date(t);
+      const xLabel = range === '7d'
         ? dateObj.toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', timeZone: chartTimeZone })
         : dateObj.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: chartTimeZone });
-      return { ...d, xLabel, valorReal: d.valor };
-    });
+      buckets.push({ fecha: dateObj.toISOString(), valor, xLabel, valorReal: valor });
+    }
+    return buckets;
   };
 
   const resolveRange = () => {
