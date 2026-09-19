@@ -172,10 +172,13 @@ export default function FirmwareClient({
     installationsPage * installationsPageSize,
   );
   const filteredDevices = useMemo(
-    () => devices.filter((device) => device.asignaciones_iot?.some((assignment) => (
-      assignment.id_usuario === Number(userId)
-      && assignment.id_cultivo === Number(cropId)
-    ))),
+    () => devices.filter((device) => (
+      device.estado === "asignado"
+      && device.asignaciones_iot?.some((assignment) => (
+        assignment.id_usuario === Number(userId)
+        && assignment.id_cultivo === Number(cropId)
+      ))
+    )),
     [devices, userId, cropId],
   );
   const selectedDevice = useMemo(
