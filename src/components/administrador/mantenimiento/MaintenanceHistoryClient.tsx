@@ -20,6 +20,8 @@ export default function MaintenanceHistoryClient() {
   const [error, setError] = useState<string | null>(null);
   const [modulo, setModulo] = useState("");
   const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 15;
 
   const cargar = async (moduloFiltro?: string) => {
     setLoading(true);
@@ -50,6 +52,13 @@ export default function MaintenanceHistoryClient() {
       (l.modulo || "").toLowerCase().includes(term)
     );
   });
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, modulo]);
+
+  const totalPages = Math.max(1, Math.ceil(filtrados.length / pageSize));
+  const paginados = filtrados.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <Box>
@@ -127,7 +136,7 @@ export default function MaintenanceHistoryClient() {
                 </tr>
               </thead>
               <tbody>
-                {filtrados.map((log) => (
+                {paginados.map((log) => (
                   <tr key={log.id} style={{ borderBottom: "1px solid var(--border-mockup)" }}>
                     <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
                       <Text size="1" color="gray" style={{ fontFamily: "monospace" }}>
@@ -148,6 +157,18 @@ export default function MaintenanceHistoryClient() {
               </tbody>
             </table>
           </ScrollArea>
+        )}
+
+        {filtrados.length > pageSize && (
+          <Flex justify="between" align="center" mt="4" px="2">
+            <Text size="2" color="gray">
+              Mostrando {Math.min((currentPage - 1) * pageSize + 1, filtrados.length)} a {Math.min(currentPage * pageSize, filtrados.length)} de {filtrados.length}
+            </Text>
+            <Flex gap="1">
+              <Button size="1" variant="soft" color="gray" onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} disabled={currentPage === 1}>Anterior</Button>
+              <Button size="1" variant="soft" color="gray" onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}>Siguiente</Button>
+            </Flex>
+          </Flex>
         )}
       </Card>
     </Box>

@@ -9,6 +9,10 @@ import SearchableSelect from "@/components/ui/SearchableSelect";
 export default function AlmacenesClient({ initialAlmacenes = [], initialDevices = [], regiones = [], provincias = [], distritos = [] }: any) {
   const [almacenesList] = useState(initialAlmacenes);
   const [isPending, startTransition] = useTransition();
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 8;
+  const totalPages = Math.max(1, Math.ceil(almacenesList.length / pageSize));
+  const paginatedAlmacenes = almacenesList.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const [newAlmacenNombre, setNewAlmacenNombre] = useState("");
   const [newAlmacenRegionId, setNewAlmacenRegionId] = useState("");
   const [newAlmacenProvinciaId, setNewAlmacenProvinciaId] = useState("");
@@ -121,7 +125,7 @@ export default function AlmacenesClient({ initialAlmacenes = [], initialDevices 
                   </Table.Row>
                 </Table.Header>
                 <Table.Body>
-                  {almacenesList.map((alm: any) => {
+                  {paginatedAlmacenes.map((alm: any) => {
                     const deviceCount = initialDevices.filter((d: any) => d.id_almacen === alm.id && d.estado === "disponible").length;
                     return (
                       <Table.Row key={alm.id}>
@@ -136,6 +140,18 @@ export default function AlmacenesClient({ initialAlmacenes = [], initialDevices 
                 </Table.Body>
               </Table.Root>
             </ScrollArea>
+
+            {almacenesList.length > pageSize && (
+              <Flex justify="between" align="center" mt="4" px="2">
+                <Text size="2" color="gray">
+                  Mostrando {Math.min((currentPage - 1) * pageSize + 1, almacenesList.length)} a {Math.min(currentPage * pageSize, almacenesList.length)} de {almacenesList.length}
+                </Text>
+                <Flex gap="1">
+                  <Button size="1" variant="soft" color="gray" onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} disabled={currentPage === 1}>Anterior</Button>
+                  <Button size="1" variant="soft" color="gray" onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}>Siguiente</Button>
+                </Flex>
+              </Flex>
+            )}
           </Card>
         </Box>
       </Grid>

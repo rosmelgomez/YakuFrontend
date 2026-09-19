@@ -144,6 +144,10 @@ export default function FirmwareClient({
   const [showMqttPassword, setShowMqttPassword] = useState(false);
   const [uploadSegments, setUploadSegments] = useState<UploadSegment[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [versionsPage, setVersionsPage] = useState(1);
+  const versionsPageSize = 10;
+  const [installationsPage, setInstallationsPage] = useState(1);
+  const installationsPageSize = 10;
 
   const selectedVersion = useMemo(
     () => initialVersions.find((item) => item.id === Number(versionId)),
@@ -156,6 +160,16 @@ export default function FirmwareClient({
   const filteredCrops = useMemo(
     () => crops.filter((crop) => crop.id_usuario === Number(userId) && crop.estado === "activo"),
     [crops, userId],
+  );
+  const versionsTotalPages = Math.max(1, Math.ceil(initialVersions.length / versionsPageSize));
+  const paginatedVersions = initialVersions.slice(
+    (versionsPage - 1) * versionsPageSize,
+    versionsPage * versionsPageSize,
+  );
+  const installationsTotalPages = Math.max(1, Math.ceil(initialInstallations.length / installationsPageSize));
+  const paginatedInstallations = initialInstallations.slice(
+    (installationsPage - 1) * installationsPageSize,
+    installationsPage * installationsPageSize,
   );
   const filteredDevices = useMemo(
     () => devices.filter((device) => device.asignaciones_iot?.some((assignment) => (
@@ -629,7 +643,7 @@ export default function FirmwareClient({
             <div className={styles.panelHeader}><h2 className={styles.panelTitle}>Versiones publicadas</h2><span className={styles.badge}>{initialVersions.length}</span></div>
             <div className={styles.tableWrap}>
               {initialVersions.length ? <table className={styles.table}><thead><tr><th>Version</th><th>Chip</th><th>Funcion</th><th>Segmentos</th><th>Estado</th><th style={{ textAlign: "right" }}>Acciones</th></tr></thead><tbody>
-                {initialVersions.map((item) => (
+                {paginatedVersions.map((item) => (
                   <tr key={item.id}>
                     <td>v{item.version}</td>
                     <td>{item.chip}</td>
@@ -654,6 +668,15 @@ export default function FirmwareClient({
                   </tr>
                 ))}
               </tbody></table> : <div className={styles.empty}>No hay versiones publicadas.</div>}
+              {initialVersions.length > versionsPageSize && (
+                <div className={styles.actions} style={{ justifyContent: "space-between", alignItems: "center" }}>
+                  <span className={styles.badge}>{versionsPage} / {versionsTotalPages}</span>
+                  <div className={styles.actions} style={{ marginTop: 0 }}>
+                    <button type="button" className={styles.button} onClick={() => setVersionsPage((p) => Math.max(p - 1, 1))} disabled={versionsPage === 1}>Anterior</button>
+                    <button type="button" className={styles.button} onClick={() => setVersionsPage((p) => Math.min(p + 1, versionsTotalPages))} disabled={versionsPage === versionsTotalPages}>Siguiente</button>
+                  </div>
+                </div>
+              )}
             </div>
           </section>
           <section className={styles.panel}>
@@ -682,8 +705,17 @@ export default function FirmwareClient({
           <div className={styles.panelHeader}><h2 className={styles.panelTitle}>Instalaciones recientes</h2><History size={17} /></div>
           <div className={styles.tableWrap}>
             {initialInstallations.length ? <table className={styles.table}><thead><tr><th>Fecha</th><th>Dispositivo</th><th>Firmware</th><th>Chip</th><th>Progreso</th><th>Estado</th></tr></thead><tbody>
-              {initialInstallations.map((item) => <tr key={item.id}><td>{new Date(item.fecha_inicio).toLocaleString("es-PE")}</td><td>#{item.id_dispositivo}</td><td>#{item.id_firmware}</td><td>{item.chip_detectado || "-"}</td><td>{item.progreso}%</td><td><span className={`${styles.badge} ${item.estado !== "completada" ? styles.badgeMuted : ""}`}>{item.estado}</span></td></tr>)}
+              {paginatedInstallations.map((item) => <tr key={item.id}><td>{new Date(item.fecha_inicio).toLocaleString("es-PE")}</td><td>#{item.id_dispositivo}</td><td>#{item.id_firmware}</td><td>{item.chip_detectado || "-"}</td><td>{item.progreso}%</td><td><span className={`${styles.badge} ${item.estado !== "completada" ? styles.badgeMuted : ""}`}>{item.estado}</span></td></tr>)}
             </tbody></table> : <div className={styles.empty}>No hay instalaciones registradas.</div>}
+            {initialInstallations.length > installationsPageSize && (
+              <div className={styles.actions} style={{ justifyContent: "space-between", alignItems: "center" }}>
+                <span className={styles.badge}>{installationsPage} / {installationsTotalPages}</span>
+                <div className={styles.actions} style={{ marginTop: 0 }}>
+                  <button type="button" className={styles.button} onClick={() => setInstallationsPage((p) => Math.max(p - 1, 1))} disabled={installationsPage === 1}>Anterior</button>
+                  <button type="button" className={styles.button} onClick={() => setInstallationsPage((p) => Math.min(p + 1, installationsTotalPages))} disabled={installationsPage === installationsTotalPages}>Siguiente</button>
+                </div>
+              </div>
+            )}
           </div>
         </section>
       )}
