@@ -17,6 +17,15 @@ export default function DashboardHistoryChart({ chartData, config, umbralVisual 
     return chartData;
   }, [chartData]);
 
+  // Cuántas etiquetas de tiempo mostrar en el eje X: con muchos puntos (rango corto, ej. 6h con
+  // buckets de 15 min) hay que saltar etiquetas para que no se amontonen; con pocos puntos
+  // (rango largo, ej. 7d) se muestran todas. `interval` le dice a Recharts cuántos ticks saltar.
+  const xAxisInterval = useMemo(() => {
+    const desiredTicks = 7;
+    if (safeData.length <= desiredTicks) return 0;
+    return Math.ceil(safeData.length / desiredTicks) - 1;
+  }, [safeData.length]);
+
   // Dominio Y seguro para evitar división por cero (NaN) cuando todos los valores son idénticos
   const yDomain = useMemo(() => {
     if (config?.isPercentage) return [0, 100] as [number, number];
@@ -37,13 +46,14 @@ export default function DashboardHistoryChart({ chartData, config, umbralVisual 
       <ResponsiveContainer width="100%" height={250} minWidth={1} minHeight={200} initialDimension={{ width: 600, height: 250 }}>
         <LineChart data={safeData} margin={{ top: 10, right: 12, left: -6, bottom: 4 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#334155" strokeOpacity={0.5} vertical={false} />
-          <XAxis 
-            dataKey="xLabel" 
-            stroke="#94a3b8" 
-            fontSize={11} 
-            tickMargin={8} 
-            minTickGap={20} 
+          <XAxis
+            dataKey="xLabel"
+            stroke="#94a3b8"
+            fontSize={11}
+            tickMargin={8}
+            minTickGap={20}
             tickLine={false}
+            interval={xAxisInterval}
           />
           <YAxis 
             stroke="#94a3b8" 
