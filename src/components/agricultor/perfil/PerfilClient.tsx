@@ -7,6 +7,7 @@ import {
   Bell, Smartphone, Laptop, Tablet, AlertTriangle, Trash2, Monitor
 } from 'lucide-react';
 import { actualizarPerfil } from '@/actions/profile';
+import { useAuth } from '@/context/AuthContext';
 import {
   guardarNotifConfig,
   obtenerNotifConfig,
@@ -130,6 +131,7 @@ function detectRealDevice(): {
 }
 
 export default function PerfilClient({ user }: { user: any }) {
+  const { updateUser } = useAuth();
   const isAdmin = user.rol === 'administrador' || user.id_rol === 1;
   const userId = user.id || 'default';
 
@@ -361,6 +363,10 @@ export default function PerfilClient({ user }: { user: any }) {
 
         const res = await actualizarPerfil(payload);
         if (res.success) {
+          updateUser({
+            name: `${payload.nombre}${payload.apellido ? ` ${payload.apellido}` : ''}`.trim(),
+            email: payload.correo,
+          });
           showNotificationSuccess("✓ Datos personales guardados correctamente.");
         }
       } catch (err: any) {
