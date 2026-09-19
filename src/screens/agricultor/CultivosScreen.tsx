@@ -246,7 +246,31 @@ export default function CultivosScreen() {
       if (res.success) {
         invalidateCache("dashboard_data");
         setUmbralesSuccessMessage(true);
-        await loadCropsData();
+
+        // Actualizacion optimista: ya sabemos los nuevos valores (los que
+        // acabamos de guardar), no hace falta esperar un round-trip completo
+        // (listarTodosCultivos + getDashboardData) para reflejarlos en la
+        // tarjeta. La recarga completa sigue corriendo en segundo plano para
+        // reconciliar cualquier otro campo derivado del servidor.
+        const findMinMax = (codigo: string) => {
+          const item = umbralesItems.find((u) => (u.codigo || "").toUpperCase() === codigo);
+          return item ? { min: Number(item.min), max: Number(item.max) } : null;
+        };
+        const nuevosUmbrales: CropThresholds = {
+          humedadSuelo: findMinMax("HUM_SUELO") ?? selectedCropForUmbrales.umbrales?.humedadSuelo,
+          humedadAmbiente: findMinMax("HUM_AMB") ?? selectedCropForUmbrales.umbrales?.humedadAmbiente,
+          temperaturaSuelo: findMinMax("TEMP_SUELO") ?? selectedCropForUmbrales.umbrales?.temperaturaSuelo,
+          temperaturaAmbiente: findMinMax("TEMP_AMB") ?? selectedCropForUmbrales.umbrales?.temperaturaAmbiente,
+        };
+        setCrops((prev) =>
+          prev.map((c) =>
+            c.idCultivo === selectedCropForUmbrales.idCultivo
+              ? { ...c, umbrales: nuevosUmbrales }
+              : c
+          )
+        );
+        void loadCropsData();
+
         setTimeout(() => {
           setIsUmbralesModalOpen(false);
           setUmbralesSuccessMessage(false);

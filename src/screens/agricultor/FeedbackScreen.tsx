@@ -4,7 +4,7 @@ import { Box } from '@radix-ui/themes';
 import { getCultivosBase } from '@/services/cultivos-base';
 import type { CultivoBase } from '@/services/cultivos-base';
 import { listarFeedbackPropios, listarPreguntasFeedback } from '@/actions/feedback';
-import DashboardSkeleton from '@/components/layout/DashboardSkeleton';
+import YakuLoader from '@/components/layout/YakuLoader';
 import FeedbackClient from '@/components/agricultor/feedback/FeedbackClient';
 
 export default function FeedbackScreen() {
@@ -43,7 +43,7 @@ export default function FeedbackScreen() {
   if (loading) {
     return (
       <Box className="page-content" px={{ initial: "2", sm: "4", md: "6" }} py={{ initial: "3", sm: "4", md: "5" }}>
-        <DashboardSkeleton variant="form" />
+        <YakuLoader />
       </Box>
     );
   }

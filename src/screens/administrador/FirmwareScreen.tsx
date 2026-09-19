@@ -4,7 +4,7 @@ import { Box } from '@radix-ui/themes';
 import { listarDispositivos, listarUsuarios } from '@/actions/admin';
 import { listarTodosCultivos } from '@/actions/crops';
 import { listarInstalacionesFirmware, listarVersionesFirmware } from '@/actions/firmware';
-import DashboardSkeleton from '@/components/layout/DashboardSkeleton';
+import YakuLoader from '@/components/layout/YakuLoader';
 import FirmwareClient from '@/components/administrador/firmware/FirmwareClient';
 
 export default function FirmwareScreen() {
@@ -49,7 +49,7 @@ export default function FirmwareScreen() {
   if (loading) {
     return (
       <Box className="page-content" px={{ initial: "2", sm: "4", md: "6" }} py={{ initial: "3", sm: "4", md: "5" }}>
-        <DashboardSkeleton variant="admin" />
+        <YakuLoader />
       </Box>
     );
   }

@@ -6,7 +6,7 @@ import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { Card, Box, Flex, Text, Button, TextField, Callout } from "@radix-ui/themes";
 import { CheckCircledIcon, ExclamationTriangleIcon, ReloadIcon } from "@radix-ui/react-icons";
-import { Loader2, Mail, KeyRound, ArrowRight, ShieldCheck } from "lucide-react";
+import { Loader2, Mail, ArrowRight, ShieldCheck } from "lucide-react";
 
 export default function VerificarCorreoClient() {
   const searchParams = useSearchParams();
@@ -23,6 +23,7 @@ export default function VerificarCorreoClient() {
   const [resendCooldown, setResendCooldown] = useState<number>(0);
   const [isResending, setIsResending] = useState<boolean>(false);
   const codeInputRef = useRef<HTMLInputElement>(null);
+  const [codeFocused, setCodeFocused] = useState(false);
 
   // Focus input on load
   useEffect(() => {
@@ -128,40 +129,6 @@ export default function VerificarCorreoClient() {
   return (
     <Card className="w-full max-w-md" style={{ padding: "2.5rem", textAlign: "center" }}>
       <Flex direction="column" gap="4" align="center">
-        {/* ICONO CENTRAL */}
-        <div
-          style={{
-            width: "64px",
-            height: "64px",
-            borderRadius: "50%",
-            background:
-              status === "success"
-                ? "rgba(34, 197, 94, 0.15)"
-                : status === "error"
-                ? "rgba(239, 68, 68, 0.15)"
-                : "rgba(13, 148, 136, 0.15)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color:
-              status === "success"
-                ? "#22c55e"
-                : status === "error"
-                ? "#ef4444"
-                : "#0d9488",
-          }}
-        >
-          {status === "verifying" ? (
-            <Loader2 size={32} className="animate-spin" />
-          ) : status === "success" ? (
-            <CheckCircledIcon width={34} height={34} />
-          ) : status === "error" ? (
-            <ExclamationTriangleIcon width={34} height={34} />
-          ) : (
-            <KeyRound size={32} />
-          )}
-        </div>
-
         {/* TÍTULO Y DESCRIPCIÓN */}
         <Box>
           <Text size="5" weight="bold" style={{ color: "white" }} as="div">
@@ -220,12 +187,13 @@ export default function VerificarCorreoClient() {
           <Box style={{ width: "100%" }} mt="2">
             {!initialEmail && (
               <Box mb="3" style={{ textAlign: "left" }}>
-                <label style={{ display: "block", marginBottom: "4px" }}>
+                <label htmlFor="verificar-correo" style={{ display: "block", marginBottom: "4px" }}>
                   <Text size="2" color="gray">
                     Correo electrónico registrado:
                   </Text>
                 </label>
                 <TextField.Root
+                  id="verificar-correo"
                   placeholder="ejemplo@correo.com"
                   type="email"
                   value={email}
@@ -239,35 +207,70 @@ export default function VerificarCorreoClient() {
               </Box>
             )}
 
-            <label style={{ display: "block", textAlign: "left", marginBottom: "8px" }}>
+            <label htmlFor="verificar-codigo" style={{ display: "block", textAlign: "left", marginBottom: "8px" }}>
               <Text size="2" weight="medium" style={{ color: "#e2e8f0" }}>
                 Código de 6 dígitos:
               </Text>
             </label>
 
-            <TextField.Root
-              ref={codeInputRef}
-              placeholder="123456"
-              value={code}
-              onChange={(e) => {
-                const val = e.target.value.replace(/\D/g, "").slice(0, 6);
-                setCode(val);
-                if (val.length === 6 && email) {
-                  procesarVerificacion(val, email);
-                }
-              }}
-              style={{
-                width: "100%",
-                fontSize: "1.5rem",
-                textAlign: "center",
-                letterSpacing: "0.5rem",
-                fontWeight: "bold",
-                marginBottom: "1.25rem",
-                padding: "0.5rem",
-              }}
-              inputMode="numeric"
-              maxLength={6}
-            />
+            <Box style={{ position: "relative", marginBottom: "1.25rem" }}>
+              {/* Input real, invisible pero funcional, superpuesto sobre las casillas */}
+              <input
+                id="verificar-codigo"
+                ref={codeInputRef}
+                value={code}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+                  setCode(val);
+                  if (val.length === 6 && email) {
+                    procesarVerificacion(val, email);
+                  }
+                }}
+                onFocus={() => setCodeFocused(true)}
+                onBlur={() => setCodeFocused(false)}
+                aria-label="Código de verificación de 6 dígitos"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  width: "100%",
+                  height: "100%",
+                  opacity: 0,
+                  cursor: "text",
+                }}
+              />
+              {/* Casillas visuales, no interactivas */}
+              <Flex gap="2" justify="center" style={{ pointerEvents: "none" }}>
+                {Array.from({ length: 6 }).map((_, i) => {
+                  const digit = code[i];
+                  const isActive = codeFocused && i === code.length;
+                  return (
+                    <Box
+                      key={i}
+                      style={{
+                        width: "44px",
+                        height: "52px",
+                        borderRadius: "8px",
+                        border: isActive
+                          ? "2px solid #38bdf8"
+                          : "1px solid rgba(255,255,255,0.15)",
+                        background: "rgba(255,255,255,0.04)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "1.5rem",
+                        fontWeight: "bold",
+                        color: "white",
+                      }}
+                    >
+                      {digit || ""}
+                    </Box>
+                  );
+                })}
+              </Flex>
+            </Box>
 
             <Button
               style={{ width: "100%", cursor: "pointer" }}

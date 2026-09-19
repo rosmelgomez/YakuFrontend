@@ -402,6 +402,17 @@ input, select, textarea {
   max-width: 100%;
 }
 
+/* El <select> nativo hereda color-scheme para que su menú desplegable
+   (incluidas las <option>) se pinte oscuro en vez del blanco por defecto del SO/navegador. */
+select {
+  color-scheme: dark;
+}
+
+select option {
+  background-color: #0f172a;
+  color: white;
+}
+
 /* =========================================================
    YAKU REPLICATED UTILITIES (Feedback & Controls)
    ========================================================= */

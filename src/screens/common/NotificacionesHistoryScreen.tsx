@@ -81,7 +81,7 @@ export default function NotificacionesHistoryScreen() {
 
   return (
     <Box className="page-content" px={{ initial: "2", sm: "4", md: "6" }} py={{ initial: "3", sm: "4", md: "5" }}>
-      <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6">
+      <div className="w-full space-y-4 sm:space-y-6">
         {/* CABECERA */}
         <Flex justify="between" align={{ initial: 'start', sm: 'center' }} gap="3" wrap="wrap">
           <div>

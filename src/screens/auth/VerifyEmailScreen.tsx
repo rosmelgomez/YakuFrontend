@@ -2,6 +2,7 @@
 import React, { Suspense } from 'react';
 import VerificarCorreoClient from '@/components/auth/VerificarCorreoClient';
 import { Box, Text, Container } from '@radix-ui/themes';
+import { SUPPORT_EMAIL } from '@/config/contact';
 
 export default function VerifyEmailScreen() {
   return (
@@ -37,7 +38,13 @@ export default function VerifyEmailScreen() {
 
         <Box style={{ textAlign: 'center', marginTop: '2rem' }}>
           <Text size="2" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-            ¿Problemas con el código? → soporte@yaku.pe
+            ¿Problemas con el código? →{' '}
+            <a
+              href={`mailto:${SUPPORT_EMAIL}`}
+              style={{ color: '#38bdf8', textDecoration: 'underline' }}
+            >
+              {SUPPORT_EMAIL}
+            </a>
           </Text>
         </Box>
       </Container>

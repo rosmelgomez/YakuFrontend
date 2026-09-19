@@ -1,7 +1,7 @@
 // src/screens/administrador/FeedbackQuestionsScreen.tsx
 import React, { useEffect, useState } from 'react';
 import { Box } from '@radix-ui/themes';
-import DashboardSkeleton from '@/components/layout/DashboardSkeleton';
+import YakuLoader from '@/components/layout/YakuLoader';
 import { listarPreguntasFeedback, obtenerKpisFeedback } from '@/actions/feedback';
 import type { FeedbackKpisResponse, FeedbackPregunta } from '@/actions/feedback';
 import FeedbackAdminClient from '@/components/administrador/feedback/FeedbackAdminClient';
@@ -40,7 +40,7 @@ export default function FeedbackQuestionsScreen() {
   if (loading) {
     return (
       <Box className="page-content" px={{ initial: "2", sm: "4", md: "6" }} py={{ initial: "3", sm: "4", md: "5" }}>
-        <DashboardSkeleton variant="admin" />
+        <YakuLoader />
       </Box>
     );
   }

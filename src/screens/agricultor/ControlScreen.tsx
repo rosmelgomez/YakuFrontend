@@ -7,7 +7,7 @@ import { getCultivosBase } from '@/services/cultivos-base';
 import type { CultivoBase } from '@/services/cultivos-base';
 import { listarModelosML } from '@/actions/ml';
 import { getCached, setCached, isCacheValid } from '@/lib/cache';
-import DashboardSkeleton from '@/components/layout/DashboardSkeleton';
+import YakuLoader from '@/components/layout/YakuLoader';
 import NoCropsEmptyState from '@/components/layout/NoCropsEmptyState';
 import ControlClient from '@/components/agricultor/control/ControlClient';
 
@@ -74,7 +74,7 @@ export default function ControlScreen() {
   if (loading) {
     return (
       <Box className="page-content" px={{ initial: "3", sm: "4", md: "6" }} py={{ initial: "3", sm: "4", md: "6" }}>
-        <DashboardSkeleton variant="control" />
+        <YakuLoader />
       </Box>
     );
   }

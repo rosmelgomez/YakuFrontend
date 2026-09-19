@@ -2,7 +2,11 @@
 
 import { refreshSession } from '@/lib/api/session-refresh';
 
-export const FASTAPI_BASE_URL = import.meta.env.VITE_FASTAPI_URL || '/api';
+// Siempre relativa: el navegador nunca debe contactar localhost/IP privada
+// directamente (dispara el permiso "Local Network Access" de Chrome cuando
+// la app se sirve desde un origen publico como un devtunnel). El backend
+// real se resuelve via el proxy de Vite en dev o el reverse proxy en prod.
+export const FASTAPI_BASE_URL = '/api';
 
 function resolveEndpoint(endpoint: string) {
   return endpoint.startsWith('/') ? endpoint : `/${endpoint}`;

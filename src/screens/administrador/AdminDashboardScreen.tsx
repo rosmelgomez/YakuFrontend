@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Card, Text } from '@radix-ui/themes';
 import { obtenerResumenAdmin } from '@/actions/admin';
-import DashboardSkeleton from '@/components/layout/DashboardSkeleton';
+import YakuLoader from '@/components/layout/YakuLoader';
 import AdminDashboardClient from '@/components/administrador/dashboard/AdminDashboardClient';
 
 export default function AdminDashboardScreen() {
@@ -32,7 +32,7 @@ export default function AdminDashboardScreen() {
   if (loading) {
     return (
       <Box className="page-content" px={{ initial: "2", sm: "4", md: "6" }} py={{ initial: "3", sm: "4", md: "5" }}>
-        <DashboardSkeleton variant="admin" />
+        <YakuLoader />
       </Box>
     );
   }

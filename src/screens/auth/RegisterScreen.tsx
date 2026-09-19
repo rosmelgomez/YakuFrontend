@@ -4,9 +4,16 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import RegisterForm from '@/components/auth/RegisterForm';
 import { Box, Text, Container } from '@radix-ui/themes';
+import { SUPPORT_EMAIL } from '@/config/contact';
+import YakuLoader from '@/components/layout/YakuLoader';
 
 export default function RegisterScreen() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, isLoading } = useAuth();
+
+  // Ver nota en LoginScreen.tsx sobre por que hay que esperar isLoading.
+  if (isLoading) {
+    return <YakuLoader fullScreen />;
+  }
 
   if (isAuthenticated && user) {
     if (user.rol === 'administrador') {
@@ -46,7 +53,13 @@ export default function RegisterScreen() {
 
         <Box style={{ textAlign: 'center', marginTop: '2rem' }}>
           <Text size="2" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-            ¿Problemas al registrarte? → soporte@yaku.pe
+            ¿Problemas al registrarte? →{' '}
+            <a
+              href={`mailto:${SUPPORT_EMAIL}`}
+              style={{ color: '#38bdf8', textDecoration: 'underline' }}
+            >
+              {SUPPORT_EMAIL}
+            </a>
           </Text>
         </Box>
       </Container>

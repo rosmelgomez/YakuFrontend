@@ -6,13 +6,16 @@ import { useAuth } from '@/context/AuthContext';
 import RootLayout from '@/layouts/RootLayout';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import ProtectedRoute from '@/routes/guards/ProtectedRoute';
-import DashboardSkeleton from '@/components/layout/DashboardSkeleton';
+import YakuLoader from '@/components/layout/YakuLoader';
 
-// Lazy-loaded Auth Screens
-const LoginScreen = lazy(() => import('@/screens/auth/LoginScreen'));
-const RegisterScreen = lazy(() => import('@/screens/auth/RegisterScreen'));
-const VerifyEmailScreen = lazy(() => import('@/screens/auth/VerifyEmailScreen'));
-const ResetPasswordScreen = lazy(() => import('@/screens/auth/ResetPasswordScreen'));
+// Pantallas de auth: import estatico (no lazy). Son la primera pantalla que
+// ve casi cualquier visitante nuevo, asi que separarlas en su propio chunk
+// solo agrega un round-trip extra sin beneficio (a diferencia del dashboard,
+// al que se llega despues de cargar la app y que si conviene diferir).
+import LoginScreen from '@/screens/auth/LoginScreen';
+import RegisterScreen from '@/screens/auth/RegisterScreen';
+import VerifyEmailScreen from '@/screens/auth/VerifyEmailScreen';
+import ResetPasswordScreen from '@/screens/auth/ResetPasswordScreen';
 
 // Lazy-loaded Agricultor Screens
 const DashboardScreen = lazy(() => import('@/screens/agricultor/DashboardScreen'));
@@ -41,9 +44,9 @@ const MqttConfigScreen = lazy(() => import('@/screens/administrador/MqttConfigSc
 const MaintenanceHistoryScreen = lazy(() => import('@/screens/administrador/MaintenanceHistoryScreen'));
 const NotificacionesHistoryScreen = lazy(() => import('@/screens/common/NotificacionesHistoryScreen'));
 
-function SuspenseWrapper({ children, variant = 'dashboard' }: { children: React.ReactNode; variant?: 'dashboard' | 'chart' | 'control' | 'admin' | 'form' }) {
+function SuspenseWrapper({ children }: { children: React.ReactNode; variant?: 'dashboard' | 'chart' | 'control' | 'admin' | 'form' }) {
   return (
-    <Suspense fallback={<DashboardSkeleton variant={variant} />}>
+    <Suspense fallback={<YakuLoader />}>
       {children}
     </Suspense>
   );
@@ -52,15 +55,10 @@ function SuspenseWrapper({ children, variant = 'dashboard' }: { children: React.
 function RootIndexRedirect() {
   const { user, isAuthenticated, isLoading } = useAuth();
 
-  if (isLoading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-[#020817] text-white">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent"></div>
-          <span className="text-sm text-slate-400">Iniciando Yaku...</span>
-        </div>
-      </div>
-    );
+  // Ver nota en ProtectedRoute.tsx: con usuario en cache no hace falta
+  // esperar la verificacion para decidir a que dashboard ir.
+  if (isLoading && !user) {
+    return <YakuLoader message="Iniciando Yaku..." fullScreen />;
   }
 
   if (!isAuthenticated || !user) {
@@ -81,11 +79,11 @@ export default function AppRoutes() {
         {/* Raíz */}
         <Route path="/" element={<RootIndexRedirect />} />
 
-        {/* Autenticación */}
-        <Route path="/auth/login" element={<SuspenseWrapper variant="form"><LoginScreen /></SuspenseWrapper>} />
-        <Route path="/auth/register" element={<SuspenseWrapper variant="form"><RegisterScreen /></SuspenseWrapper>} />
-        <Route path="/auth/verificar-correo" element={<SuspenseWrapper variant="form"><VerifyEmailScreen /></SuspenseWrapper>} />
-        <Route path="/auth/recuperar-contrasena" element={<SuspenseWrapper variant="form"><ResetPasswordScreen /></SuspenseWrapper>} />
+        {/* Autenticación: import estatico, no necesitan Suspense */}
+        <Route path="/auth/login" element={<LoginScreen />} />
+        <Route path="/auth/register" element={<RegisterScreen />} />
+        <Route path="/auth/verificar-correo" element={<VerifyEmailScreen />} />
+        <Route path="/auth/recuperar-contrasena" element={<ResetPasswordScreen />} />
 
         {/* Panel Privado */}
         <Route

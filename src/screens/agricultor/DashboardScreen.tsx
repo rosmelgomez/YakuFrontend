@@ -4,7 +4,7 @@ import { Box, Heading, Text } from '@radix-ui/themes';
 import { useAuth } from '@/context/AuthContext';
 import { getDashboardData } from '@/services/dashboard';
 import { getCached, setCached, isCacheValid } from '@/lib/cache';
-import DashboardSkeleton from '@/components/layout/DashboardSkeleton';
+import YakuLoader from '@/components/layout/YakuLoader';
 import DashboardClient from '@/components/agricultor/dashboard/DashboardClient';
 
 export default function DashboardScreen() {
@@ -45,7 +45,7 @@ export default function DashboardScreen() {
   if (loading) {
     return (
       <Box className="page-content" px={{ initial: "4", sm: "5", md: "6" }} py={{ initial: "4", sm: "5", md: "6" }}>
-        <DashboardSkeleton variant="dashboard" />
+        <YakuLoader />
       </Box>
     );
   }

@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { getMLDashboardData } from '@/services/ml';
 import { getCultivosBase } from '@/services/cultivos-base';
 import { getCached, setCached, isCacheValid } from '@/lib/cache';
-import DashboardSkeleton from '@/components/layout/DashboardSkeleton';
+import YakuLoader from '@/components/layout/YakuLoader';
 import NoCropsEmptyState from '@/components/layout/NoCropsEmptyState';
 import MLClient from '@/components/agricultor/ml/MLClient';
 
@@ -65,7 +65,7 @@ export default function PredictivoScreen() {
   if (loading) {
     return (
       <Box className="page-content" px={{ initial: "2", sm: "4", md: "6" }} py={{ initial: "3", sm: "4", md: "5" }}>
-        <DashboardSkeleton variant="chart" />
+        <YakuLoader />
       </Box>
     );
   }

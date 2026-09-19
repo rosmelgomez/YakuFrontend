@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Box } from '@radix-ui/themes';
 import { useAuth } from '@/context/AuthContext';
 import { obtenerPerfil } from '@/actions/profile';
-import DashboardSkeleton from '@/components/layout/DashboardSkeleton';
+import YakuLoader from '@/components/layout/YakuLoader';
 import PerfilClient from '@/components/agricultor/perfil/PerfilClient';
 
 export default function PerfilScreen() {
@@ -38,7 +38,7 @@ export default function PerfilScreen() {
   if (loading) {
     return (
       <Box className="page-content" px={{ initial: "2", sm: "4", md: "6" }} py={{ initial: "3", sm: "4", md: "5" }}>
-        <DashboardSkeleton variant="form" />
+        <YakuLoader />
       </Box>
     );
   }

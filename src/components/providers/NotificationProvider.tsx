@@ -239,10 +239,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     let stopped = false;
 
     const resolveWebSocketUrl = () => {
-      const url = new URL('/ws/alertas', import.meta.env.VITE_FASTAPI_WS_URL);
-      // Una página servida por HTTPS no puede abrir un WebSocket ws:// (el navegador lo bloquea).
-      if (window.location.protocol === 'https:') url.protocol = 'wss:';
-      return url.toString();
+      // Mismo origen que la página (proxeado por Vite en dev / el reverse
+      // proxy en prod): el navegador no debe abrir un WS directo a
+      // localhost/IP privada cuando la app se sirve desde un origen publico
+      // como un devtunnel (dispara el permiso "Local Network Access").
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      return `${protocol}//${window.location.host}/ws/alertas`;
     };
 
     const connectWS = async () => {

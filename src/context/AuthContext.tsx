@@ -34,6 +34,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Verificar la sesión con el backend al arrancar
   useEffect(() => {
     let isMounted = true;
+
+    // Sin 'yaku_user' en localStorage nunca hubo un login exitoso en este
+    // navegador, asi que tampoco puede existir la cookie de sesion (access
+    // token / refresh token se emiten juntos con ese registro). Evita un
+    // GET /auth/perfil que sabemos que va a responder 401 para cualquier
+    // visitante nuevo o que ya cerro sesion.
+    if (!localStorage.getItem('yaku_user')) {
+      setIsLoading(false);
+      return;
+    }
+
     apiClient('/auth/perfil')
       .then((perfil) => {
         if (!isMounted) return;

@@ -2,7 +2,9 @@
 
 import { refreshSession } from '@/lib/api/session-refresh';
 
-export const API_BASE_URL = import.meta.env.VITE_FASTAPI_URL || '/api';
+// Siempre relativa: ver nota en src/lib/api/client.ts sobre por que el
+// navegador no debe contactar localhost/IP privada directamente.
+export const API_BASE_URL = '/api';
 
 export class ApiError extends Error {
   status: number;
@@ -110,9 +112,14 @@ export async function apiClient<T = any>(
 
   if (method === 'GET') {
     inFlightRequests.set(url, fetchPromise);
-    fetchPromise.finally(() => {
-      inFlightRequests.delete(url);
-    });
+    // El .catch(() => {}) evita un "Uncaught (in promise)" en consola: esta
+    // rama solo limpia el mapa de deduplicacion, el rechazo real ya lo
+    // maneja quien llamo a apiClient() a traves de la promesa retornada.
+    fetchPromise
+      .finally(() => {
+        inFlightRequests.delete(url);
+      })
+      .catch(() => {});
   }
 
   return fetchPromise;

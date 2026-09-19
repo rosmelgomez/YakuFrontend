@@ -2,6 +2,7 @@
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import YakuLoader from '@/components/layout/YakuLoader';
 
 interface ProtectedRouteProps {
   allowedRole?: 'agricultor' | 'administrador';
@@ -11,15 +12,14 @@ interface ProtectedRouteProps {
 export default function ProtectedRoute({ allowedRole, children }: ProtectedRouteProps) {
   const { user, isLoading, isAuthenticated } = useAuth();
 
-  if (isLoading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-[#020817] text-white">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent"></div>
-          <span className="text-sm text-slate-400">Cargando Yaku...</span>
-        </div>
-      </div>
-    );
+  // Mientras se verifica la sesion con el backend (/auth/perfil), si ya hay
+  // un usuario en cache (localStorage) renderizamos la ruta de una vez en
+  // lugar de esperar: esto deja que el fetch de datos de la pantalla corra
+  // en paralelo con la verificacion, en vez de encadenados en serie. Si la
+  // verificacion termina fallando, AuthContext limpia `user` y este mismo
+  // componente redirige a login en el siguiente render.
+  if (isLoading && !user) {
+    return <YakuLoader fullScreen />;
   }
 
   if (!isAuthenticated || !user) {

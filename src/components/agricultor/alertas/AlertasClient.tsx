@@ -1,7 +1,7 @@
 // src/components/agricultor/alertas/AlertasClient.tsx
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, Text, Flex, Card, Button, Grid, Badge, Switch, Table } from '@radix-ui/themes';
 import {
@@ -159,7 +159,6 @@ export default function AlertasClient({
   const [isSecure, setIsSecure] = useState(true);
   const [pushRegistered, setPushRegistered] = useState(Boolean(initialPushRegistered));
   const [hasLoadedPushRegistration, setHasLoadedPushRegistration] = useState(Boolean(initialPushRegistered));
-  const autoPushAttempted = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -227,23 +226,6 @@ export default function AlertasClient({
     const currentPermission = Notification.permission;
     setPushStatus(currentPermission as any);
   }, []);
-
-  useEffect(() => {
-    if (
-      pushRegistered ||
-      !hasLoadedPushRegistration ||
-      autoPushAttempted.current ||
-      !isSecure ||
-      pushStatus === 'checking' ||
-      pushStatus === 'not-supported' ||
-      pushStatus === 'denied'
-    ) {
-      return;
-    }
-
-    autoPushAttempted.current = true;
-    handleRequestPush();
-  }, [pushRegistered, hasLoadedPushRegistration, isSecure, pushStatus]);
 
   const handleTestNotification = async () => {
     if (typeof window === 'undefined' || !('Notification' in window) || Notification.permission !== 'granted') return;

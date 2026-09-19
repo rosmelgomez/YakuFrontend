@@ -117,18 +117,19 @@ export default function PerfilClient({ user }: { user: any }) {
   const [zonaHoraria, setZonaHoraria] = useState(user.zona_horaria || "America/Lima");
 
   // 2. Preferencias de Notificaciones (solo para agricultor)
+  // Todas desactivadas por defecto: el usuario debe activarlas explícitamente.
   const [notifPrefs, setNotifPrefs] = useState({
-    criticas: true,
-    advertencias: true,
-    riegoInicio: true,
-    riegoProblema: true,
-    riegoFin: true,
-    hardwareFirmware: true,
-    recomendacionesIA: true,
+    criticas: true, // Alerta crítica de seguridad, no se puede desactivar.
+    advertencias: false,
+    riegoInicio: false,
+    riegoProblema: false,
+    riegoFin: false,
+    hardwareFirmware: false,
+    recomendacionesIA: false,
     resumenDiario: false,
     novedadesYaku: false,
-    canalEmail: true,
-    canalApp: true,
+    canalEmail: false,
+    canalApp: false,
   });
 
   // 3. Seguridad y Sesiones REALES
@@ -211,6 +212,52 @@ export default function PerfilClient({ user }: { user: any }) {
     setTimeout(() => setSuccessMsg(null), 3500);
   };
 
+  const handleToggleNotifPref = (key: keyof typeof notifPrefs, checked: boolean) => {
+    setNotifPrefs((prev) => ({ ...prev, [key]: checked }));
+  };
+
+  const notifPrefLabels: Record<keyof typeof notifPrefs, string> = {
+    criticas: 'Alertas críticas',
+    advertencias: 'Alertas de advertencia',
+    riegoInicio: 'Notificación de riego iniciado',
+    riegoProblema: 'Problemas durante el riego',
+    riegoFin: 'Confirmación de riego finalizado',
+    hardwareFirmware: 'Hardware y firmware',
+    recomendacionesIA: 'Recomendaciones de IA predictiva',
+    resumenDiario: 'Resumen diario del sistema',
+    novedadesYaku: 'Novedades de Yaku',
+    canalEmail: 'Canal: Correo electrónico',
+    canalApp: 'Canal: Notificación en la app',
+  };
+
+  // Al guardar, se solicita permiso de notificaciones del navegador (si aún
+  // no fue concedido) y se dispara un push mostrando lo que quedó activado.
+  const sendActivationPush = (prefs: typeof notifPrefs) => {
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+
+    const activeLabels = (Object.keys(prefs) as (keyof typeof notifPrefs)[])
+      .filter((k) => prefs[k])
+      .map((k) => notifPrefLabels[k]);
+
+    if (activeLabels.length === 0) return;
+
+    const showPush = () => {
+      try {
+        new Notification('Preferencias de notificaciones actualizadas', {
+          body: `Activado: ${activeLabels.join(', ')}`,
+        });
+      } catch {}
+    };
+
+    if (Notification.permission === 'granted') {
+      showPush();
+    } else if (Notification.permission === 'default') {
+      Notification.requestPermission().then((perm) => {
+        if (perm === 'granted') showPush();
+      });
+    }
+  };
+
   // Guardar Datos Personales
   const handleSaveProfile = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -251,6 +298,7 @@ export default function PerfilClient({ user }: { user: any }) {
     try {
       localStorage.setItem(`yaku_notif_prefs_${userId}`, JSON.stringify(notifPrefs));
       showNotificationSuccess("✓ Preferencias de notificaciones actualizadas.");
+      sendActivationPush(notifPrefs);
     } catch {
       setErrorMsg("No se pudieron guardar las preferencias.");
     }
@@ -585,7 +633,7 @@ export default function PerfilClient({ user }: { user: any }) {
                       <input
                         type="checkbox"
                         checked={notifPrefs.advertencias}
-                        onChange={(e) => setNotifPrefs({ ...notifPrefs, advertencias: e.target.checked })}
+                        onChange={(e) => handleToggleNotifPref('advertencias', e.target.checked)}
                         className="w-5 h-5 accent-emerald-500 rounded cursor-pointer mt-1"
                       />
                     </div>
@@ -599,7 +647,7 @@ export default function PerfilClient({ user }: { user: any }) {
                       <input
                         type="checkbox"
                         checked={notifPrefs.riegoInicio}
-                        onChange={(e) => setNotifPrefs({ ...notifPrefs, riegoInicio: e.target.checked })}
+                        onChange={(e) => handleToggleNotifPref('riegoInicio', e.target.checked)}
                         className="w-5 h-5 accent-blue-500 rounded cursor-pointer mt-1"
                       />
                     </div>
@@ -612,7 +660,7 @@ export default function PerfilClient({ user }: { user: any }) {
                       <input
                         type="checkbox"
                         checked={notifPrefs.riegoProblema}
-                        onChange={(e) => setNotifPrefs({ ...notifPrefs, riegoProblema: e.target.checked })}
+                        onChange={(e) => handleToggleNotifPref('riegoProblema', e.target.checked)}
                         className="w-5 h-5 accent-amber-500 rounded cursor-pointer mt-1"
                       />
                     </div>
@@ -625,7 +673,7 @@ export default function PerfilClient({ user }: { user: any }) {
                       <input
                         type="checkbox"
                         checked={notifPrefs.riegoFin}
-                        onChange={(e) => setNotifPrefs({ ...notifPrefs, riegoFin: e.target.checked })}
+                        onChange={(e) => handleToggleNotifPref('riegoFin', e.target.checked)}
                         className="w-5 h-5 accent-emerald-500 rounded cursor-pointer mt-1"
                       />
                     </div>
@@ -641,7 +689,7 @@ export default function PerfilClient({ user }: { user: any }) {
                       <input
                         type="checkbox"
                         checked={notifPrefs.hardwareFirmware}
-                        onChange={(e) => setNotifPrefs({ ...notifPrefs, hardwareFirmware: e.target.checked })}
+                        onChange={(e) => handleToggleNotifPref('hardwareFirmware', e.target.checked)}
                         className="w-5 h-5 accent-emerald-500 rounded cursor-pointer mt-1"
                       />
                     </div>
@@ -655,7 +703,7 @@ export default function PerfilClient({ user }: { user: any }) {
                       <input
                         type="checkbox"
                         checked={notifPrefs.recomendacionesIA}
-                        onChange={(e) => setNotifPrefs({ ...notifPrefs, recomendacionesIA: e.target.checked })}
+                        onChange={(e) => handleToggleNotifPref('recomendacionesIA', e.target.checked)}
                         className="w-5 h-5 accent-emerald-500 rounded cursor-pointer mt-1"
                       />
                     </div>
@@ -669,7 +717,7 @@ export default function PerfilClient({ user }: { user: any }) {
                       <input
                         type="checkbox"
                         checked={notifPrefs.resumenDiario}
-                        onChange={(e) => setNotifPrefs({ ...notifPrefs, resumenDiario: e.target.checked })}
+                        onChange={(e) => handleToggleNotifPref('resumenDiario', e.target.checked)}
                         className="w-5 h-5 accent-emerald-500 rounded cursor-pointer mt-1"
                       />
                     </div>
@@ -685,7 +733,7 @@ export default function PerfilClient({ user }: { user: any }) {
                         <input
                           type="checkbox"
                           checked={notifPrefs.canalEmail}
-                          onChange={(e) => setNotifPrefs({ ...notifPrefs, canalEmail: e.target.checked })}
+                          onChange={(e) => handleToggleNotifPref('canalEmail', e.target.checked)}
                           className="w-4 h-4 accent-emerald-500 rounded"
                         />
                         <span className="text-sm text-slate-300">📧 Correo electrónico ({correo})</span>
@@ -694,7 +742,7 @@ export default function PerfilClient({ user }: { user: any }) {
                         <input
                           type="checkbox"
                           checked={notifPrefs.canalApp}
-                          onChange={(e) => setNotifPrefs({ ...notifPrefs, canalApp: e.target.checked })}
+                          onChange={(e) => handleToggleNotifPref('canalApp', e.target.checked)}
                           className="w-4 h-4 accent-emerald-500 rounded"
                         />
                         <span className="text-sm text-slate-300">🔔 Notificación en la app (campana superior y alertas flotantes)</span>

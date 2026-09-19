@@ -17,15 +17,7 @@ import {
   ExclamationTriangleIcon,
   ReloadIcon,
 } from "@radix-ui/react-icons";
-import {
-  Loader2,
-  Mail,
-  KeyRound,
-  ArrowLeft,
-  Lock,
-  CheckCircle2,
-  ShieldCheck,
-} from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 
 export default function RecuperarContrasenaClient() {
   const searchParams = useSearchParams();
@@ -46,6 +38,7 @@ export default function RecuperarContrasenaClient() {
   const [isResending, setIsResending] = useState(false);
 
   const codigoInputRef = useRef<HTMLInputElement>(null);
+  const [codigoFocused, setCodigoFocused] = useState(false);
 
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -186,32 +179,7 @@ export default function RecuperarContrasenaClient() {
 
   return (
     <Card className="w-full max-w-md" style={{ padding: "2.5rem" }}>
-      {/* HEADER ICON */}
       <Flex direction="column" gap="4" align="center" style={{ textAlign: "center" }}>
-        <div
-          style={{
-            width: "64px",
-            height: "64px",
-            borderRadius: "50%",
-            background:
-              step === "exito"
-                ? "rgba(34, 197, 94, 0.15)"
-                : "rgba(13, 148, 136, 0.15)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: step === "exito" ? "#22c55e" : "#0d9488",
-          }}
-        >
-          {step === "exito" ? (
-            <CheckCircledIcon width={36} height={36} />
-          ) : step === "restablecer" ? (
-            <KeyRound size={32} />
-          ) : (
-            <Mail size={32} />
-          )}
-        </div>
-
         {/* TÍTULO Y DESCRIPCIÓN */}
         <Box>
           <Text size="5" weight="bold" style={{ color: "white" }} as="div">
@@ -266,12 +234,13 @@ export default function RecuperarContrasenaClient() {
             style={{ width: "100%", display: "flex", flexDirection: "column", gap: "1rem" }}
           >
             <Box style={{ textAlign: "left" }}>
-              <label style={{ display: "block", marginBottom: "0.35rem" }}>
+              <label htmlFor="recuperar-correo" style={{ display: "block", marginBottom: "0.35rem" }}>
                 <Text size="2" weight="medium" style={{ color: "white" }}>
                   Correo electrónico
                 </Text>
               </label>
               <TextField.Root
+                id="recuperar-correo"
                 type="email"
                 placeholder="ejemplo@correo.com"
                 value={correo}
@@ -302,7 +271,7 @@ export default function RecuperarContrasenaClient() {
               <Link
                 href="/auth/login"
                 style={{
-                  color: "var(--accent-9)",
+                  color: "#38bdf8",
                   fontSize: "0.875rem",
                   display: "inline-flex",
                   alignItems: "center",
@@ -325,35 +294,74 @@ export default function RecuperarContrasenaClient() {
           >
             {/* CÓDIGO DE 6 DÍGITOS */}
             <Box style={{ textAlign: "left" }}>
-              <label style={{ display: "block", marginBottom: "0.35rem" }}>
+              <label htmlFor="recuperar-codigo" style={{ display: "block", marginBottom: "0.35rem" }}>
                 <Text size="2" weight="medium" style={{ color: "white" }}>
                   Código de confirmación (6 dígitos)
                 </Text>
               </label>
-              <TextField.Root
-                ref={codigoInputRef}
-                placeholder="123456"
-                maxLength={6}
-                value={codigo}
-                onChange={(e) => setCodigo(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                style={{
-                  width: "100%",
-                  fontSize: "1.4rem",
-                  letterSpacing: "0.35rem",
-                  textAlign: "center",
-                  fontWeight: "bold",
-                }}
-              />
+              <Box style={{ position: "relative" }}>
+                {/* Input real, invisible pero funcional, superpuesto sobre las casillas */}
+                <input
+                  id="recuperar-codigo"
+                  ref={codigoInputRef}
+                  value={codigo}
+                  onChange={(e) => setCodigo(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  onFocus={() => setCodigoFocused(true)}
+                  onBlur={() => setCodigoFocused(false)}
+                  aria-label="Código de verificación de 6 dígitos"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    width: "100%",
+                    height: "100%",
+                    opacity: 0,
+                    cursor: "text",
+                  }}
+                />
+                {/* Casillas visuales, no interactivas */}
+                <Flex gap="2" justify="center" style={{ pointerEvents: "none" }}>
+                  {Array.from({ length: 6 }).map((_, i) => {
+                    const digit = codigo[i];
+                    const isActive = codigoFocused && i === codigo.length;
+                    return (
+                      <Box
+                        key={i}
+                        style={{
+                          width: "44px",
+                          height: "52px",
+                          borderRadius: "8px",
+                          border: isActive
+                            ? "2px solid #38bdf8"
+                            : "1px solid rgba(255,255,255,0.15)",
+                          background: "rgba(255,255,255,0.04)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "1.5rem",
+                          fontWeight: "bold",
+                          color: "white",
+                        }}
+                      >
+                        {digit || ""}
+                      </Box>
+                    );
+                  })}
+                </Flex>
+              </Box>
             </Box>
 
             {/* NUEVA CONTRASEÑA */}
             <Box style={{ textAlign: "left" }}>
-              <label style={{ display: "block", marginBottom: "0.35rem" }}>
+              <label htmlFor="recuperar-nueva-contrasena" style={{ display: "block", marginBottom: "0.35rem" }}>
                 <Text size="2" weight="medium" style={{ color: "white" }}>
                   Nueva contraseña
                 </Text>
               </label>
               <TextField.Root
+                id="recuperar-nueva-contrasena"
                 type="password"
                 placeholder="Mínimo 10 caracteres"
                 value={nuevaContrasena}
@@ -405,20 +413,23 @@ export default function RecuperarContrasenaClient() {
 
             {/* CONFIRMAR CONTRASEÑA */}
             <Box style={{ textAlign: "left" }}>
-              <label style={{ display: "block", marginBottom: "0.35rem" }}>
+              <label htmlFor="recuperar-confirmar-contrasena" style={{ display: "block", marginBottom: "0.35rem" }}>
                 <Text size="2" weight="medium" style={{ color: "white" }}>
                   Confirmar nueva contraseña
                 </Text>
               </label>
               <TextField.Root
+                id="recuperar-confirmar-contrasena"
                 type="password"
                 placeholder="Repite la nueva contraseña"
                 value={confirmarContrasena}
                 onChange={(e) => setConfirmarContrasena(e.target.value)}
+                aria-invalid={!!confirmarContrasena && !coincidenContrasenas}
+                aria-describedby={confirmarContrasena && !coincidenContrasenas ? 'recuperar-confirmar-error' : undefined}
                 style={{ width: "100%" }}
               />
               {confirmarContrasena && !coincidenContrasenas && (
-                <Text size="1" color="red" mt="1">
+                <Text id="recuperar-confirmar-error" size="1" color="red" mt="1" as="div">
                   Las contraseñas no coinciden
                 </Text>
               )}
