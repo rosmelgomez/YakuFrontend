@@ -21,9 +21,8 @@ import {
   Leaf, 
   AlertTriangle, 
   Activity, 
-  Brain, 
-  Search, 
-  Clock, 
+  Brain,
+  Search,
   Database,
   Filter
 } from 'lucide-react';
@@ -105,10 +104,9 @@ interface AdminDashboardClientProps {
 }
 
 export default function AdminDashboardClient({ data }: AdminDashboardClientProps) {
-  const { 
-    metricas, 
-    logs, 
-    predicciones, 
+  const {
+    metricas,
+    predicciones,
     modelos, 
     consumo_semanal, 
     usuarios_filtro = [], 
@@ -121,22 +119,18 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
   const [filterCropId, setFilterCropId] = useState<string>('all');
 
   // Search states
-  const [logSearch, setLogSearch] = useState('');
   const [predSearch, setPredSearch] = useState('');
 
   // Pagination states
-  const [currentPageLogs, setCurrentPageLogs] = useState(1);
-  const pageSizeLogs = 10;
   const [currentPagePreds, setCurrentPagePreds] = useState(1);
   const pageSizePreds = 10;
   const [currentPageModels, setCurrentPageModels] = useState(1);
-  const pageSizeModels = 5;
+  const pageSizeModels = 10;
 
   // Handle user change (resets crop choice and resets page counters)
   const handleUserFilterChange = (val: string) => {
     setFilterUserId(val);
     setFilterCropId('all');
-    setCurrentPageLogs(1);
     setCurrentPagePreds(1);
   };
 
@@ -144,19 +138,6 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
   const availableCropsForSelect = cultivos_filtro.filter(
     c => c.id_usuario.toString() === filterUserId
   );
-
-  // Apply filters on Logs
-  const filteredLogs = logs.filter(l => {
-    const matchesSearch = 
-      (l.usuario_nombre || '').toLowerCase().includes(logSearch.toLowerCase()) ||
-      (l.accion || '').toLowerCase().includes(logSearch.toLowerCase()) ||
-      (l.descripcion || '').toLowerCase().includes(logSearch.toLowerCase()) ||
-      (l.modulo || '').toLowerCase().includes(logSearch.toLowerCase());
-    
-    const matchesUserFilter = filterUserId === 'all' || l.id_usuario?.toString() === filterUserId;
-    
-    return matchesSearch && matchesUserFilter;
-  });
 
   // Apply filters on ML predictions
   const filteredPreds = predicciones.filter(p => {
@@ -412,20 +393,17 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
       </Grid>
 
       {/* TABS FOR DETAILS */}
-      <Tabs.Root defaultValue="auditoria">
-        <Tabs.List style={{ 
-          marginBottom: '1.25rem', 
-          background: '#111827', 
-          borderRadius: '12px', 
-          padding: '4px', 
+      <Tabs.Root defaultValue="ml_preds">
+        <Tabs.List style={{
+          marginBottom: '1.25rem',
+          background: '#111827',
+          borderRadius: '12px',
+          padding: '4px',
           border: '1px solid #1f2937',
           overflowX: 'auto',
           whiteSpace: 'nowrap',
           maxWidth: '100%'
         }}>
-          <Tabs.Trigger value="auditoria" style={{ cursor: 'pointer', padding: '6px 12px', fontSize: '0.8rem' }}>
-            📜 Auditoría
-          </Tabs.Trigger>
           <Tabs.Trigger value="ml_preds" style={{ cursor: 'pointer', padding: '6px 12px', fontSize: '0.8rem' }}>
             🤖 Predicciones ML
           </Tabs.Trigger>
@@ -435,131 +413,7 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
         </Tabs.List>
 
         <Box pt="1">
-          {/* TAB 1: AUDITORÍA */}
-          <Tabs.Content value="auditoria">
-            <Card size={{ initial: "2", sm: "3" }} style={{ background: '#111827', borderColor: '#1f2937', borderRadius: '16px' }}>
-              <Flex justify="between" align={{ initial: 'stretch', sm: 'center' }} direction={{ initial: 'column', sm: 'row' }} mb="4" gap="3">
-                <Text size={{ initial: "2", sm: "3" }} weight="bold" color="indigo">Logs de Auditoría del Sistema</Text>
-                <TextField.Root 
-                  placeholder="Buscar por usuario o acción..." 
-                  value={logSearch}
-                  onChange={(e) => { setLogSearch(e.target.value); setCurrentPageLogs(1); }}
-                  style={{ background: '#1e293b', width: '100%', maxWidth: '300px', color: 'white' }}
-                >
-                  <TextField.Slot>
-                    <Search size={14} color="#94a3b8" />
-                  </TextField.Slot>
-                </TextField.Root>
-              </Flex>
-
-              <ScrollArea style={{ height: '350px' }}>
-                <Table.Root variant="surface" style={{ background: 'transparent' }}>
-                  <Table.Header>
-                    <Table.Row>
-                      <Table.ColumnHeaderCell>Fecha / Hora</Table.ColumnHeaderCell>
-                      <Table.ColumnHeaderCell>Usuario</Table.ColumnHeaderCell>
-                      <Table.ColumnHeaderCell>Acción</Table.ColumnHeaderCell>
-                      <Table.ColumnHeaderCell>Módulo</Table.ColumnHeaderCell>
-                      <Table.ColumnHeaderCell>Descripción</Table.ColumnHeaderCell>
-                      <Table.ColumnHeaderCell>IP Acceso</Table.ColumnHeaderCell>
-                    </Table.Row>
-                  </Table.Header>
-
-                  <Table.Body>
-                    {filteredLogs.length === 0 ? (
-                      <Table.Row>
-                        <Table.Cell colSpan={6} style={{ textAlign: 'center', color: '#64748b' }}>
-                          No se encontraron registros de auditoría.
-                        </Table.Cell>
-                      </Table.Row>
-                    ) : (
-                      filteredLogs.slice((currentPageLogs - 1) * pageSizeLogs, currentPageLogs * pageSizeLogs).map((l) => (
-                        <Table.Row key={l.id}>
-                          <Table.Cell style={{ fontSize: '11px', whiteSpace: 'nowrap' }}>
-                            <Flex align="center" gap="1">
-                              <Clock size={12} color="#94a3b8" />
-                              <Text>{formatFecha(l.fecha)}</Text>
-                            </Flex>
-                          </Table.Cell>
-                          <Table.Cell>
-                            <Text weight="bold" style={{ color: 'white' }}>{l.usuario_nombre || 'Sistema'}</Text>
-                          </Table.Cell>
-                          <Table.Cell>
-                            <Badge color={l.accion.toLowerCase().includes('error') ? 'red' : 'indigo'} variant="soft">
-                              {l.accion.toUpperCase()}
-                            </Badge>
-                          </Table.Cell>
-                          <Table.Cell style={{ fontFamily: 'monospace', fontSize: '11px' }}>{l.modulo || '--'}</Table.Cell>
-                          <Table.Cell style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={l.descripcion || ''}>
-                            {l.descripcion || ''}
-                          </Table.Cell>
-                          <Table.Cell style={{ fontFamily: 'monospace', fontSize: '11px' }}>{l.ip_acceso || '--'}</Table.Cell>
-                        </Table.Row>
-                      ))
-                    )}
-                  </Table.Body>
-                </Table.Root>
-              </ScrollArea>
-
-              {/* Controles de Paginación para Logs */}
-              {filteredLogs.length > pageSizeLogs && (
-                <Flex justify="between" align="center" mt="4" px="2">
-                  <Text size="2" color="gray">
-                    Mostrando {Math.min((currentPageLogs - 1) * pageSizeLogs + 1, filteredLogs.length)} a {Math.min(currentPageLogs * pageSizeLogs, filteredLogs.length)} de {filteredLogs.length} registros
-                  </Text>
-                  <Flex gap="1">
-                    <Button 
-                      size="1" 
-                      variant="soft" 
-                      color="gray" 
-                      onClick={() => setCurrentPageLogs(1)} 
-                      disabled={currentPageLogs === 1}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      «
-                    </Button>
-                    <Button 
-                      size="1" 
-                      variant="soft" 
-                      color="gray" 
-                      onClick={() => setCurrentPageLogs(prev => Math.max(prev - 1, 1))} 
-                      disabled={currentPageLogs === 1}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      ‹
-                    </Button>
-                    <Flex align="center" px="2" style={{ background: '#1e293b', borderRadius: '4px', height: '24px' }}>
-                      <Text size="1" weight="bold" style={{ color: 'white' }}>
-                        {currentPageLogs} / {Math.ceil(filteredLogs.length / pageSizeLogs)}
-                      </Text>
-                    </Flex>
-                    <Button 
-                      size="1" 
-                      variant="soft" 
-                      color="gray" 
-                      onClick={() => setCurrentPageLogs(prev => Math.min(prev + 1, Math.ceil(filteredLogs.length / pageSizeLogs)))} 
-                      disabled={currentPageLogs === Math.ceil(filteredLogs.length / pageSizeLogs)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      ›
-                    </Button>
-                    <Button 
-                      size="1" 
-                      variant="soft" 
-                      color="gray" 
-                      onClick={() => setCurrentPageLogs(Math.ceil(filteredLogs.length / pageSizeLogs))} 
-                      disabled={currentPageLogs === Math.ceil(filteredLogs.length / pageSizeLogs)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      »
-                    </Button>
-                  </Flex>
-                </Flex>
-              )}
-            </Card>
-          </Tabs.Content>
-
-          {/* TAB 2: PREDICCIONES */}
+          {/* TAB 1: PREDICCIONES */}
           <Tabs.Content value="ml_preds">
             <Card size={{ initial: "2", sm: "3" }} style={{ background: '#111827', borderColor: '#1f2937', borderRadius: '16px' }}>
               <Flex justify="between" align={{ initial: 'stretch', sm: 'center' }} direction={{ initial: 'column', sm: 'row' }} mb="4" gap="3">
@@ -576,7 +430,7 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
                 </TextField.Root>
               </Flex>
 
-              <ScrollArea style={{ height: '350px' }}>
+              <ScrollArea style={{ height: '500px' }}>
                 <Table.Root variant="surface" style={{ background: 'transparent' }}>
                   <Table.Header>
                     <Table.Row>
@@ -686,12 +540,12 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
             </Card>
           </Tabs.Content>
 
-          {/* TAB 3: MODELOS */}
+          {/* TAB 2: MODELOS */}
           <Tabs.Content value="ml_models">
             <Card size={{ initial: "2", sm: "3" }} style={{ background: '#111827', borderColor: '#1f2937', borderRadius: '16px' }}>
               <Text size={{ initial: "2", sm: "3" }} weight="bold" color="indigo" mb="4" as="div">Modelos de Aprendizaje Automático Disponibles</Text>
 
-              <ScrollArea style={{ height: '350px' }}>
+              <ScrollArea style={{ height: '500px' }}>
                 <Table.Root variant="surface" style={{ background: 'transparent' }}>
                   <Table.Header>
                     <Table.Row>

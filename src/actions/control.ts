@@ -158,8 +158,9 @@ export async function listarHorariosRiego(idAsignacion: number) {
 
 export async function crearHorarioRiego(payload: {
   idAsignacion: number;
-  horaInicio: string;
-  duracionSegundos: number;
+  siempreActivo?: boolean;
+  horaInicio?: string;
+  horaFin?: string;
   diasSemana: number[];
   activo?: boolean;
 }) {
@@ -169,8 +170,9 @@ export async function crearHorarioRiego(payload: {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id_asignacion: payload.idAsignacion,
-        hora_inicio: payload.horaInicio,
-        duracion_segundos: payload.duracionSegundos,
+        siempre_activo: payload.siempreActivo ?? false,
+        hora_inicio: payload.horaInicio ?? null,
+        hora_fin: payload.horaFin ?? null,
         dias_semana: payload.diasSemana,
         activo: payload.activo ?? true,
       }),
@@ -186,15 +188,17 @@ export async function crearHorarioRiego(payload: {
 }
 
 export async function actualizarHorarioRiego(idHorario: number, payload: Partial<{
+  siempreActivo: boolean;
   horaInicio: string;
-  duracionSegundos: number;
+  horaFin: string;
   diasSemana: number[];
   activo: boolean;
 }>) {
   try {
     const body: Record<string, any> = {};
+    if (payload.siempreActivo !== undefined) body.siempre_activo = payload.siempreActivo;
     if (payload.horaInicio !== undefined) body.hora_inicio = payload.horaInicio;
-    if (payload.duracionSegundos !== undefined) body.duracion_segundos = payload.duracionSegundos;
+    if (payload.horaFin !== undefined) body.hora_fin = payload.horaFin;
     if (payload.diasSemana !== undefined) body.dias_semana = payload.diasSemana;
     if (payload.activo !== undefined) body.activo = payload.activo;
 
