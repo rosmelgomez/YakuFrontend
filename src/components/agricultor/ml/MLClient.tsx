@@ -41,6 +41,10 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
   }, [idCultivo]);
 
   useEffect(() => {
+    setSimModelId(modelos?.find((m: any) => m.activo)?.id_modelo?.toString() || "");
+  }, [idCultivo, modelos]);
+
+  useEffect(() => {
     const container = chartContainerRef.current;
     if (!container) return;
 
@@ -67,6 +71,12 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
   const [simLoading, setSimLoading] = useState(false);
   const [simResult, setSimResult] = useState<any>(null);
   const [simError, setSimError] = useState<string | null>(null);
+  // Modelo elegido SOLO para la simulacion manual: no activa el modelo de
+  // verdad para el cultivo (eso lo hace el boton "Activar" de la
+  // comparativa). Empieza en el modelo actualmente activo.
+  const [simModelId, setSimModelId] = useState<string>(
+    () => modelos?.find((m: any) => m.activo)?.id_modelo?.toString() || ""
+  );
 
   const handleSelectModel = async (modelIdStr: string) => {
     setLoading(true);
@@ -99,7 +109,8 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
       return;
     }
 
-    const res = await solicitarPrediccionML(payload, idCultivo);
+    const idModeloSim = simModelId ? parseInt(simModelId, 10) : undefined;
+    const res = await solicitarPrediccionML(payload, idCultivo, idModeloSim);
     setSimLoading(false);
 
     if (res.success && res.data) {
@@ -299,17 +310,16 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
               Simulador de Riego Inteligente (Entrada Manual)
             </h3>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              Prueba el comportamiento del modelo activo para <strong className="text-slate-200">{cultivos?.find((c: any) => c.id === idCultivo)?.nombre_planta || 'este cultivo'}</strong>.
+              Prueba el comportamiento de cualquier modelo compatible con <strong className="text-slate-200">{cultivos?.find((c: any) => c.id === idCultivo)?.nombre_planta || 'este cultivo'}</strong> sin activarlo.
             </p>
           </div>
           <div className="flex items-center gap-2 self-start sm:self-auto w-full sm:w-auto">
-            <span className="text-[11px] text-slate-400 shrink-0">Modelo:</span>
+            <span className="text-[11px] text-slate-400 shrink-0">Simular con:</span>
             {modelos && modelos.length > 0 ? (
               <div className="flex-1 sm:flex-initial min-w-0">
                 <SearchableSelect
-                  value={modelos.find((m: any) => m.activo)?.id_modelo?.toString() || ""}
-                  onValueChange={handleSelectModel}
-                  disabled={loading}
+                  value={simModelId}
+                  onValueChange={setSimModelId}
                   placeholder="Seleccionar modelo"
                   searchPlaceholder="Buscar modelo..."
                   style={{ background: '#1f2937', borderColor: '#374151', minWidth: 'auto', width: '100%' }}

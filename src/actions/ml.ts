@@ -23,10 +23,15 @@ export async function solicitarPrediccionML(
     temperatura_ambiente: number;
     temperatura_suelo: number;
   },
-  idCultivo?: number
+  idCultivo?: number,
+  idModelo?: number
 ) {
   try {
-    const url = idCultivo ? `/ml/prediccion?id_cultivo=${idCultivo}` : '/ml/prediccion';
+    const params = new URLSearchParams();
+    if (idCultivo) params.set('id_cultivo', String(idCultivo));
+    if (idModelo) params.set('id_modelo', String(idModelo));
+    const query = params.toString();
+    const url = query ? `/ml/prediccion?${query}` : '/ml/prediccion';
     const res = await fetchFromFastAPI(url, {
       method: 'POST',
       headers: {
