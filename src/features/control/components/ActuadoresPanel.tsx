@@ -845,9 +845,9 @@ export function ActuadoresPanel({
               <Text size="3" weight="bold" color="indigo" as="div">
                 Modelos de Machine Learning Disponibles
               </Text>
-              {isActuatorActive && (
+              {isRiegoEnCurso && (
                 <Badge color="amber" variant="soft">
-                  🔒 Selección bloqueada mientras el actuador esté activo
+                  🔒 Selección bloqueada mientras el riego esté en curso
                 </Badge>
               )}
             </Flex>
@@ -916,21 +916,21 @@ export function ActuadoresPanel({
                       <Button
                         color="purple"
                         variant={m.activo ? "solid" : "soft"}
-                        disabled={m.activo || isActuatorActive || isPending}
+                        disabled={m.activo || isRiegoEnCurso || isPending}
                         onClick={() => onSelectModel(m.id_modelo)}
                         style={{
-                          cursor: m.activo || isActuatorActive ? "not-allowed" : "pointer",
+                          cursor: m.activo || isRiegoEnCurso ? "not-allowed" : "pointer",
                         }}
                         title={
-                          isActuatorActive
-                            ? "Bloqueado: desactive el dispositivo actuador para cambiar de modelo"
+                          isRiegoEnCurso
+                            ? "Bloqueado: espere a que finalice el riego en curso para cambiar de modelo"
                             : undefined
                         }
                       >
                         {m.activo
                           ? "Seleccionado"
-                          : isActuatorActive
-                          ? "Bloqueado (Activo)"
+                          : isRiegoEnCurso
+                          ? "Bloqueado (Riego en curso)"
                           : "Seleccionar"}
                       </Button>
                     </Flex>
