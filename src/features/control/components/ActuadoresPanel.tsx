@@ -908,7 +908,10 @@ export function ActuadoresPanel({
                           <Text size="1" color="gray" style={{ display: "block" }}>
                             Precisión del modelo:{" "}
                             <span style={{ color: "#c084fc", fontWeight: "bold" }}>
-                              {(m.precision_modelo * 100).toFixed(1)}%
+                              {/* precision_modelo ya viene como porcentaje (ej. 99.46) desde
+                                  la BD (columna Numeric(5,2)); multiplicar por 100 de nuevo
+                                  daba valores absurdos como "9946.0%". */}
+                              {Number(m.precision_modelo).toFixed(1)}%
                             </span>
                           </Text>
                         )}
