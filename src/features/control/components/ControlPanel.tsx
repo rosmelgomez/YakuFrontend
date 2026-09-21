@@ -511,13 +511,18 @@ export function ControlPanel({
         !controlData.ultimoRiegoFechaFin ||
         isRiegoEnCurso ||
         !isActuatorActive ||
-        isCheckingMl
+        isCheckingMl ||
+        !cooldownMinutes
       ) {
+        // Sin un cooldownMinutes real todavia cargado, no se debe adivinar
+        // un valor por defecto (antes usaba 10 min como fallback silencioso,
+        // lo que disparaba evaluaciones de ML muchisimo antes del cooldown
+        // real configurado, p.ej. 120 min).
         return;
       }
 
       const fechaFin = new Date(controlData.ultimoRiegoFechaFin);
-      const cooldownSegundos = (cooldownMinutes || 10) * 60;
+      const cooldownSegundos = cooldownMinutes * 60;
       const elapsedSeconds = Math.floor((Date.now() - fechaFin.getTime()) / 1000);
 
       // Si ya transcurrió el tiempo de cooldown (ej. >= 10 min) y no se ha evaluado para este ciclo
