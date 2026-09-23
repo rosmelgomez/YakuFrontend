@@ -72,6 +72,7 @@ type CultivoData = {
   fuenteAgua?: { id?: number; nombre?: string; tipo?: string } | null;
   esConexionDirecta?: boolean;
   consumoSemanal: ConsumoData[];
+  historialConsumo?: HistoricoPunto[];
   limiteConsumo: number | null;
   resumenDia: ResumenDiaData;
 };
@@ -524,10 +525,11 @@ export default function DashboardClient({
             <Flex direction={{ initial: 'column', lg: 'row' }} gap="4" style={{ width: '100%' }}>
               <Box style={{ flex: 2, minWidth: 0 }}>
                 {cultivoActivo.consumoSemanal && (
-                  <ConsumoChartCard 
-                    data={cultivoActivo.consumoSemanal} 
-                    limite={cultivoActivo.limiteConsumo} 
-                    isClientMounted={isClientMounted} 
+                  <ConsumoChartCard
+                    data={cultivoActivo.consumoSemanal}
+                    eventos={cultivoActivo.historialConsumo || []}
+                    limite={cultivoActivo.limiteConsumo}
+                    isClientMounted={isClientMounted}
                     timeRange={dashboardRange}
                     calendarFilters={calendarFilters}
                     cultivoTimezone={cultivoActivo.zonaHoraria}
@@ -868,16 +870,18 @@ const TanqueCard = ({ tanque }: { tanque: TanqueData }) => {
 };
 
 // --- SUB-COMPONENTE: GRÁFICO DE CONSUMO ---
-const ConsumoChartCard = ({ 
-  data, 
-  limite, 
+const ConsumoChartCard = ({
+  data,
+  eventos,
+  limite,
   isClientMounted,
   timeRange,
   calendarFilters,
   cultivoTimezone,
-}: { 
-  data: ConsumoData[]; 
-  limite: number | null; 
+}: {
+  data: ConsumoData[];
+  eventos?: HistoricoPunto[];
+  limite: number | null;
   isClientMounted: boolean;
   timeRange?: HistoryRange;
   calendarFilters: CalendarFilters;
@@ -891,14 +895,20 @@ const ConsumoChartCard = ({
     return dateMatchesCalendarFilters(date, calendarFilters);
   });
 
-  // El backend solo agrega consumo por día (7 puntos fijos); para 6h/24h se filtra ese mismo
-  // dato al rango pedido y se rellenan los intervalos con buildFilledTimeSeries, igual que en
-  // el gráfico de sensores, para que el gráfico de agua también responda al filtro de tiempo.
-  const timedData: HistoricoPunto[] = calendarFilteredData
-    .filter((item): item is ConsumoData & { fecha: string } => !!item.fecha)
-    .map((item) => ({ fecha: item.fecha, valor: item.valor }));
+  // Eventos reales de riego (fecha + litros de cada riego individual). El total diario de
+  // `data` (consumoSemanal) solo sirve para la vista de 7 días; para 6h/24h usamos estos
+  // eventos reales rellenados con buildFilledTimeSeries, para que el gráfico responda al
+  // filtro de tiempo con datos reales en vez de repetir el total del día.
+  const calendarFilteredEventos: HistoricoPunto[] = (eventos || []).filter((item) =>
+    dateMatchesCalendarFilters(new Date(item.fecha), calendarFilters)
+  );
 
-  const effectiveRange = resolveEffectiveRange(timedData, requestedRange, chartTimeZone);
+  const ranges: HistoryRange[] = requestedRange === '6h' ? ['6h', '24h', '7d'] : requestedRange === '24h' ? ['24h', '7d'] : ['7d'];
+  const effectiveRange = ranges.find((range) => (
+    range === '7d'
+      ? calendarFilteredData.length > 0
+      : buildFilledTimeSeries(calendarFilteredEventos, range, chartTimeZone).length > 0
+  )) || requestedRange;
 
   const chartData = effectiveRange === '7d'
     ? calendarFilteredData.map(d => {
@@ -906,7 +916,7 @@ const ConsumoChartCard = ({
         const xLabel = d.label === 'Hoy' ? 'Hoy' : (d.label || dateObj.toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', timeZone: chartTimeZone }));
         return { ...d, xLabel, valorReal: d.valor };
       })
-    : buildFilledTimeSeries(timedData, effectiveRange, chartTimeZone);
+    : buildFilledTimeSeries(calendarFilteredEventos, effectiveRange, chartTimeZone);
 
   const config = {
     title: 'Consumo de agua',
