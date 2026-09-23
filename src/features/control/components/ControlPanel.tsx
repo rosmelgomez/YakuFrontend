@@ -659,7 +659,7 @@ export function ControlPanel({
                 textOverflow: "ellipsis",
               }}
             >
-              📡 Sensores <span className="hidden sm:inline">de Captura</span>
+              📡 Sensores <span className="hidden sm:inline"> de Captura</span>
             </Tabs.Trigger>
             <Tabs.Trigger
               value="actuadores"
@@ -674,7 +674,7 @@ export function ControlPanel({
                 textOverflow: "ellipsis",
               }}
             >
-              ⚡ Actuadores <span className="hidden sm:inline">Físicos</span>
+              ⚡ Actuadores <span className="hidden sm:inline"> Físicos</span>
             </Tabs.Trigger>
             <Tabs.Trigger
               value="horarios"
@@ -689,7 +689,7 @@ export function ControlPanel({
                 textOverflow: "ellipsis",
               }}
             >
-              ⏰ Horarios <span className="hidden sm:inline">Fijos</span>
+              ⏰ Horarios <span className="hidden sm:inline"> de Riego</span>
             </Tabs.Trigger>
           </Tabs.List>
 

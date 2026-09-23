@@ -18,13 +18,15 @@ function toMinutes(hhmm: string): number {
   return h * 60 + m;
 }
 
-// Duración en minutos del rango horaInicio->horaFin, admitiendo cruce de
-// medianoche (ej. 23:50 -> 00:10 dura 20 min). Retorna null si las horas
-// son iguales (rango inválido/ambiguo).
-function duracionMinutos(horaInicio: string, horaFin: string): number | null {
+// Ancho en minutos de la ventana horaInicio->horaFin durante la cual se
+// permite regar (no es un evento unico: dentro de ella la IA sigue
+// respetando el tiempo de riego por ciclo y el cooldown configurados
+// aparte). Admite cruce de medianoche (ej. 23:50 -> 00:10 dura 20 min).
+// Si ambas horas son iguales, se interpreta como "todo el dia" (24h).
+function duracionMinutos(horaInicio: string, horaFin: string): number {
   const inicio = toMinutes(horaInicio);
   const fin = toMinutes(horaFin);
-  if (inicio === fin) return null;
+  if (inicio === fin) return 24 * 60;
   return fin > inicio ? fin - inicio : 24 * 60 - inicio + fin;
 }
 
@@ -69,18 +71,6 @@ export function HorarioRiegoPanel({ idAsignacion }: HorarioRiegoPanelProps) {
   const handleCrear = async () => {
     if (!idAsignacion) return;
 
-    if (!siempreActivo) {
-      const duracion = duracionMinutos(horaInicio, horaFin);
-      if (duracion === null) {
-        alert("La hora de fin no puede ser igual a la hora de inicio.");
-        return;
-      }
-      if (duracion > 60) {
-        alert("El rango de riego no puede superar 60 minutos.");
-        return;
-      }
-    }
-
     setSaving(true);
     const res = await crearHorarioRiego({
       idAsignacion,
@@ -107,7 +97,7 @@ export function HorarioRiegoPanel({ idAsignacion }: HorarioRiegoPanelProps) {
   };
 
   const handleEliminar = async (idHorario: number) => {
-    if (!confirm("¿Eliminar este horario fijo de riego?")) return;
+    if (!confirm("¿Eliminar este horario de riego?")) return;
     const res = await eliminarHorarioRiego(idHorario);
     if (res.success) {
       await cargarHorarios();
@@ -128,14 +118,14 @@ export function HorarioRiegoPanel({ idAsignacion }: HorarioRiegoPanelProps) {
     <Flex direction="column" gap="5">
       <Card size={{ initial: "2", sm: "3" }} style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
         <Text size="3" weight="bold" color="indigo" mb="3" as="div">
-          ⏰ Nuevo horario fijo de riego
+          ⏰ Nuevo horario de riego
         </Text>
         <Flex direction="column" gap="3">
           <Flex align="center" gap="2" p="2" style={{ background: "rgba(99, 102, 241, 0.08)", borderRadius: "10px" }}>
             <Switch checked={siempreActivo} onCheckedChange={setSiempreActivo} style={{ cursor: "pointer" }} />
             <Box>
               <Text size="2" weight="bold" style={{ color: "white" }} as="div">🔄 Siempre activo</Text>
-              <Text size="1" color="gray">Sin franja horaria fija: deja que la IA decida regar en cualquier momento del día.</Text>
+              <Text size="1" color="gray">Sin franja horaria: deja que la IA decida regar en cualquier momento del día.</Text>
             </Box>
           </Flex>
 
@@ -162,13 +152,14 @@ export function HorarioRiegoPanel({ idAsignacion }: HorarioRiegoPanelProps) {
                 </Box>
               </Flex>
               <Text size="1" color="gray">
-                El riego se ejecutará automáticamente de {horaInicio} a {horaFin}
+                La IA podrá evaluar y regar automáticamente entre {horaInicio} y {horaFin}
                 {(() => {
+                  if (horaInicio === horaFin) return " (todo el día).";
                   const d = duracionMinutos(horaInicio, horaFin);
-                  if (d === null) return ".";
                   const cruzaMedianoche = horaFin <= horaInicio;
                   return ` (${d} min${cruzaMedianoche ? ", cruza la medianoche" : ""}).`;
                 })()}
+                {" "}Fuera de esta ventana no se evaluará ni regará automáticamente.
               </Text>
             </>
           )}
@@ -206,7 +197,7 @@ export function HorarioRiegoPanel({ idAsignacion }: HorarioRiegoPanelProps) {
         {loading ? (
           <Text color="gray" size="2">Cargando...</Text>
         ) : horarios.length === 0 ? (
-          <Text color="gray" size="2">No hay horarios fijos configurados para este cultivo.</Text>
+          <Text color="gray" size="2">No hay horarios de riego configurados para este cultivo.</Text>
         ) : (
           <Flex direction="column" gap="2">
             {horarios.map((h) => (
@@ -223,7 +214,9 @@ export function HorarioRiegoPanel({ idAsignacion }: HorarioRiegoPanelProps) {
                         <Text weight="bold" style={{ color: "white" }}>
                           {String(h.hora_inicio).slice(0, 5)} – {String(h.hora_fin).slice(0, 5)}
                         </Text>
-                        <Badge color="indigo" variant="soft" size="1">{Math.round(h.duracion_segundos / 60)} min</Badge>
+                        <Badge color="indigo" variant="soft" size="1">
+                          {h.hora_inicio === h.hora_fin ? "todo el día" : `${Math.round(h.duracion_segundos / 60)} min`}
+                        </Badge>
                       </>
                     )}
                     <Badge color={h.activo ? "green" : "gray"} variant="soft" size="1">
@@ -233,7 +226,7 @@ export function HorarioRiegoPanel({ idAsignacion }: HorarioRiegoPanelProps) {
                   <Text size="1" color="gray" style={{ display: "block", marginTop: "4px" }}>
                     {h.siempre_activo
                       ? "La IA evalúa continuamente si conviene regar, en cualquier momento."
-                      : (h.dias_semana || []).map((d: number) => DIAS.find((x) => x.value === d)?.label).join(", ") || "Todos los días"}
+                      : `IA habilitada ${(h.dias_semana || []).map((d: number) => DIAS.find((x) => x.value === d)?.label).join(", ") || "todos los días"} dentro de esta ventana.`}
                   </Text>
                 </div>
                 <Flex align="center" gap="2">
