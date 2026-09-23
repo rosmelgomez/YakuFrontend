@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useTransition, useMemo, useEffect, useRef } from "react";
+import React, { useState, useTransition, useMemo, useEffect, useRef, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Box,
   Text,
@@ -43,7 +44,29 @@ export function ControlPanel({
   modelosML: initialModelosML,
 }: ControlPanelProps) {
   const [isPending, startTransition] = useTransition();
-  const [activeTab, setActiveTab] = useState<string>("sensores");
+  const VALID_TABS = ["sensores", "actuadores", "horarios"];
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get("tab");
+  const [activeTab, setActiveTabState] = useState<string>(
+    tabFromUrl && VALID_TABS.includes(tabFromUrl) ? tabFromUrl : "sensores"
+  );
+  // Se guarda la pestaña activa en la URL (?tab=...) para que al recargar
+  // la pagina (F5) se mantenga en la misma pestaña en vez de volver siempre
+  // a "Sensores de Captura".
+  const setActiveTab = useCallback(
+    (tab: string) => {
+      setActiveTabState(tab);
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.set("tab", tab);
+          return next;
+        },
+        { replace: true }
+      );
+    },
+    [setSearchParams]
+  );
 
   // Hook para gestión de polling GET inteligente y visibilidad de pestaña
   const {
