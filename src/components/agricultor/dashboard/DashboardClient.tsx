@@ -95,6 +95,85 @@ const dateMatchesCalendarFilters = (date: Date, filters: CalendarFilters) => {
   return true;
 };
 
+// Ventana total de datos a considerar por cada rango del selector de tiempo
+const HISTORY_RANGE_LIMIT_MS: Record<HistoryRange, number> = {
+  '6h': 6 * 60 * 60 * 1000,
+  '24h': 24 * 60 * 60 * 1000,
+  '7d': 7 * 24 * 60 * 60 * 1000,
+};
+
+// Intervalo entre puntos generados por rango: 6h -> cada 15 min, 24h -> cada hora, 7d -> cada día
+const HISTORY_RANGE_BUCKET_MS: Record<HistoryRange, number> = {
+  '6h': 15 * 60 * 1000,
+  '24h': 60 * 60 * 1000,
+  '7d': 24 * 60 * 60 * 1000,
+};
+
+// Valor interpolado linealmente entre las lecturas reales más cercanas a targetMs
+const interpolateValueAt = (sorted: HistoricoPunto[], targetMs: number): number | null => {
+  if (sorted.length === 0) return null;
+  const firstMs = new Date(sorted[0].fecha).getTime();
+  const lastMs = new Date(sorted[sorted.length - 1].fecha).getTime();
+  if (targetMs <= firstMs) return sorted[0].valor;
+  if (targetMs >= lastMs) return sorted[sorted.length - 1].valor;
+  for (let i = 0; i < sorted.length - 1; i++) {
+    const t1 = new Date(sorted[i].fecha).getTime();
+    const t2 = new Date(sorted[i + 1].fecha).getTime();
+    if (targetMs >= t1 && targetMs <= t2) {
+      if (t2 === t1) return sorted[i].valor;
+      const ratio = (targetMs - t1) / (t2 - t1);
+      return sorted[i].valor + (sorted[i + 1].valor - sorted[i].valor) * ratio;
+    }
+  }
+  return sorted[sorted.length - 1].valor;
+};
+
+// Genera un punto por cada intervalo del rango seleccionado, interpolando cuando no hay una
+// lectura exacta, para que cualquier gráfico de series de tiempo del dashboard muestre
+// información continua (y responda al filtro de rango) en vez de solo las lecturas dispersas.
+const buildFilledTimeSeries = (
+  data: HistoricoPunto[],
+  range: HistoryRange,
+  timeZone: string
+): (HistoricoPunto & { xLabel: string; valorReal: number })[] => {
+  if (data.length === 0) return [];
+  const now = new Date().getTime();
+  const cutoff = now - HISTORY_RANGE_LIMIT_MS[range];
+
+  const inRange = data.filter(d => new Date(d.fecha).getTime() >= cutoff);
+  if (inRange.length === 0) return [];
+
+  const sorted = [...inRange].sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
+  const bucketMs = HISTORY_RANGE_BUCKET_MS[range];
+
+  const buckets: (HistoricoPunto & { xLabel: string; valorReal: number })[] = [];
+  for (let t = cutoff; t <= now; t += bucketMs) {
+    const valor = interpolateValueAt(sorted, t);
+    if (valor === null) continue;
+    const dateObj = new Date(t);
+    const xLabel = range === '7d'
+      ? dateObj.toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', timeZone })
+      : dateObj.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone });
+    buckets.push({ fecha: dateObj.toISOString(), valor, xLabel, valorReal: valor });
+  }
+  return buckets;
+};
+
+// Elige el rango más angosto (entre las opciones >= al solicitado) que sí tenga datos,
+// para no mostrar un gráfico vacío cuando el rango seleccionado no tiene lecturas.
+const resolveEffectiveRange = (
+  data: HistoricoPunto[],
+  requestedRange: HistoryRange,
+  timeZone: string
+): HistoryRange => {
+  const ranges: HistoryRange[] = requestedRange === '6h'
+    ? ['6h', '24h', '7d']
+    : requestedRange === '24h'
+      ? ['24h', '7d']
+      : ['7d'];
+  return ranges.find((range) => buildFilledTimeSeries(data, range, timeZone).length > 0) || requestedRange;
+};
+
 const getDashboardYears = (cultivo: CultivoData | null) => {
   if (!cultivo) return [new Date().getFullYear().toString()];
   const dates = [
@@ -602,66 +681,8 @@ const HistoricoSensoresCard = ({
     return dateMatchesCalendarFilters(date, calendarFilters);
   });
 
-  // Intervalo entre puntos generados por rango: 6h -> cada 15 min, 24h -> cada hora, 7d -> cada día
-  const BUCKET_MS: Record<HistoryRange, number> = {
-    '6h': 15 * 60 * 1000,
-    '24h': 60 * 60 * 1000,
-    '7d': 24 * 60 * 60 * 1000,
-  };
-
-  // Valor interpolado linealmente entre las lecturas reales más cercanas a targetMs
-  const interpolateAt = (sorted: HistoricoPunto[], targetMs: number): number | null => {
-    if (sorted.length === 0) return null;
-    const firstMs = new Date(sorted[0].fecha).getTime();
-    const lastMs = new Date(sorted[sorted.length - 1].fecha).getTime();
-    if (targetMs <= firstMs) return sorted[0].valor;
-    if (targetMs >= lastMs) return sorted[sorted.length - 1].valor;
-    for (let i = 0; i < sorted.length - 1; i++) {
-      const t1 = new Date(sorted[i].fecha).getTime();
-      const t2 = new Date(sorted[i + 1].fecha).getTime();
-      if (targetMs >= t1 && targetMs <= t2) {
-        if (t2 === t1) return sorted[i].valor;
-        const ratio = (targetMs - t1) / (t2 - t1);
-        return sorted[i].valor + (sorted[i + 1].valor - sorted[i].valor) * ratio;
-      }
-    }
-    return sorted[sorted.length - 1].valor;
-  };
-
-  const filterDataByTime = (data: HistoricoPunto[], range: HistoryRange) => {
-    if (data.length === 0) return [];
-    const now = new Date().getTime();
-    const limits = { '6h': 6 * 60 * 60 * 1000, '24h': 24 * 60 * 60 * 1000, '7d': 7 * 24 * 60 * 60 * 1000 };
-    const cutoff = now - limits[range];
-
-    const inRange = data.filter(d => new Date(d.fecha).getTime() >= cutoff);
-    if (inRange.length === 0) return [];
-
-    const sorted = [...inRange].sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
-    const bucketMs = BUCKET_MS[range];
-
-    // Genera un punto por cada intervalo del rango, interpolando cuando no hay lectura exacta,
-    // para que el gráfico muestre información continua en vez de solo las lecturas dispersas.
-    const buckets: (HistoricoPunto & { xLabel: string; valorReal: number })[] = [];
-    for (let t = cutoff; t <= now; t += bucketMs) {
-      const valor = interpolateAt(sorted, t);
-      if (valor === null) continue;
-      const dateObj = new Date(t);
-      const xLabel = range === '7d'
-        ? dateObj.toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', timeZone: chartTimeZone })
-        : dateObj.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: chartTimeZone });
-      buckets.push({ fecha: dateObj.toISOString(), valor, xLabel, valorReal: valor });
-    }
-    return buckets;
-  };
-
-  const resolveRange = () => {
-    const ranges: HistoryRange[] = timeRange === '6h' ? ['6h', '24h', '7d'] : timeRange === '24h' ? ['24h', '7d'] : ['7d'];
-    return ranges.find((range) => filterDataByTime(calendarFilteredData, range).length > 0) || timeRange;
-  };
-
-  const effectiveRange = resolveRange();
-  const chartData = filterDataByTime(calendarFilteredData, effectiveRange);
+  const effectiveRange = resolveEffectiveRange(calendarFilteredData, timeRange, chartTimeZone);
+  const chartData = buildFilledTimeSeries(calendarFilteredData, effectiveRange, chartTimeZone);
   const umbralVisual = sensorInfo?.umbral ? sensorInfo.umbral[config.umbralRef] : null;
 
   return (
@@ -863,27 +884,47 @@ const ConsumoChartCard = ({
   cultivoTimezone?: string;
 }) => {
   const chartTimeZone = cultivoTimezone || DEFAULT_DASHBOARD_TIME_ZONE;
+  const requestedRange: HistoryRange = timeRange || '7d';
   const calendarFilteredData = data.filter((item) => {
     if (!item.fecha) return true;
     const date = new Date(item.fecha);
     return dateMatchesCalendarFilters(date, calendarFilters);
   });
 
-  const chartData = calendarFilteredData.map(d => {
-    const dateObj = d.fecha ? new Date(d.fecha) : new Date();
-    const xLabel = d.label === 'Hoy' ? 'Hoy' : (d.label || dateObj.toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', timeZone: chartTimeZone }));
-    return { ...d, xLabel, valorReal: d.valor };
-  });
+  // El backend solo agrega consumo por día (7 puntos fijos); para 6h/24h se filtra ese mismo
+  // dato al rango pedido y se rellenan los intervalos con buildFilledTimeSeries, igual que en
+  // el gráfico de sensores, para que el gráfico de agua también responda al filtro de tiempo.
+  const timedData: HistoricoPunto[] = calendarFilteredData
+    .filter((item): item is ConsumoData & { fecha: string } => !!item.fecha)
+    .map((item) => ({ fecha: item.fecha, valor: item.valor }));
+
+  const effectiveRange = resolveEffectiveRange(timedData, requestedRange, chartTimeZone);
+
+  const chartData = effectiveRange === '7d'
+    ? calendarFilteredData.map(d => {
+        const dateObj = d.fecha ? new Date(d.fecha) : new Date();
+        const xLabel = d.label === 'Hoy' ? 'Hoy' : (d.label || dateObj.toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', timeZone: chartTimeZone }));
+        return { ...d, xLabel, valorReal: d.valor };
+      })
+    : buildFilledTimeSeries(timedData, effectiveRange, chartTimeZone);
 
   const config = {
     title: 'Consumo de agua',
     color: '#38bdf8', // sky-400
   };
 
+  const rangeLabel = effectiveRange === '7d' ? 'últimos 7 días' : effectiveRange === '24h' ? 'últimas 24h' : 'últimas 6h';
+
   return (
     <Card size="3" style={{ background: '#111827', borderColor: '#1f2937', borderRadius: '16px', height: '100%' }}>
-      <Text size="3" weight="bold" color="indigo" mb="3" as="div">Consumo de agua — últimos 7 días</Text>
-      
+      <Text size="3" weight="bold" color="indigo" mb="3" as="div">Consumo de agua — {rangeLabel}</Text>
+
+      {effectiveRange !== requestedRange && (
+        <Text size="1" color="gray" mb="3" as="div" style={{ fontFamily: 'monospace' }}>
+          Sin datos en {requestedRange}; mostrando {effectiveRange}.
+        </Text>
+      )}
+
       {chartData.length === 0 ? (
         <Flex align="center" justify="center" style={{ height: '250px' }}>
           <Text color="gray">No hay datos de consumo en este rango de tiempo.</Text>
