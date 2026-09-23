@@ -147,8 +147,14 @@ const buildFilledTimeSeries = (
   const sorted = [...inRange].sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
   const bucketMs = HISTORY_RANGE_BUCKET_MS[range];
 
+  // Solo se genera un punto entre la primera y la última lectura real (nunca antes ni después):
+  // si el sensor dejó de reportar hace horas, la línea debe terminar ahí en vez de seguir
+  // "plana" hasta ahora simulando que sigue midiendo lo mismo.
+  const loopStart = Math.max(cutoff, new Date(sorted[0].fecha).getTime());
+  const loopEnd = Math.min(now, new Date(sorted[sorted.length - 1].fecha).getTime());
+
   const buckets: (HistoricoPunto & { xLabel: string; valorReal: number })[] = [];
-  for (let t = cutoff; t <= now; t += bucketMs) {
+  for (let t = loopStart; t <= loopEnd; t += bucketMs) {
     const valor = interpolateValueAt(sorted, t);
     if (valor === null) continue;
     const dateObj = new Date(t);
@@ -738,6 +744,15 @@ const HistoricoSensoresCard = ({
   const chartData = buildFilledTimeSeries(calendarFilteredData, effectiveRange, chartTimeZone);
   const umbralVisual = sensorInfo?.umbral ? sensorInfo.umbral[config.umbralRef] : null;
 
+  // Si la última lectura real quedó bastante antes de ahora, se avisa: el gráfico ya no
+  // extiende una línea plana falsa hasta el presente, así que sin este aviso parecería
+  // que simplemente "no hay más puntos" en vez de que el sensor dejó de reportar.
+  const lastPointMs = chartData.length > 0 ? new Date(chartData[chartData.length - 1].fecha).getTime() : null;
+  const isStale = lastPointMs !== null && (Date.now() - lastPointMs) > HISTORY_RANGE_BUCKET_MS[effectiveRange] * 2;
+  const lastPointLabel = lastPointMs !== null
+    ? new Date(lastPointMs).toLocaleString('es-PE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: chartTimeZone })
+    : null;
+
   return (
     <Card size="3" style={{ background: '#111827', borderColor: '#1f2937', borderRadius: '16px', height: '100%' }}>
       <Flex justify="between" align="center" mb="4" wrap="wrap" gap="3">
@@ -758,8 +773,14 @@ const HistoricoSensoresCard = ({
       {/* Filtros movidos al nivel de página principal */}
 
       {effectiveRange !== timeRange && (
-        <Text size="1" color="gray" mb="3" as="div" style={{ fontFamily: 'monospace' }}>
+        <Text size="1" color="gray" mb="1" as="div" style={{ fontFamily: 'monospace' }}>
           Sin datos en {timeRange}; mostrando {effectiveRange}.
+        </Text>
+      )}
+
+      {isStale && lastPointLabel && (
+        <Text size="1" color="amber" mb="3" as="div" style={{ fontFamily: 'monospace' }}>
+          Sin lecturas recientes: la última fue el {lastPointLabel}.
         </Text>
       )}
 
