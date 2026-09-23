@@ -235,7 +235,11 @@ export default function DashboardClient({
   const [monthFilter, setMonthFilter] = useState<CalendarFilter>('all');
   const [yearFilter, setYearFilter] = useState<CalendarFilter>('all');
   const [filterMode, setFilterMode] = useState<FilterMode>('relative');
-  const [dashboardRange, setDashboardRange] = useState<HistoryRange>('6h');
+  // Rango de tiempo independiente por gráfico: los sensores suelen tener lecturas frecuentes y
+  // sí tienen datos en 6h, mientras que el consumo de agua depende de cuándo se regó realmente;
+  // forzarlos al mismo rango hacía que uno arrastrara el fallback del otro.
+  const [sensorRange, setSensorRange] = useState<HistoryRange>('6h');
+  const [consumoRange, setConsumoRange] = useState<HistoryRange>('6h');
   const [startDateFilter, setStartDateFilter] = useState('');
   const [endDateFilter, setEndDateFilter] = useState('');
 
@@ -256,20 +260,20 @@ export default function DashboardClient({
 
   useEffect(() => {
     if (filterMode === 'calendar') return;
-    if (dashboardRange !== '7d') {
+    if (sensorRange !== '7d' && consumoRange !== '7d') {
       setWeekdayFilter('all');
     }
     setMonthFilter('all');
     setYearFilter('all');
     setStartDateFilter('');
     setEndDateFilter('');
-  }, [dashboardRange, filterMode]);
+  }, [sensorRange, consumoRange, filterMode]);
 
   const hasCrops = localCultivos.length > 0;
   const cultivoActivo = hasCrops ? (localCultivos.find((c) => c.idCultivo.toString() === selectedId) || localCultivos[0]) : null;
   const recolectorActivo = hasActiveCollector(cultivoActivo);
   const isRelativeMode = filterMode === 'relative';
-  const canUseWeekday = !isRelativeMode || dashboardRange === '7d';
+  const canUseWeekday = !isRelativeMode || sensorRange === '7d' || consumoRange === '7d';
   const canUseMonthYear = !isRelativeMode;
   const calendarFilters: CalendarFilters = {
     weekday: canUseWeekday ? weekdayFilter : 'all',
@@ -457,20 +461,42 @@ export default function DashboardClient({
                 </Button>
               </Flex>
 
-              <Flex gap="2" style={{ background: '#0f172a', padding: '4px', borderRadius: '8px', border: '1px solid #1f2937' }}>
-                {(['6h', '24h', '7d'] as HistoryRange[]).map((range) => (
-                  <Button
-                    key={range}
-                    size="1"
-                    variant={dashboardRange === range ? 'solid' : 'ghost'}
-                    color="green"
-                    disabled={!isRelativeMode}
-                    onClick={() => setDashboardRange(range)}
-                    style={{ cursor: isRelativeMode ? 'pointer' : 'default', opacity: isRelativeMode ? 1 : 0.45 }}
-                  >
-                    {range}
-                  </Button>
-                ))}
+              <Flex gap="2" align="center">
+                <Text size="1" color="gray">Sensores:</Text>
+                <Flex gap="2" style={{ background: '#0f172a', padding: '4px', borderRadius: '8px', border: '1px solid #1f2937' }}>
+                  {(['6h', '24h', '7d'] as HistoryRange[]).map((range) => (
+                    <Button
+                      key={range}
+                      size="1"
+                      variant={sensorRange === range ? 'solid' : 'ghost'}
+                      color="green"
+                      disabled={!isRelativeMode}
+                      onClick={() => setSensorRange(range)}
+                      style={{ cursor: isRelativeMode ? 'pointer' : 'default', opacity: isRelativeMode ? 1 : 0.45 }}
+                    >
+                      {range}
+                    </Button>
+                  ))}
+                </Flex>
+              </Flex>
+
+              <Flex gap="2" align="center">
+                <Text size="1" color="gray">Consumo:</Text>
+                <Flex gap="2" style={{ background: '#0f172a', padding: '4px', borderRadius: '8px', border: '1px solid #1f2937' }}>
+                  {(['6h', '24h', '7d'] as HistoryRange[]).map((range) => (
+                    <Button
+                      key={range}
+                      size="1"
+                      variant={consumoRange === range ? 'solid' : 'ghost'}
+                      color="sky"
+                      disabled={!isRelativeMode}
+                      onClick={() => setConsumoRange(range)}
+                      style={{ cursor: isRelativeMode ? 'pointer' : 'default', opacity: isRelativeMode ? 1 : 0.45 }}
+                    >
+                      {range}
+                    </Button>
+                  ))}
+                </Flex>
               </Flex>
               
               {false && <Select.Root value={weekdayFilter} onValueChange={setWeekdayFilter} disabled={!canUseWeekday}>
@@ -511,7 +537,7 @@ export default function DashboardClient({
               )}
               <Text size="1" color="gray" style={{ fontFamily: 'monospace', marginLeft: 'auto' }}>
                 {filterMode === 'relative'
-                  ? (dashboardRange === '7d' ? 'En 7d solo se habilita dia de semana.' : 'Calendario deshabilitado en rangos cortos.')
+                  ? ((sensorRange === '7d' || consumoRange === '7d') ? 'En 7d solo se habilita dia de semana.' : 'Calendario deshabilitado en rangos cortos.')
                   : 'Mes, anio y dia habilitados para historico.'}
               </Text>
             </Flex>
@@ -530,8 +556,8 @@ export default function DashboardClient({
                 <HistoricoSensoresCard 
                   historial={cultivoActivo.historialSensores} 
                   sensores={cultivoActivo.sensores} 
-                  isClientMounted={isClientMounted} 
-                  timeRange={dashboardRange}
+                  isClientMounted={isClientMounted}
+                  timeRange={sensorRange}
                   calendarFilters={calendarFilters}
                   cultivoTimezone={cultivoActivo.zonaHoraria}
                 />
@@ -555,7 +581,7 @@ export default function DashboardClient({
                     eventos={cultivoActivo.historialConsumo || []}
                     limite={cultivoActivo.limiteConsumo}
                     isClientMounted={isClientMounted}
-                    timeRange={dashboardRange}
+                    timeRange={consumoRange}
                     calendarFilters={calendarFilters}
                     cultivoTimezone={cultivoActivo.zonaHoraria}
                   />
