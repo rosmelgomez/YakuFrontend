@@ -160,6 +160,31 @@ const buildFilledTimeSeries = (
   return buckets;
 };
 
+// A diferencia de buildFilledTimeSeries (para lecturas continuas como humedad/temperatura),
+// esto NO interpola ni inventa puntos: cada evento (p. ej. un riego) vale por sí mismo y ocurre
+// en un instante puntual, así que se listan tal cual quedaron en la base de datos, en su propio
+// horario real, filtrados a la ventana del rango elegido.
+const buildRealEventSeries = (
+  data: HistoricoPunto[],
+  range: HistoryRange,
+  timeZone: string
+): (HistoricoPunto & { xLabel: string; valorReal: number })[] => {
+  if (data.length === 0) return [];
+  const now = new Date().getTime();
+  const cutoff = now - HISTORY_RANGE_LIMIT_MS[range];
+
+  return data
+    .filter(d => new Date(d.fecha).getTime() >= cutoff)
+    .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime())
+    .map(d => {
+      const dateObj = new Date(d.fecha);
+      const xLabel = range === '7d'
+        ? dateObj.toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', timeZone }) + ' ' + dateObj.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone })
+        : dateObj.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone });
+      return { ...d, xLabel, valorReal: d.valor };
+    });
+};
+
 // Elige el rango más angosto (entre las opciones >= al solicitado) que sí tenga datos,
 // para no mostrar un gráfico vacío cuando el rango seleccionado no tiene lecturas.
 const resolveEffectiveRange = (
@@ -896,9 +921,10 @@ const ConsumoChartCard = ({
   });
 
   // Eventos reales de riego (fecha + litros de cada riego individual). El total diario de
-  // `data` (consumoSemanal) solo sirve para la vista de 7 días; para 6h/24h usamos estos
-  // eventos reales rellenados con buildFilledTimeSeries, para que el gráfico responda al
-  // filtro de tiempo con datos reales en vez de repetir el total del día.
+  // `data` (consumoSemanal) solo sirve para la vista de 7 días; para 6h/24h se listan estos
+  // eventos reales tal cual ocurrieron (sin interpolar ni rellenar huecos: cada riego es un
+  // hecho puntual, no una lectura continua), para que el gráfico muestre datos reales de la
+  // base de datos y responda al filtro de tiempo.
   const calendarFilteredEventos: HistoricoPunto[] = (eventos || []).filter((item) =>
     dateMatchesCalendarFilters(new Date(item.fecha), calendarFilters)
   );
@@ -907,7 +933,7 @@ const ConsumoChartCard = ({
   const effectiveRange = ranges.find((range) => (
     range === '7d'
       ? calendarFilteredData.length > 0
-      : buildFilledTimeSeries(calendarFilteredEventos, range, chartTimeZone).length > 0
+      : buildRealEventSeries(calendarFilteredEventos, range, chartTimeZone).length > 0
   )) || requestedRange;
 
   const chartData = effectiveRange === '7d'
@@ -916,7 +942,7 @@ const ConsumoChartCard = ({
         const xLabel = d.label === 'Hoy' ? 'Hoy' : (d.label || dateObj.toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', timeZone: chartTimeZone }));
         return { ...d, xLabel, valorReal: d.valor };
       })
-    : buildFilledTimeSeries(calendarFilteredEventos, effectiveRange, chartTimeZone);
+    : buildRealEventSeries(calendarFilteredEventos, effectiveRange, chartTimeZone);
 
   const config = {
     title: 'Consumo de agua',
