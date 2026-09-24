@@ -525,48 +525,6 @@ export function ControlPanel({
     }
   };
 
-  // Disparo automático de predicción ML una vez que el tiempo desde el último riego cumple el cooldown
-  const cooldownEvaluatedRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    const checkCooldownAndTriggerMl = () => {
-      if (
-        !controlData.ultimoRiegoFechaFin ||
-        isRiegoEnCurso ||
-        !isActuatorActive ||
-        isCheckingMl ||
-        !cooldownMinutes
-      ) {
-        // Sin un cooldownMinutes real todavia cargado, no se debe adivinar
-        // un valor por defecto (antes usaba 10 min como fallback silencioso,
-        // lo que disparaba evaluaciones de ML muchisimo antes del cooldown
-        // real configurado, p.ej. 120 min).
-        return;
-      }
-
-      const fechaFin = new Date(controlData.ultimoRiegoFechaFin);
-      const cooldownSegundos = cooldownMinutes * 60;
-      const elapsedSeconds = Math.floor((Date.now() - fechaFin.getTime()) / 1000);
-
-      // Si ya transcurrió el tiempo de cooldown (ej. >= 10 min) y no se ha evaluado para este ciclo
-      const evalKey = `${controlData.ultimoRiegoFechaFin}_${cooldownMinutes}`;
-      if (elapsedSeconds >= cooldownSegundos && cooldownEvaluatedRef.current !== evalKey) {
-        cooldownEvaluatedRef.current = evalKey;
-        runLiveMlCheck(true);
-      }
-    };
-
-    checkCooldownAndTriggerMl();
-    const interval = setInterval(checkCooldownAndTriggerMl, 5000);
-    return () => clearInterval(interval);
-  }, [
-    controlData.ultimoRiegoFechaFin,
-    cooldownMinutes,
-    isRiegoEnCurso,
-    isActuatorActive,
-    isCheckingMl,
-  ]);
-
   const { bomba, modo, seguridad = {}, logs = [] } = controlData;
 
   return (
