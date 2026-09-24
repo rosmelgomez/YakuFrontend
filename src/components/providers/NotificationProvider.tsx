@@ -20,6 +20,7 @@ export interface Alerta {
   mensaje: string;
   severidad: 'info' | 'advertencia' | 'critica' | 'exito';
   valor?: number;
+  link?: string;
 }
 
 export interface NotificationContextType {
@@ -294,7 +295,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                 titulo: alerta.titulo,
                 mensaje: alerta.mensaje,
                 severidad: alerta.severidad,
-                link: '/dashboard/agricultor/notificaciones',
+                // El backend indica a dónde debe llevar el clic según el tipo
+                // de evento (p. ej. control/actuadores para riego); si no lo
+                // manda, se cae al historial de notificaciones.
+                link: (payload as any).link || '/dashboard/agricultor/notificaciones',
               });
             }
           } catch {}

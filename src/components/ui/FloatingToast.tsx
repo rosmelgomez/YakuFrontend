@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, X, Droplet, CheckCircle2 } from 'lucide-react';
 
 interface FloatingToastProps {
@@ -10,11 +11,20 @@ interface FloatingToastProps {
     mensaje: string;
     severidad: 'info' | 'advertencia' | 'critica' | 'exito';
     valor?: number;
+    link?: string;
   };
   onClose: () => void;
 }
 
 export default function FloatingToast({ alerta, onClose }: FloatingToastProps) {
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    if (alerta.link) {
+      navigate(alerta.link);
+      onClose();
+    }
+  };
   // Configuración de estilos y colores premium (dark theme glassmorphism)
   const styles = {
     info: {
@@ -54,11 +64,14 @@ export default function FloatingToast({ alerta, onClose }: FloatingToastProps) {
   };
 
   return (
-    <div className={`fixed top-6 right-6 z-[9999] flex items-start gap-4 p-4 w-96 rounded-xl border backdrop-blur-md bg-slate-950/80 bg-gradient-to-br ${styles.gradient} ${styles.border} ${styles.shadow} shadow-2xl transition-all duration-300 animate-slide-in`}>
+    <div
+      onClick={alerta.link ? handleClick : undefined}
+      className={`fixed top-6 right-6 z-[9999] flex items-start gap-4 p-4 w-96 rounded-xl border backdrop-blur-md bg-slate-950/80 bg-gradient-to-br ${styles.gradient} ${styles.border} ${styles.shadow} shadow-2xl transition-all duration-300 animate-slide-in ${alerta.link ? 'cursor-pointer' : ''}`}
+    >
       <div className="flex-shrink-0 mt-0.5">
         {styles.icon}
       </div>
-      
+
       <div className="flex-grow min-w-0">
         <h4 className={`text-sm font-semibold tracking-wide ${styles.text}`}>{alerta.titulo}</h4>
         <p className="text-xs text-slate-300 mt-1 leading-relaxed break-words">{alerta.mensaje}</p>
@@ -69,8 +82,8 @@ export default function FloatingToast({ alerta, onClose }: FloatingToastProps) {
         )}
       </div>
 
-      <button 
-        onClick={onClose} 
+      <button
+        onClick={(e) => { e.stopPropagation(); onClose(); }}
         className="flex-shrink-0 text-slate-500 hover:text-white transition-colors duration-150 p-1 hover:bg-slate-900/50 rounded-lg"
       >
         <X className="w-4 h-4" />

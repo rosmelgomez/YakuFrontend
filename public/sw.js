@@ -11,10 +11,13 @@ self.addEventListener('push', function(event) {
         badge: '/favicon.ico',
         vibrate: [150, 75, 150, 75, 200],
         data: {
-          url: '/dashboard/agricultor/alertas'
+          // El backend indica a dónde debe llevar el clic (p. ej. el panel
+          // de control para eventos de riego); si no lo manda, se cae al
+          // historial de notificaciones.
+          url: data.url || '/dashboard/agricultor/notificaciones'
         },
         actions: [
-          { action: 'open', title: 'Ver Alertas' }
+          { action: 'open', title: 'Ver' }
         ]
       };
 
