@@ -18,9 +18,14 @@ import {
 import { 
   Users, 
   Cpu, 
-  Leaf, 
-  AlertTriangle, 
-  Activity, 
+  Leaf,
+  Droplets,
+  Activity,
+  Wifi,
+  Trophy,
+  Sprout,
+  UserPlus,
+  Layers,
   Brain,
   Search,
   Database,
@@ -35,11 +40,54 @@ import {
   YAxis, 
   Tooltip, 
   Legend, 
-  CartesianGrid, 
-  PieChart, 
-  Pie, 
-  Cell 
+  CartesianGrid,
+  PieChart,
+  Pie,
+  Cell,
+  AreaChart,
+  Area
 } from 'recharts';
+
+const CARD_STYLE = { background: '#111827', borderColor: '#1f2937' };
+const TOOLTIP_STYLE = { background: '#1f2937', borderColor: '#374151', color: 'white', fontSize: 11, borderRadius: 8 };
+// Resaltado sutil al pasar el cursor sobre las barras (reemplaza el fondo blanco por defecto de Recharts)
+const BAR_CURSOR = { fill: 'rgba(148, 163, 184, 0.08)' };
+
+const DEVICE_STATE_COLORS: Record<string, string> = {
+  asignado: '#10b981',
+  disponible: '#3b82f6',
+  reparacion: '#f59e0b',
+  retirado: '#64748b',
+};
+
+const DEVICE_STATE_LABELS: Record<string, string> = {
+  asignado: 'Asignados',
+  disponible: 'En stock',
+  reparacion: 'En reparación',
+  retirado: 'Retirados',
+};
+
+const PLANT_COLORS = ['#10b981', '#22c55e', '#84cc16', '#14b8a6', '#06b6d4', '#0ea5e9', '#6366f1'];
+
+function ChartHeader({ icon, title, subtitle }: { icon: React.ReactNode; title: string; subtitle: string }) {
+  return (
+    <Flex direction="column" gap="1" mb="3">
+      <Flex align="center" gap="2">
+        {icon}
+        <Text size={{ initial: "2", sm: "3" }} weight="bold" style={{ color: 'white' }}>{title}</Text>
+      </Flex>
+      <Text size="1" color="gray">{subtitle}</Text>
+    </Flex>
+  );
+}
+
+function EmptyChart({ message }: { message: string }) {
+  return (
+    <Flex align="center" justify="center" style={{ height: '100%', minHeight: 160 }}>
+      <Text size="1" color="gray">{message}</Text>
+    </Flex>
+  );
+}
 
 interface AdminDashboardClientProps {
   data: {
@@ -48,7 +96,6 @@ interface AdminDashboardClientProps {
       total_dispositivos: number;
       total_dispositivos_activos: number;
       total_cultivos_activos: number;
-      alertas_pendientes: number;
     };
     logs: Array<{
       id: number;
@@ -87,6 +134,9 @@ interface AdminDashboardClientProps {
       fecha: string;
       litros: number;
       riegos: number;
+      automatico?: number;
+      manual?: number;
+      programado?: number;
     }>;
     usuarios_filtro: Array<{
       id: number;
@@ -98,6 +148,25 @@ interface AdminDashboardClientProps {
       id: number;
       nombre_planta: string;
       id_usuario: number;
+    }>;
+    top_consumo?: Array<{
+      id_usuario: number;
+      nombre: string;
+      litros: number;
+      riegos: number;
+    }>;
+    registros_mensuales?: Array<{
+      mes: string;
+      agricultores: number;
+    }>;
+    dispositivos_estado?: Array<{
+      estado: string;
+      total: number;
+    }>;
+    dispositivos_conectados?: number;
+    cultivos_por_planta?: Array<{
+      planta: string;
+      total: number;
     }>;
     zona_horaria?: string;
   };
@@ -111,8 +180,27 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
     consumo_semanal, 
     usuarios_filtro = [], 
     cultivos_filtro = [],
+    top_consumo = [],
+    registros_mensuales = [],
+    dispositivos_estado = [],
+    dispositivos_conectados = 0,
+    cultivos_por_planta = [],
     zona_horaria = 'America/Lima',
   } = data;
+
+  const litrosSemana = consumo_semanal.reduce((acc, d) => acc + (d.litros || 0), 0);
+  const riegosSemana = consumo_semanal.reduce((acc, d) => acc + (d.riegos || 0), 0);
+  const nuevosEsteMes = registros_mensuales.length > 0 ? registros_mensuales[registros_mensuales.length - 1].agricultores : 0;
+  const conexionPct = metricas.total_dispositivos > 0
+    ? Math.round((dispositivos_conectados / metricas.total_dispositivos) * 100)
+    : 0;
+
+  const deviceStateData = dispositivos_estado.map(d => ({
+    name: DEVICE_STATE_LABELS[d.estado] || d.estado.charAt(0).toUpperCase() + d.estado.slice(1),
+    value: d.total,
+    color: DEVICE_STATE_COLORS[d.estado] || '#a855f7',
+  }));
+  const plantData = cultivos_por_planta.slice(0, 7);
 
   // Selected filters for User & Crop
   const [filterUserId, setFilterUserId] = useState<string>('all');
@@ -245,8 +333,11 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
               <Users size={20} color="#3b82f6" />
             </Box>
             <Box>
-              <Text size="1" color="gray" weight="medium">Usuarios</Text>
-              <Text size={{ initial: "4", sm: "5" }} weight="bold" style={{ color: 'white', display: 'block' }}>{metricas.total_usuarios}</Text>
+              <Text size="1" color="gray" weight="medium">Agricultores</Text>
+              <Flex gap="1.5" align="baseline">
+                <Text size={{ initial: "4", sm: "5" }} weight="bold" style={{ color: 'white' }}>{metricas.total_usuarios}</Text>
+                {nuevosEsteMes > 0 && <Text size="1" color="green">+{nuevosEsteMes} este mes</Text>}
+              </Flex>
             </Box>
           </Flex>
         </Card>
@@ -280,21 +371,20 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
           </Flex>
         </Card>
 
-        {/* Alertas */}
-        <Card size="1" style={{ background: '#111827', borderColor: '#1f2937' }}>
+        {/* Agua 7 días */}
+        <Card size="1" style={CARD_STYLE}>
           <Flex align="center" gap="2.5">
-            <Box style={{ 
-              background: metricas.alertas_pendientes > 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(148, 163, 184, 0.1)', 
-              padding: '8px', 
-              borderRadius: '10px' 
-            }}>
-              <AlertTriangle size={20} color={metricas.alertas_pendientes > 0 ? "#ef4444" : "#94a3b8"} />
+            <Box style={{ background: 'rgba(14, 165, 233, 0.1)', padding: '8px', borderRadius: '10px' }}>
+              <Droplets size={20} color="#0ea5e9" />
             </Box>
             <Box>
-              <Text size="1" color="gray" weight="medium">Alertas</Text>
-              <Badge color={metricas.alertas_pendientes > 0 ? "red" : "gray"} variant="soft" size="1" mt="0.5">
-                {metricas.alertas_pendientes} pend.
-              </Badge>
+              <Text size="1" color="gray" weight="medium">Agua (7 días)</Text>
+              <Flex gap="1.5" align="baseline">
+                <Text size={{ initial: "4", sm: "5" }} weight="bold" style={{ color: 'white' }}>
+                  {litrosSemana.toLocaleString('es-PE', { maximumFractionDigits: 1 })} L
+                </Text>
+                <Text size="1" color="gray">({riegosSemana} riegos)</Text>
+              </Flex>
             </Box>
           </Flex>
         </Card>
@@ -309,18 +399,19 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
               <Activity size={18} color="#3b82f6" />
               <Text size={{ initial: "2", sm: "3" }} weight="bold" style={{ color: 'white' }}>Monitoreo Semanal de Riego (Global)</Text>
             </Flex>
-            <Text size="1" color="gray">Consumo total de agua en litros y número de riegos automáticos ejecutados.</Text>
+            <Text size="1" color="gray">Consumo total de agua en litros y número de riegos ejecutados por los agricultores.</Text>
           </Flex>
 
           <Box style={{ width: '100%', minWidth: 0, height: '260px' }}>
             <ResponsiveContainer width="100%" height={260} minWidth={0}>
               <BarChart data={consumo_semanal} margin={{ top: 10, right: 10, left: -5, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
                 <XAxis dataKey="fecha" stroke="#94a3b8" fontSize={10} />
                 <YAxis yAxisId="left" stroke="#3b82f6" fontSize={10} label={{ value: 'Litros', angle: -90, position: 'insideLeft', fill: '#3b82f6', style: {fontSize: 10} }} />
-                <YAxis yAxisId="right" orientation="right" stroke="#10b981" fontSize={10} label={{ value: 'Riegos', angle: 90, position: 'insideRight', fill: '#10b981', style: {fontSize: 10} }} />
-                <Tooltip 
-                  contentStyle={{ background: '#1f2937', borderColor: '#374151', color: 'white' }}
+                <YAxis yAxisId="right" orientation="right" stroke="#10b981" fontSize={10} allowDecimals={false} label={{ value: 'Riegos', angle: 90, position: 'insideRight', fill: '#10b981', style: {fontSize: 10} }} />
+                <Tooltip
+                  cursor={BAR_CURSOR}
+                  contentStyle={TOOLTIP_STYLE}
                   labelStyle={{ fontWeight: 'bold', color: '#818cf8' }}
                 />
                 <Legend wrapperStyle={{ fontSize: 11, paddingTop: 6 }} />
@@ -372,7 +463,7 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip contentStyle={{ background: '#1f2937', borderColor: '#374151', color: 'white', fontSize: 11 }} />
+                    <Tooltip contentStyle={TOOLTIP_STYLE} itemStyle={{ color: 'white' }} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div style={{
@@ -389,6 +480,165 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
               <Text size="1" color="gray" style={{ textAlign: 'center', padding: '20px' }}>Sin registros de predicciones.</Text>
             )}
           </Flex>
+        </Card>
+      </Grid>
+
+      {/* CHARTS ROW 2: Dispositivos, Top consumo, Cultivos por especie */}
+      <Grid columns={{ initial: '1', md: '2', lg: '3' }} gap={{ initial: "3", sm: "4" }}>
+        {/* Estado de dispositivos */}
+        <Card size={{ initial: "2", sm: "3" }} style={CARD_STYLE}>
+          <ChartHeader
+            icon={<Wifi size={18} color="#a855f7" />}
+            title="Parque de Dispositivos"
+            subtitle="Distribución por estado y conectividad reciente."
+          />
+          {deviceStateData.length > 0 ? (
+            <>
+              <Box style={{ height: '170px', width: '100%', minWidth: 0, position: 'relative' }}>
+                <ResponsiveContainer width="100%" height={170} minWidth={0}>
+                  <PieChart>
+                    <Pie data={deviceStateData} cx="50%" cy="50%" innerRadius={52} outerRadius={72} paddingAngle={3} dataKey="value" stroke="none">
+                      {deviceStateData.map((entry, index) => (
+                        <Cell key={`dev-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={TOOLTIP_STYLE} itemStyle={{ color: 'white' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+                  <Text size="1" color="gray" style={{ display: 'block', lineHeight: 1 }}>En línea</Text>
+                  <Text size="4" weight="bold" style={{ color: 'white' }}>{conexionPct}%</Text>
+                </div>
+              </Box>
+              <Flex wrap="wrap" gap="3" justify="center" mt="2">
+                {deviceStateData.map(d => (
+                  <Flex key={d.name} align="center" gap="1">
+                    <Box style={{ width: 8, height: 8, borderRadius: 2, background: d.color }} />
+                    <Text size="1" color="gray">{d.name}: <Text weight="bold" style={{ color: 'white' }}>{d.value}</Text></Text>
+                  </Flex>
+                ))}
+              </Flex>
+              <Text size="1" color="gray" align="center" as="div" mt="2">
+                {dispositivos_conectados} de {metricas.total_dispositivos} reportando actividad reciente
+              </Text>
+            </>
+          ) : (
+            <EmptyChart message="No hay dispositivos registrados." />
+          )}
+        </Card>
+
+        {/* Top agricultores por consumo */}
+        <Card size={{ initial: "2", sm: "3" }} style={CARD_STYLE}>
+          <ChartHeader
+            icon={<Trophy size={18} color="#f59e0b" />}
+            title="Mayor Consumo de Agua"
+            subtitle="Agricultores con más litros utilizados en los últimos 7 días."
+          />
+          <Box style={{ height: '230px', width: '100%', minWidth: 0 }}>
+            {top_consumo.length > 0 ? (
+              <ResponsiveContainer width="100%" height={230} minWidth={0}>
+                <BarChart data={top_consumo} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" horizontal={false} />
+                  <XAxis type="number" stroke="#94a3b8" fontSize={10} />
+                  <YAxis type="category" dataKey="nombre" stroke="#94a3b8" fontSize={10} width={90} tickFormatter={(v: string) => v.length > 13 ? `${v.slice(0, 12)}…` : v} />
+                  <Tooltip
+                    cursor={BAR_CURSOR}
+                    contentStyle={TOOLTIP_STYLE}
+                    labelStyle={{ fontWeight: 'bold', color: '#fbbf24' }}
+                    formatter={(value: any) => [`${value} L`, 'Agua']}
+                  />
+                  <Bar dataKey="litros" fill="#f59e0b" radius={[0, 4, 4, 0]} barSize={16} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <EmptyChart message="Sin consumo registrado esta semana." />
+            )}
+          </Box>
+        </Card>
+
+        {/* Cultivos por especie */}
+        <Card size={{ initial: "2", sm: "3" }} className="md:col-span-2 lg:col-span-1" style={CARD_STYLE}>
+          <ChartHeader
+            icon={<Sprout size={18} color="#10b981" />}
+            title="Cultivos por Especie"
+            subtitle="Cultivos activos agrupados por tipo de planta."
+          />
+          <Box style={{ height: '230px', width: '100%', minWidth: 0 }}>
+            {plantData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={230} minWidth={0}>
+                <BarChart data={plantData} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" horizontal={false} />
+                  <XAxis type="number" stroke="#94a3b8" fontSize={10} allowDecimals={false} />
+                  <YAxis type="category" dataKey="planta" stroke="#94a3b8" fontSize={10} width={90} tickFormatter={(v: string) => v.length > 13 ? `${v.slice(0, 12)}…` : v} />
+                  <Tooltip
+                    cursor={BAR_CURSOR}
+                    contentStyle={TOOLTIP_STYLE}
+                    labelStyle={{ fontWeight: 'bold', color: '#34d399' }}
+                    formatter={(value: any) => [value, 'Cultivos']}
+                  />
+                  <Bar dataKey="total" radius={[0, 4, 4, 0]} barSize={16}>
+                    {plantData.map((_, index) => (
+                      <Cell key={`plant-${index}`} fill={PLANT_COLORS[index % PLANT_COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <EmptyChart message="No hay cultivos activos." />
+            )}
+          </Box>
+        </Card>
+      </Grid>
+
+      {/* CHARTS ROW 3: Origen de riegos + Nuevos agricultores */}
+      <Grid columns={{ initial: '1', lg: '2' }} gap={{ initial: "3", sm: "4" }}>
+        {/* Riegos por tipo */}
+        <Card size={{ initial: "2", sm: "3" }} style={CARD_STYLE}>
+          <ChartHeader
+            icon={<Layers size={18} color="#818cf8" />}
+            title="Origen de los Riegos"
+            subtitle="Riegos diarios según su origen: automático (ML), programado o manual."
+          />
+          <Box style={{ height: '240px', width: '100%', minWidth: 0 }}>
+            <ResponsiveContainer width="100%" height={240} minWidth={0}>
+              <BarChart data={consumo_semanal} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
+                <XAxis dataKey="fecha" stroke="#94a3b8" fontSize={10} />
+                <YAxis stroke="#94a3b8" fontSize={10} allowDecimals={false} />
+                <Tooltip cursor={BAR_CURSOR} contentStyle={TOOLTIP_STYLE} labelStyle={{ fontWeight: 'bold', color: '#818cf8' }} />
+                <Legend wrapperStyle={{ fontSize: 11, paddingTop: 6 }} />
+                <Bar dataKey="automatico" name="Automático (ML)" stackId="tipo" fill="#6366f1" />
+                <Bar dataKey="programado" name="Programado" stackId="tipo" fill="#06b6d4" />
+                <Bar dataKey="manual" name="Manual" stackId="tipo" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </Box>
+        </Card>
+
+        {/* Nuevos agricultores */}
+        <Card size={{ initial: "2", sm: "3" }} style={CARD_STYLE}>
+          <ChartHeader
+            icon={<UserPlus size={18} color="#3b82f6" />}
+            title="Nuevos Agricultores"
+            subtitle="Agricultores registrados por mes durante el último semestre."
+          />
+          <Box style={{ height: '240px', width: '100%', minWidth: 0 }}>
+            <ResponsiveContainer width="100%" height={240} minWidth={0}>
+              <AreaChart data={registros_mensuales} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="adminRegistrosGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
+                <XAxis dataKey="mes" stroke="#94a3b8" fontSize={10} />
+                <YAxis stroke="#94a3b8" fontSize={10} allowDecimals={false} />
+                <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={{ fontWeight: 'bold', color: '#60a5fa' }} formatter={(value: any) => [value, 'Nuevos agricultores']} />
+                <Area type="monotone" dataKey="agricultores" stroke="#3b82f6" strokeWidth={2} fill="url(#adminRegistrosGradient)" dot={{ r: 3, fill: '#3b82f6' }} activeDot={{ r: 5 }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </Box>
         </Card>
       </Grid>
 
@@ -419,7 +669,7 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
               <Flex justify="between" align={{ initial: 'stretch', sm: 'center' }} direction={{ initial: 'column', sm: 'row' }} mb="4" gap="3">
                 <Text size={{ initial: "2", sm: "3" }} weight="bold" color="indigo">Predicciones de Riego Recientes</Text>
                 <TextField.Root 
-                  placeholder="Buscar por usuario o cultivo..." 
+                  placeholder="Buscar por agricultor o cultivo..." 
                   value={predSearch}
                   onChange={(e) => { setPredSearch(e.target.value); setCurrentPagePreds(1); }}
                   style={{ background: '#1e293b', width: '100%', maxWidth: '300px', color: 'white' }}
@@ -435,7 +685,7 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
                   <Table.Header>
                     <Table.Row>
                       <Table.ColumnHeaderCell>Fecha / Hora</Table.ColumnHeaderCell>
-                      <Table.ColumnHeaderCell>Usuario</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell>Agricultor</Table.ColumnHeaderCell>
                       <Table.ColumnHeaderCell>Cultivo</Table.ColumnHeaderCell>
                       <Table.ColumnHeaderCell>Modelo</Table.ColumnHeaderCell>
                       <Table.ColumnHeaderCell>Recomendación</Table.ColumnHeaderCell>
