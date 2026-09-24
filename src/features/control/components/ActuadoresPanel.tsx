@@ -230,12 +230,16 @@ export function ActuadoresPanel({
                           ? "Error de lectura de sensor"
                           : (controlData as any).sesionPausada.motivo === "apagado_dispositivo"
                           ? "Dispositivo actuador apagado"
+                          : (controlData as any).sesionPausada.motivo === "desconexion_riego"
+                          ? "Reinicio del equipo (posible corte de energía)"
                           : isConexionDirecta
                           ? "Ausencia de flujo de agua"
                           : "Falta de agua física en el tanque"}
                       </strong>
                       .{" "}
-                      {isConexionDirecta
+                      {(controlData as any).sesionPausada.motivo === "desconexion_riego"
+                        ? "El riego se reanudará automáticamente por el tiempo restante cuando el equipo vuelva a conectarse."
+                        : isConexionDirecta
                         ? "El riego se reanudará automáticamente al detectar flujo de agua."
                         : "El riego se reanudará automáticamente al normalizarse las condiciones."}
                     </Text>
@@ -265,6 +269,29 @@ export function ActuadoresPanel({
                       timeoutMin={bomba.timeoutMin || 10}
                       onComplete={() => onStopIrrigation?.("cronometro_completado")}
                     />
+                    {controlData.riegoActivo?.conexionPerdida && (
+                      <Box
+                        style={{
+                          border: "1px solid #f59e0b",
+                          background: "rgba(245, 158, 11, 0.12)",
+                          borderRadius: "8px",
+                          padding: "8px 10px",
+                        }}
+                      >
+                        <Text size="2" weight="bold" style={{ color: "#fbbf24" }} as="div">
+                          Sin conexión con el equipo
+                        </Text>
+                        <Text size="1" color="gray" as="div">
+                          El riego continúa en el dispositivo
+                          {controlData.riegoActivo.fechaFinEstimada
+                            ? ` y terminará a las ${new Date(
+                                controlData.riegoActivo.fechaFinEstimada
+                              ).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+                            : ""}
+                          . Los litros medidos se actualizarán cuando vuelva a conectarse.
+                        </Text>
+                      </Box>
+                    )}
                     <Text size="1" color="gray">
                       {isConexionDirecta
                         ? "La electroválvula de riego se encuentra abierta y el sensor de flujo monitorea el caudal hacia el cultivo."

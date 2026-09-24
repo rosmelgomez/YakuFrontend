@@ -50,6 +50,9 @@ export interface RiegoActivoInfo {
   duracionSegundos: number;
   fechaReferencia: string;
   litrosMedidos?: number;
+  /** El equipo dejó de reportar pero sigue regando con su propio cronómetro. */
+  conexionPerdida?: boolean;
+  fechaFinEstimada?: string | null;
 }
 
 export interface ControlData {
