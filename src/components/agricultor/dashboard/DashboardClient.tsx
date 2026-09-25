@@ -103,70 +103,77 @@ const HISTORY_RANGE_LIMIT_MS: Record<HistoryRange, number> = {
   '7d': 7 * 24 * 60 * 60 * 1000,
 };
 
-// Intervalo entre puntos generados por rango: 6h -> cada 15 min, 24h -> cada hora, 7d -> cada día
+// Para 7d se promedian las lecturas en intervalos de 10 min (unas 1000 en vez de ~10 000);
+// en 6h y 24h se dibujan todas las lecturas reales, una por minuto.
 const HISTORY_RANGE_BUCKET_MS: Record<HistoryRange, number> = {
-  '6h': 15 * 60 * 1000,
-  '24h': 60 * 60 * 1000,
-  '7d': 24 * 60 * 60 * 1000,
+  '6h': 0,
+  '24h': 0,
+  '7d': 10 * 60 * 1000,
 };
 
-// Valor interpolado linealmente entre las lecturas reales más cercanas a targetMs
-const interpolateValueAt = (sorted: HistoricoPunto[], targetMs: number): number | null => {
-  if (sorted.length === 0) return null;
-  const firstMs = new Date(sorted[0].fecha).getTime();
-  const lastMs = new Date(sorted[sorted.length - 1].fecha).getTime();
-  if (targetMs <= firstMs) return sorted[0].valor;
-  if (targetMs >= lastMs) return sorted[sorted.length - 1].valor;
-  for (let i = 0; i < sorted.length - 1; i++) {
-    const t1 = new Date(sorted[i].fecha).getTime();
-    const t2 = new Date(sorted[i + 1].fecha).getTime();
-    if (targetMs >= t1 && targetMs <= t2) {
-      if (t2 === t1) return sorted[i].valor;
-      const ratio = (targetMs - t1) / (t2 - t1);
-      return sorted[i].valor + (sorted[i + 1].valor - sorted[i].valor) * ratio;
-    }
-  }
-  return sorted[sorted.length - 1].valor;
+// Silencio entre dos lecturas a partir del cual la línea se corta (sensor sin reportar), en vez
+// de unir con una recta un hueco de horas como si hubiera medido todo ese tiempo.
+const HISTORY_RANGE_GAP_MS: Record<HistoryRange, number> = {
+  '6h': 5 * 60 * 1000,
+  '24h': 5 * 60 * 1000,
+  '7d': 30 * 60 * 1000,
 };
 
-// Genera un punto por cada intervalo del rango seleccionado, interpolando cuando no hay una
-// lectura exacta, para que cualquier gráfico de series de tiempo del dashboard muestre
-// información continua (y responda al filtro de rango) en vez de solo las lecturas dispersas.
-const buildFilledTimeSeries = (
+// Silencio a partir del cual se avisa que el sensor dejó de reportar (independiente del
+// intervalo del gráfico: con puntos por minuto, 2 intervalos serían solo 2 min).
+const STALE_READING_MS = 5 * 60 * 1000;
+
+type SensorSeriesPoint = HistoricoPunto & { ts: number; xLabel: string; valorReal: number | null };
+
+// Serie continua tipo "bolsa": cada lectura real en su instante (no valores interpolados), para
+// que la línea suba y baje con lo que midió el sensor. Si el sensor deja de reportar, se inserta
+// un punto nulo que corta la línea en ese hueco.
+const buildSensorSeries = (
   data: HistoricoPunto[],
   range: HistoryRange,
   timeZone: string
-): (HistoricoPunto & { xLabel: string; valorReal: number })[] => {
+): SensorSeriesPoint[] => {
   if (data.length === 0) return [];
-  const now = new Date().getTime();
-  const cutoff = now - HISTORY_RANGE_LIMIT_MS[range];
+  const cutoff = Date.now() - HISTORY_RANGE_LIMIT_MS[range];
 
-  const inRange = data.filter(d => new Date(d.fecha).getTime() >= cutoff);
-  if (inRange.length === 0) return [];
+  let points = data
+    .map((d) => ({ ts: new Date(d.fecha).getTime(), valor: d.valor }))
+    .filter((d) => Number.isFinite(d.ts) && d.ts >= cutoff && Number.isFinite(d.valor))
+    .sort((a, b) => a.ts - b.ts);
+  if (points.length === 0) return [];
 
-  const sorted = [...inRange].sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
   const bucketMs = HISTORY_RANGE_BUCKET_MS[range];
-
-  // Solo se genera un punto entre la primera y la última lectura real (nunca antes ni después):
-  // si el sensor dejó de reportar hace horas, la línea debe terminar ahí en vez de seguir
-  // "plana" hasta ahora simulando que sigue midiendo lo mismo.
-  const loopStart = Math.max(cutoff, new Date(sorted[0].fecha).getTime());
-  const loopEnd = Math.min(now, new Date(sorted[sorted.length - 1].fecha).getTime());
-
-  const buckets: (HistoricoPunto & { xLabel: string; valorReal: number })[] = [];
-  for (let t = loopStart; t <= loopEnd; t += bucketMs) {
-    const valor = interpolateValueAt(sorted, t);
-    if (valor === null) continue;
-    const dateObj = new Date(t);
-    const xLabel = range === '7d'
-      ? dateObj.toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', timeZone })
-      : dateObj.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone });
-    buckets.push({ fecha: dateObj.toISOString(), valor, xLabel, valorReal: valor });
+  if (bucketMs > 0) {
+    const grouped = new Map<number, { sumTs: number; sum: number; n: number }>();
+    for (const p of points) {
+      const key = Math.floor(p.ts / bucketMs);
+      const g = grouped.get(key) || { sumTs: 0, sum: 0, n: 0 };
+      g.sumTs += p.ts; g.sum += p.valor; g.n += 1;
+      grouped.set(key, g);
+    }
+    points = Array.from(grouped.values()).map((g) => ({ ts: Math.round(g.sumTs / g.n), valor: g.sum / g.n }));
   }
-  return buckets;
+
+  const gapMs = HISTORY_RANGE_GAP_MS[range];
+  const series: SensorSeriesPoint[] = [];
+  const toPoint = (ts: number, valor: number | null): SensorSeriesPoint => {
+    const dateObj = new Date(ts);
+    const xLabel = dateObj.toLocaleString('es-PE', range === '7d'
+      ? { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone }
+      : { hour: '2-digit', minute: '2-digit', timeZone });
+    const redondeado = valor === null ? null : Math.round(valor * 10) / 10;
+    return { fecha: dateObj.toISOString(), valor: redondeado ?? 0, ts, xLabel, valorReal: redondeado };
+  };
+  points.forEach((p, i) => {
+    if (i > 0 && p.ts - points[i - 1].ts > gapMs) {
+      series.push(toPoint(points[i - 1].ts + 1, null));
+    }
+    series.push(toPoint(p.ts, p.valor));
+  });
+  return series;
 };
 
-// A diferencia de buildFilledTimeSeries (para lecturas continuas como humedad/temperatura),
+// A diferencia de buildSensorSeries (para lecturas continuas como humedad/temperatura),
 // esto NO interpola ni inventa puntos: cada evento (p. ej. un riego) vale por sí mismo y ocurre
 // en un instante puntual, así que se listan tal cual quedaron en la base de datos, en su propio
 // horario real, filtrados a la ventana del rango elegido.
@@ -203,7 +210,7 @@ const resolveEffectiveRange = (
     : requestedRange === '24h'
       ? ['24h', '7d']
       : ['7d'];
-  return ranges.find((range) => buildFilledTimeSeries(data, range, timeZone).length > 0) || requestedRange;
+  return ranges.find((range) => buildSensorSeries(data, range, timeZone).length > 0) || requestedRange;
 };
 
 const getDashboardYears = (cultivo: CultivoData | null) => {
@@ -741,14 +748,14 @@ const HistoricoSensoresCard = ({
   });
 
   const effectiveRange = resolveEffectiveRange(calendarFilteredData, timeRange, chartTimeZone);
-  const chartData = buildFilledTimeSeries(calendarFilteredData, effectiveRange, chartTimeZone);
+  const chartData = buildSensorSeries(calendarFilteredData, effectiveRange, chartTimeZone);
   const umbralVisual = sensorInfo?.umbral ? sensorInfo.umbral[config.umbralRef] : null;
 
   // Si la última lectura real quedó bastante antes de ahora, se avisa: el gráfico ya no
   // extiende una línea plana falsa hasta el presente, así que sin este aviso parecería
   // que simplemente "no hay más puntos" en vez de que el sensor dejó de reportar.
   const lastPointMs = chartData.length > 0 ? new Date(chartData[chartData.length - 1].fecha).getTime() : null;
-  const isStale = lastPointMs !== null && (Date.now() - lastPointMs) > HISTORY_RANGE_BUCKET_MS[effectiveRange] * 2;
+  const isStale = lastPointMs !== null && (Date.now() - lastPointMs) > STALE_READING_MS;
   const lastPointLabel = lastPointMs !== null
     ? new Date(lastPointMs).toLocaleString('es-PE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: chartTimeZone })
     : null;
@@ -793,7 +800,7 @@ const HistoricoSensoresCard = ({
           <Text color="gray">Cargando gráfico...</Text>
         </Flex>
       ) : (
-        <DashboardHistoryChart chartData={chartData} config={config} umbralVisual={umbralVisual} />
+        <DashboardHistoryChart chartData={chartData} config={config} umbralVisual={umbralVisual} timeZone={chartTimeZone} range={effectiveRange} />
       )}
     </Card>
   );

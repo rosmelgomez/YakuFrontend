@@ -42,6 +42,36 @@ export default function DashboardScreen() {
     };
   }, []);
 
+  // Actualización en vivo del gráfico: el colector reporta cada minuto y el backend avisa por
+  // WebSocket ("yaku:control_update", event "telemetria"). Se recarga como máximo cada 20 s
+  // (el backend cachea el dashboard 15 s) y, por si el WebSocket se cae, cada 60 s.
+  useEffect(() => {
+    let lastFetch = Date.now();
+    let inFlight = false;
+    const refetch = () => {
+      if (inFlight || Date.now() - lastFetch < 20_000) return;
+      inFlight = true;
+      lastFetch = Date.now();
+      getDashboardData()
+        .then((data) => {
+          setCultivosData(data || []);
+          setCached('dashboard_data', data || []);
+        })
+        .catch(() => {})
+        .finally(() => { inFlight = false; });
+    };
+    const onControlUpdate = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (detail?.event === 'telemetria') refetch();
+    };
+    window.addEventListener('yaku:control_update', onControlUpdate);
+    const timer = setInterval(refetch, 60_000);
+    return () => {
+      window.removeEventListener('yaku:control_update', onControlUpdate);
+      clearInterval(timer);
+    };
+  }, []);
+
   if (loading) {
     return (
       <Box className="page-content" px={{ initial: "4", sm: "5", md: "6" }} py={{ initial: "4", sm: "5", md: "6" }}>
