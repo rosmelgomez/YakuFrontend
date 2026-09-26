@@ -3,7 +3,6 @@
 import React from "react";
 import {
   Box,
-  Card,
   Flex,
   Grid,
   Text,
@@ -15,6 +14,8 @@ import {
 } from "@radix-ui/themes";
 import { UltimoRiegoTimer, RiegoActivoTimer } from "./RiegoTimer";
 import { HorarioRiegoResumen } from "./HorarioRiegoResumen";
+import { BrainCircuit, Cpu, Lock, Settings2, Sparkles, Timer, Zap } from "lucide-react";
+import { HelpNote, Inset, Panel, SectionHeader, StatusDot, tone, type Tone } from "./ui";
 import { formatearSegundos } from "../selectors";
 import type { ControlData, DispositivoItem } from "../types";
 
@@ -112,58 +113,69 @@ export function ActuadoresPanel({
     }
   };
 
-  return (
-    <Flex direction="column" gap="5">
-      {/* SECCIÓN CRONÓMETROS DE RIEGO */}
-      <Card
-        size="3"
-        style={{
-          background: "var(--surface-mockup)",
-          borderColor: "var(--border-mockup)",
-          borderRadius: "16px",
-        }}
-      >
-        <Flex direction="column" gap="4">
-          <Box>
-            <Text size="3" weight="bold" color="indigo" mb="1" as="div">
-              ⏱️ Cronómetros y Estado de Riego
-            </Text>
-            <Text size="2" color="gray">
-              Monitoreo en tiempo real del tiempo transcurrido y suspensiones automáticas de seguridad.
-            </Text>
-          </Box>
+  const sesionPausada = (controlData as any).sesionPausada;
+  const ultimaPrediccion = (controlData as any).ultimaPrediccion;
+  const cooldownVigente = controlData.cooldownMinutos ?? cooldownMinutes ?? 30;
 
-          <Grid columns={{ initial: "1", md: "2" }} gap="4">
+  const motivoPausa =
+    sesionPausada?.motivo === "sin_flujo"
+      ? "Sin flujo de agua detectado en la tubería"
+      : sesionPausada?.motivo === "sensor_error"
+      ? "Error de lectura de sensor"
+      : sesionPausada?.motivo === "apagado_dispositivo"
+      ? "Dispositivo actuador apagado"
+      : sesionPausada?.motivo === "desconexion_riego"
+      ? "Reinicio del equipo (posible corte de energía)"
+      : isConexionDirecta
+      ? "Ausencia de flujo de agua"
+      : "Falta de agua física en el tanque";
+
+  const actuadorTone: Tone =
+    bomba.encendida && isActuatorActive ? "green" : !isActuatorActive ? "red" : "gray";
+  const actuadorTexto =
+    bomba.encendida && isActuatorActive
+      ? isConexionDirecta
+        ? "Riego en curso (válvula abierta)"
+        : "Riego en curso (bomba encendida)"
+      : !isActuatorActive
+      ? "Actuador apagado"
+      : isConexionDirecta
+      ? "Válvula cerrada"
+      : "Bomba apagada";
+
+  const labelStyle: React.CSSProperties = {
+    color: "var(--muted-foreground)",
+    fontWeight: 600,
+  };
+
+  return (
+    <Flex direction="column" gap="4">
+      {/* SECCIÓN CRONÓMETROS DE RIEGO */}
+      <Panel>
+        <Flex direction="column" gap="4">
+          <SectionHeader
+            icon={Timer}
+            t="blue"
+            title="Cronómetros y estado de riego"
+            description="Monitoreo en tiempo real del tiempo transcurrido y suspensiones automáticas de seguridad."
+          />
+
+          <Grid columns={{ initial: "1", md: "2" }} gap="3">
             {/* Cronómetro 1: Tiempo desde el último riego */}
-            <Card
-              size="2"
-              style={{
-                background: "var(--surface2-mockup)",
-                borderColor: "var(--border-mockup)",
-                borderRadius: "12px",
-              }}
-            >
-              <Flex direction="column" gap="2" p="2">
-                <Text size="2" weight="bold" color="gray">
+            <Inset>
+              <Flex direction="column" gap="2">
+                <Text size="2" style={labelStyle}>
                   Tiempo desde el último riego
                 </Text>
                 {isRiegoEnCurso ? (
                   <Flex direction="column" gap="1">
-                    <Flex align="center" gap="2" style={{ marginTop: "4px" }}>
-                      <Box
-                        style={{
-                          width: "10px",
-                          height: "10px",
-                          borderRadius: "50%",
-                          background: "#10b981",
-                          animation: "pulse 1s infinite",
-                        }}
-                      />
-                      <Text size="5" weight="bold" style={{ color: "#34d399", fontFamily: "monospace" }}>
+                    <Flex align="center" gap="2" mt="1">
+                      <StatusDot t="green" pulse />
+                      <Text size="5" weight="bold" style={{ color: tone("green").fg }}>
                         Riego en curso
                       </Text>
                     </Flex>
-                    <Text size="1" color="gray" style={{ marginTop: "2px" }}>
+                    <Text size="1" color="gray">
                       Sesión de riego en ejecución actualmente. El cronómetro se reiniciará al finalizar.
                     </Text>
                   </Flex>
@@ -176,69 +188,39 @@ export function ActuadoresPanel({
                   </>
                 )}
               </Flex>
-            </Card>
+            </Inset>
 
             {/* Cronómetro 2: Estado del relé y suspensión */}
-            <Card
-              size="2"
-              style={{
-                background: "var(--surface2-mockup)",
-                borderColor: "var(--border-mockup)",
-                borderRadius: "12px",
-              }}
-            >
-              <Flex direction="column" gap="2" p="2">
-                <Text size="2" weight="bold" color="gray">
+            <Inset>
+              <Flex direction="column" gap="2">
+                <Text size="2" style={labelStyle}>
                   {isConexionDirecta
-                    ? "Cronómetro de Ejecución de Válvula"
-                    : "Cronómetro de Ejecución del Relé"}
+                    ? "Cronómetro de ejecución de válvula"
+                    : "Cronómetro de ejecución del relé"}
                 </Text>
-                {(controlData as any).sesionPausada?.activa && isActuatorActive ? (
+                {sesionPausada?.activa && isActuatorActive ? (
                   <Flex direction="column" gap="1">
                     <Flex align="center" gap="2">
-                      <Box
-                        style={{
-                          width: "8px",
-                          height: "8px",
-                          borderRadius: "50%",
-                          background: "#fbbf24",
-                          animation: "pulse 1.5s infinite",
-                        }}
-                      />
-                      <Text size="2" weight="bold" style={{ color: "#fbbf24" }}>
-                        Riego Suspendido (En Pausa)
+                      <StatusDot t="amber" pulse />
+                      <Text size="2" weight="bold" style={{ color: tone("amber").fg }}>
+                        Riego suspendido (en pausa)
                       </Text>
                     </Flex>
                     <Text
                       size="6"
                       weight="bold"
-                      style={{ color: "#fbbf24", fontFamily: "monospace", marginTop: "4px" }}
+                      className="control-num"
+                      style={{ color: tone("amber").fg, fontFamily: "var(--font-mono)", marginTop: "4px" }}
                     >
-                      {formatearSegundos((controlData as any).sesionPausada.segundosTranscurridos || 0)} /{" "}
-                      {formatearSegundos(
-                        (controlData as any).sesionPausada.duracionSegundos || (bomba.timeoutMin || 10) * 60
-                      )}
+                      {formatearSegundos(sesionPausada.segundosTranscurridos || 0)} /{" "}
+                      {formatearSegundos(sesionPausada.duracionSegundos || (bomba.timeoutMin || 10) * 60)}
                     </Text>
-                    <Text size="2" weight="bold" style={{ color: "#fbbf24" }}>
-                      Restante: {formatearSegundos((controlData as any).sesionPausada.tiempoRestanteSeg || 0)}
+                    <Text size="2" weight="bold" style={{ color: tone("amber").fg }}>
+                      Restante: {formatearSegundos(sesionPausada.tiempoRestanteSeg || 0)}
                     </Text>
                     <Text size="1" color="gray">
-                      Pausado por:{" "}
-                      <strong style={{ color: "#f87171" }}>
-                        {(controlData as any).sesionPausada.motivo === "sin_flujo"
-                          ? "Sin flujo de agua detectado en la tubería"
-                          : (controlData as any).sesionPausada.motivo === "sensor_error"
-                          ? "Error de lectura de sensor"
-                          : (controlData as any).sesionPausada.motivo === "apagado_dispositivo"
-                          ? "Dispositivo actuador apagado"
-                          : (controlData as any).sesionPausada.motivo === "desconexion_riego"
-                          ? "Reinicio del equipo (posible corte de energía)"
-                          : isConexionDirecta
-                          ? "Ausencia de flujo de agua"
-                          : "Falta de agua física en el tanque"}
-                      </strong>
-                      .{" "}
-                      {(controlData as any).sesionPausada.motivo === "desconexion_riego"
+                      Pausado por: <strong style={{ color: "#fca5a5" }}>{motivoPausa}</strong>.{" "}
+                      {sesionPausada.motivo === "desconexion_riego"
                         ? "El riego se reanudará automáticamente por el tiempo restante cuando el equipo vuelva a conectarse."
                         : isConexionDirecta
                         ? "El riego se reanudará automáticamente al detectar flujo de agua."
@@ -248,19 +230,9 @@ export function ActuadoresPanel({
                 ) : isRiegoEnCurso ? (
                   <Flex direction="column" gap="1">
                     <Flex align="center" gap="2">
-                      <Box
-                        style={{
-                          width: "8px",
-                          height: "8px",
-                          borderRadius: "50%",
-                          background: "#10b981",
-                          animation: "pulse 1s infinite",
-                        }}
-                      />
-                      <Text size="2" weight="bold" style={{ color: "#34d399" }}>
-                        {isConexionDirecta
-                          ? "Válvula de Riego Activa (Abierta)"
-                          : "Bomba Activa (Regando)"}
+                      <StatusDot t="green" pulse />
+                      <Text size="2" weight="bold" style={{ color: tone("green").fg }}>
+                        {isConexionDirecta ? "Válvula de riego activa (abierta)" : "Bomba activa (regando)"}
                       </Text>
                     </Flex>
                     <RiegoActivoTimer
@@ -273,13 +245,13 @@ export function ActuadoresPanel({
                     {controlData.riegoActivo?.conexionPerdida && (
                       <Box
                         style={{
-                          border: "1px solid #f59e0b",
-                          background: "rgba(245, 158, 11, 0.12)",
+                          border: `1px solid ${tone("amber").brd}`,
+                          background: tone("amber").bg,
                           borderRadius: "8px",
                           padding: "8px 10px",
                         }}
                       >
-                        <Text size="2" weight="bold" style={{ color: "#fbbf24" }} as="div">
+                        <Text size="2" weight="bold" style={{ color: tone("amber").fg }} as="div">
                           Sin conexión con el equipo
                         </Text>
                         <Text size="1" color="gray" as="div">
@@ -302,22 +274,16 @@ export function ActuadoresPanel({
                 ) : (
                   <Flex direction="column" gap="1">
                     <Flex align="center" gap="2">
-                      <Box
-                        style={{
-                          width: "8px",
-                          height: "8px",
-                          borderRadius: "50%",
-                          background: "#6b7280",
-                        }}
-                      />
+                      <StatusDot t="gray" />
                       <Text size="2" weight="bold" color="gray">
-                        {isConexionDirecta ? "Inactivo (Válvula Cerrada)" : "Inactivo (Bomba Apagada)"}
+                        {isConexionDirecta ? "Inactivo (válvula cerrada)" : "Inactivo (bomba apagada)"}
                       </Text>
                     </Flex>
                     <Text
                       size="6"
                       weight="bold"
-                      style={{ color: "#9ca3af", fontFamily: "monospace", marginTop: "4px" }}
+                      className="control-num"
+                      style={{ color: "var(--muted-foreground)", fontFamily: "var(--font-mono)", marginTop: "4px" }}
                     >
                       00:00:00
                     </Text>
@@ -329,145 +295,107 @@ export function ActuadoresPanel({
                   </Flex>
                 )}
               </Flex>
-            </Card>
+            </Inset>
           </Grid>
         </Flex>
-      </Card>
+      </Panel>
 
       {/* PROGRAMACIÓN DE HORARIOS DE RIEGO */}
       <HorarioRiegoResumen idAsignacion={bomba?.id} />
 
-      <Grid columns={{ initial: "1", lg: "2" }} gap="5">
-        {/* PARÁMETROS DE TIEMPO Y COOLDOWN ML (CON FORMULARIO FLOTANTE) */}
-        <Card
-          size="3"
-          style={{
-            background: "var(--surface-mockup)",
-            borderColor: "var(--border-mockup)",
-            borderRadius: "16px",
-          }}
-        >
+      <Grid columns={{ initial: "1", lg: "2" }} gap="4">
+        {/* PARÁMETROS DE TIEMPO Y COOLDOWN ML */}
+        <Panel>
           <Flex direction="column" gap="4">
-            <Flex justify="between" align="start" wrap="wrap" gap="2">
-              <Box>
-                <Text size="3" weight="bold" color="indigo" as="div">
-                  ⏱️ Tiempo de Riego y Cooldown ML
-                </Text>
-                <Text size="2" color="gray" mt="1" as="div">
-                  Duración configurada por ciclo y reposo obligatorio para el control predictivo.
-                </Text>
-              </Box>
-              <Badge color={isRiegoEnCurso ? "amber" : "cyan"} variant="soft">
-                {isRiegoEnCurso ? "Riego en curso" : "En espera (Standby)"}
-              </Badge>
-            </Flex>
+            <SectionHeader
+              icon={Settings2}
+              t="teal"
+              title="Tiempo de riego y cooldown ML"
+              description="Duración configurada por ciclo y reposo obligatorio para el control predictivo."
+              aside={
+                <Badge color={isRiegoEnCurso ? "amber" : "gray"} variant="soft">
+                  {isRiegoEnCurso ? "Riego en curso" : "En espera"}
+                </Badge>
+              }
+            />
 
-            {/* Vista Resumen de los 2 Tiempos */}
-            <Grid columns={{ initial: "1", sm: "2" }} gap="3">
-              <Box
-                style={{
-                  background: "var(--surface2-mockup)",
-                  border: "1px solid var(--border-mockup)",
-                  borderRadius: "12px",
-                  padding: "14px",
-                }}
-              >
-                <Text size="1" color="gray" weight="bold" as="div" style={{ letterSpacing: "0.5px" }}>
-                  TIEMPO DE RIEGO
+            <Grid columns="2" gap="3">
+              <Inset>
+                <Text size="1" as="div" style={labelStyle}>
+                  Tiempo de riego
                 </Text>
-                <Flex align="baseline" gap="2" mt="1">
-                  <Text size="6" weight="bold" style={{ color: "#38bdf8" }}>
+                <Flex align="baseline" gap="1" mt="1">
+                  <Text size="7" weight="bold" className="control-num" style={{ color: tone("blue").fg, lineHeight: 1.1 }}>
                     {maxRelayMinutes}
                   </Text>
                   <Text size="2" color="gray">
-                    minutos
+                    min
                   </Text>
                 </Flex>
                 <Text size="1" color="gray" mt="1" as="div">
                   Duración configurada por ciclo
                 </Text>
-              </Box>
+              </Inset>
 
-              <Box
-                style={{
-                  background: "var(--surface2-mockup)",
-                  border: "1px solid var(--border-mockup)",
-                  borderRadius: "12px",
-                  padding: "14px",
-                }}
-              >
-                <Text size="1" color="gray" weight="bold" as="div" style={{ letterSpacing: "0.5px" }}>
-                  COOLDOWN ENTRE RIEGOS ML
+              <Inset>
+                <Text size="1" as="div" style={labelStyle}>
+                  Cooldown entre riegos ML
                 </Text>
-                <Flex align="baseline" gap="2" mt="1">
-                  <Text size="6" weight="bold" style={{ color: "#34d399" }}>
+                <Flex align="baseline" gap="1" mt="1">
+                  <Text size="7" weight="bold" className="control-num" style={{ color: tone("green").fg, lineHeight: 1.1 }}>
                     {cooldownMinutes}
                   </Text>
                   <Text size="2" color="gray">
-                    minutos
+                    min
                   </Text>
                 </Flex>
                 <Text size="1" color="gray" mt="1" as="div">
                   Reposo tras culminar un riego
                 </Text>
-              </Box>
+              </Inset>
             </Grid>
 
-            {/* Botón para abrir el Formulario Flotante */}
             <Dialog.Root open={isTimingModalOpen} onOpenChange={setIsTimingModalOpen}>
               <Dialog.Trigger>
                 <Button
-                  size="3"
-                  color="indigo"
-                  variant="surface"
+                  size="2"
+                  variant="soft"
                   disabled={isPending || isRiegoEnCurso}
                   onClick={handleOpenTimingModal}
-                  style={{
-                    width: "100%",
-                    cursor: isRiegoEnCurso ? "not-allowed" : "pointer",
-                    fontWeight: 600,
-                  }}
+                  style={{ width: "100%", cursor: isRiegoEnCurso ? "not-allowed" : "pointer", fontWeight: 600 }}
                 >
-                  ⚙️ Configurar Tiempos de Riego
+                  {isRiegoEnCurso ? <Lock size={15} aria-hidden /> : <Settings2 size={15} aria-hidden />}
+                  Configurar tiempos de riego
                 </Button>
               </Dialog.Trigger>
 
-              {/* Formulario Flotante (Modal Dialog) */}
               <Dialog.Content
                 style={{
                   maxWidth: 500,
                   width: "min(500px, 94vw)",
                   background: "var(--surface-mockup)",
-                  border: "1px solid var(--border-mockup)",
-                  borderRadius: "16px",
+                  border: "1px solid var(--border2-mockup)",
+                  borderRadius: "14px",
                   padding: "clamp(16px, 4vw, 24px)",
-                  boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.7)",
+                  boxShadow: "0 24px 48px -12px rgba(0, 0, 0, 0.7)",
                 }}
               >
-                <Dialog.Title style={{ color: "white", fontSize: "1.2rem", fontWeight: "bold" }}>
-                  ⚙️ Configurar Tiempo de Riego y Cooldown
+                <Dialog.Title style={{ color: "var(--foreground)", fontSize: "1.125rem", fontWeight: 700 }}>
+                  Configurar tiempo de riego y cooldown
                 </Dialog.Title>
-                <Dialog.Description size="2" mb="4" style={{ color: "#9ca3af" }}>
+                <Dialog.Description size="2" mb="4" style={{ color: "var(--muted-foreground)" }}>
                   Modifique el tiempo de riego por ciclo y el tiempo de reposo del modelo predictivo (ML).
                 </Dialog.Description>
 
                 <Flex direction="column" gap="4">
-                  {/* Input Flotante 1: Tiempo de Riego */}
-                  <Box
-                    style={{
-                      background: "var(--surface2-mockup)",
-                      borderRadius: "12px",
-                      padding: "14px",
-                      border: "1px solid var(--border-mockup)",
-                    }}
-                  >
+                  <label style={{ display: "block" }}>
                     <Flex justify="between" align="center" mb="1">
-                      <Text size="2" weight="bold" style={{ color: "white" }}>
-                        ⏱️ Tiempo de Riego por Evento
+                      <Text size="2" weight="bold" style={{ color: "var(--foreground)" }}>
+                        Tiempo de riego por evento
                       </Text>
-                      <Badge color="cyan" variant="soft">
-                        1 - 30 min
-                      </Badge>
+                      <Text size="1" color="gray" className="control-num">
+                        1 – 30 min
+                      </Text>
                     </Flex>
                     <Text size="1" color="gray" mb="2" as="div">
                       {isConexionDirecta
@@ -479,34 +407,27 @@ export function ActuadoresPanel({
                       min="1"
                       max="30"
                       step="1"
+                      size="3"
                       disabled={isSavingTiming}
                       value={draftRelayMin === 0 ? "" : Number(draftRelayMin).toString()}
                       onChange={(e) => setDraftRelayMin(Number(e.target.value) || 0)}
                       placeholder="10"
-                      style={{
-                        background: "var(--bg-mockup)",
-                        color: "white",
-                        fontSize: "1rem",
-                      }}
-                    />
-                  </Box>
+                      style={{ background: "var(--bg-mockup)" }}
+                    >
+                      <TextField.Slot side="right">
+                        <Text size="1" color="gray">min</Text>
+                      </TextField.Slot>
+                    </TextField.Root>
+                  </label>
 
-                  {/* Input Flotante 2: Cooldown ML */}
-                  <Box
-                    style={{
-                      background: "var(--surface2-mockup)",
-                      borderRadius: "12px",
-                      padding: "14px",
-                      border: "1px solid var(--border-mockup)",
-                    }}
-                  >
+                  <label style={{ display: "block" }}>
                     <Flex justify="between" align="center" mb="1">
-                      <Text size="2" weight="bold" style={{ color: "white" }}>
-                        ⏰ Cooldown entre Riegos ML
+                      <Text size="2" weight="bold" style={{ color: "var(--foreground)" }}>
+                        Cooldown entre riegos ML
                       </Text>
-                      <Badge color="green" variant="soft">
-                        1 - 1440 min
-                      </Badge>
+                      <Text size="1" color="gray" className="control-num">
+                        1 – 1440 min
+                      </Text>
                     </Flex>
                     <Text size="1" color="gray" mb="2" as="div">
                       Tiempo de reposo tras culminar un riego antes de que el modelo ML evalúe un nuevo ciclo.
@@ -516,51 +437,53 @@ export function ActuadoresPanel({
                       min="1"
                       max="1440"
                       step="1"
+                      size="3"
                       disabled={isSavingTiming}
                       value={draftCooldownMin === 0 ? "" : Number(draftCooldownMin).toString()}
                       onChange={(e) => setDraftCooldownMin(Number(e.target.value) || 0)}
                       placeholder="30"
-                      style={{
-                        background: "var(--bg-mockup)",
-                        color: "white",
-                        fontSize: "1rem",
-                      }}
-                    />
-                    <Box
-                      style={{
-                        background: "rgba(99, 102, 241, 0.1)",
-                        border: "1px solid rgba(99, 102, 241, 0.2)",
-                        borderRadius: "8px",
-                        padding: "8px 12px",
-                        marginTop: "10px",
-                      }}
+                      style={{ background: "var(--bg-mockup)" }}
                     >
-                      <Text size="1" style={{ color: "#c7d2fe" }} as="div">
-                        💡 <strong>Actualización Inmediata:</strong> Si reduce el cooldown y el tiempo transcurrido desde el último riego ya cumplió la nueva meta, el sistema evaluará y regará de inmediato.
-                      </Text>
-                    </Box>
+                      <TextField.Slot side="right">
+                        <Text size="1" color="gray">min</Text>
+                      </TextField.Slot>
+                    </TextField.Root>
+                  </label>
+
+                  <Box
+                    style={{
+                      background: tone("blue").bg,
+                      border: `1px solid ${tone("blue").brd}`,
+                      borderRadius: "8px",
+                      padding: "10px 12px",
+                    }}
+                  >
+                    <Text size="1" style={{ color: "#bae6fd" }} as="div">
+                      <strong>Actualización inmediata:</strong> si reduce el cooldown y el tiempo transcurrido desde el
+                      último riego ya cumplió la nueva meta, el sistema evaluará y regará de inmediato.
+                    </Text>
                   </Box>
 
-                  {/* Botones de Acción */}
-                  <Flex justify="end" gap="3" mt="2">
+                  <Flex justify="end" gap="3" mt="1">
                     <Dialog.Close>
                       <Button
                         variant="soft"
                         color="gray"
                         disabled={isSavingTiming}
                         onClick={() => setIsTimingModalOpen(false)}
+                        style={{ cursor: "pointer" }}
                       >
                         Cancelar
                       </Button>
                     </Dialog.Close>
                     <Button
-                      color="indigo"
                       variant="solid"
                       loading={isSavingTiming}
                       disabled={isSavingTiming || isRiegoEnCurso}
                       onClick={handleSaveTimingModal}
+                      style={{ cursor: "pointer" }}
                     >
-                      Guardar Configuración
+                      Guardar configuración
                     </Button>
                   </Flex>
                 </Flex>
@@ -568,333 +491,253 @@ export function ActuadoresPanel({
             </Dialog.Root>
 
             {isRiegoEnCurso && (
-              <Text size="1" color="orange" style={{ textAlign: "center" }} as="div">
-                🔒 Modificación de tiempos bloqueada mientras haya un riego en curso.
+              <Flex align="center" justify="center" gap="1" style={{ marginTop: "-6px" }}>
+                <Lock size={12} aria-hidden style={{ color: tone("amber").fg }} />
+                <Text size="1" style={{ color: tone("amber").fg }}>
+                  Modificación de tiempos bloqueada mientras haya un riego en curso.
+                </Text>
+              </Flex>
+            )}
+          </Flex>
+        </Panel>
+
+        {/* VINCULACIÓN Y ESTADO DE DISPOSITIVOS ACTUADORES */}
+        <Panel>
+          <Flex direction="column" gap="4">
+            <SectionHeader icon={Zap} t="amber" title="Dispositivos actuadores" />
+            {dispositivosActuadores.length > 0 ? (
+              <Flex direction="column" gap="3">
+                {dispositivosActuadores.map((dev: any) => (
+                  <Inset key={`act-${dev.id}`}>
+                    <Flex align="center" justify="between" gap="3">
+                      <Box style={{ minWidth: 0, flex: 1 }}>
+                        <Flex align="center" gap="2" wrap="wrap">
+                          <Text size="2" weight="bold" style={{ color: "var(--foreground)" }}>
+                            {dev.nombre}
+                          </Text>
+                          {dev.tipoNombre && (
+                            <Badge color="gray" variant="outline" size="1">
+                              {dev.tipoNombre}
+                            </Badge>
+                          )}
+                        </Flex>
+                        <Text
+                          size="1"
+                          as="div"
+                          style={{ color: "var(--muted-foreground)", fontFamily: "var(--font-mono)", marginTop: 2 }}
+                        >
+                          MAC {dev.mac}
+                        </Text>
+                      </Box>
+
+                      <Flex align="center" gap="2" style={{ flexShrink: 0 }}>
+                        {isRiegoEnCurso && dev.funcionamientoActivo && (
+                          <Badge color="amber" variant="soft" size="1">
+                            <Lock size={11} aria-hidden /> Riego activo
+                          </Badge>
+                        )}
+                        <Badge color={dev.conectado ? "green" : "red"} variant="soft" size="1">
+                          {dev.conectado ? "Online" : "Offline"}
+                        </Badge>
+                        <Switch
+                          aria-label={`Activar ${dev.nombre}`}
+                          checked={dev.funcionamientoActivo}
+                          disabled={isPending || (isRiegoEnCurso && dev.funcionamientoActivo)}
+                          onCheckedChange={(checked) => onToggleCaptura(dev.id, checked)}
+                          style={{
+                            cursor: isRiegoEnCurso && dev.funcionamientoActivo ? "not-allowed" : "pointer",
+                          }}
+                        />
+                      </Flex>
+                    </Flex>
+
+                    {dev.sensores && dev.sensores.length > 0 && (
+                      <Flex
+                        direction="column"
+                        gap="1"
+                        mt="3"
+                        pt="3"
+                        style={{ borderTop: "1px solid var(--border-mockup)" }}
+                      >
+                        {dev.sensores.map((s: any, index: number) => (
+                          <Flex key={`act-${dev.id}-${s.id}-${index}`} align="center" justify="between" gap="2">
+                            <Flex align="center" gap="2" style={{ minWidth: 0 }}>
+                              <Cpu size={13} aria-hidden style={{ color: "var(--muted-foreground)", flexShrink: 0 }} />
+                              <Text size="1" style={{ color: "var(--foreground)" }}>
+                                {s.nombre}
+                              </Text>
+                            </Flex>
+                            <Text size="1" style={{ color: "var(--muted-foreground)", fontFamily: "var(--font-mono)" }}>
+                              GPIO {s.pin}
+                            </Text>
+                          </Flex>
+                        ))}
+                      </Flex>
+                    )}
+                  </Inset>
+                ))}
+              </Flex>
+            ) : (
+              <Text color="gray" size="2">
+                No hay dispositivos actuadores vinculados a este cultivo.
               </Text>
             )}
           </Flex>
-        </Card>
-
-        {/* VINCULACIÓN Y ESTADO DE DISPOSITIVOS ACTUADORES */}
-        <Card
-          size={{ initial: "2", sm: "3" }}
-          style={{
-            background: "var(--surface-mockup)",
-            borderColor: "var(--border-mockup)",
-            borderRadius: "16px",
-          }}
-        >
-          <Text size="3" weight="bold" color="indigo" mb="4" as="div">
-            ⚡ Dispositivos Actuadores
-          </Text>
-          {dispositivosActuadores.length > 0 ? (
-            <div className="flex flex-col gap-3">
-              {dispositivosActuadores.map((dev: any) => (
-                <div
-                  key={`act-${dev.id}`}
-                  className="p-3 sm:p-4 rounded-xl bg-slate-900/60 border border-slate-800/80 transition-colors"
-                >
-                  {/* FILA SUPERIOR: Encabezado del Actuador y Controles */}
-                  <div className="flex items-center justify-between gap-3 pb-2.5 border-b border-slate-800/60">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-bold text-white text-sm sm:text-base leading-tight">
-                          {dev.nombre}
-                        </span>
-                        {dev.tipoNombre && (
-                          <Badge color="plum" variant="outline" size="1">
-                            {dev.tipoNombre}
-                          </Badge>
-                        )}
-                      </div>
-                      <span className="text-[11px] text-slate-400 font-mono block mt-0.5">
-                        MAC: {dev.mac}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2.5 shrink-0">
-                      {isRiegoEnCurso && dev.funcionamientoActivo && (
-                        <Badge color="amber" variant="soft" size="1">
-                          🔒 Riego activo
-                        </Badge>
-                      )}
-                      <Badge color={dev.conectado ? "green" : "red"} variant="soft" size="1">
-                        {dev.conectado ? "Online" : "Offline"}
-                      </Badge>
-                      <Switch
-                        checked={dev.funcionamientoActivo}
-                        disabled={isPending || (isRiegoEnCurso && dev.funcionamientoActivo)}
-                        onCheckedChange={(checked) => onToggleCaptura(dev.id, checked)}
-                        style={{
-                          cursor: isRiegoEnCurso && dev.funcionamientoActivo ? "not-allowed" : "pointer",
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* SECCIÓN INFERIOR: Lista de Pines / Componentes */}
-                  {dev.sensores && dev.sensores.length > 0 && (
-                    <div className="mt-2.5 space-y-1 pl-2 border-l-2 border-slate-800">
-                      {dev.sensores.map((s: any, index: number) => (
-                        <div
-                          key={`act-${dev.id}-${s.id}-${index}`}
-                          className="text-xs text-slate-300 py-0.5"
-                        >
-                          <span className="text-slate-500 mr-1.5">•</span>
-                          <span className="text-slate-200 font-medium">{s.nombre}</span>{" "}
-                          <span className="text-slate-500 font-mono text-[11px]">
-                            (GPIO {s.pin})
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <Text color="gray" size="2">
-              No hay dispositivos actuadores vinculados a este cultivo.
-            </Text>
-          )}
-        </Card>
+        </Panel>
       </Grid>
 
       {/* PANEL MODO PREDICTIVO (ML) */}
-      <Card
-        size="3"
-        style={{
-          background: "var(--surface-mockup)",
-          borderColor: "var(--border-mockup)",
-          borderRadius: "16px",
-        }}
-      >
+      <Panel>
         <Flex direction="column" gap="4">
-          <Flex justify="between" align="center" wrap="wrap" gap="3">
-            <Box>
-              <Flex align="center" gap="2" mb="1">
-                <Text size="4" weight="bold" color="indigo">
-                  🧠 Modo Predictivo Inteligente (Machine Learning)
-                </Text>
-                <Badge color="purple" size="2" variant="solid">
-                  Modo Único Activo
+          <SectionHeader
+            icon={BrainCircuit}
+            t="purple"
+            title={
+              <Flex as="span" align="center" gap="2" wrap="wrap">
+                Modo predictivo inteligente (Machine Learning)
+                <Badge color="purple" size="1" variant="soft">
+                  Modo único activo
                 </Badge>
               </Flex>
-              <Text size="2" color="gray">
-                El sistema opera de forma 100% autónoma guiado por modelos de Machine Learning entrenados para su cultivo.
-              </Text>
-            </Box>
-            <Button
-              size="2"
-              color="purple"
-              variant="soft"
-              disabled={isCheckingMl || !isActuatorActive || isRiegoEnCurso || !modo.tieneModelo}
-              onClick={onCheckMlManual}
-              style={{ cursor: "pointer" }}
-            >
-              {isCheckingMl ? "Verificando..." : "⚡ Evaluar IA Ahora"}
-            </Button>
-          </Flex>
+            }
+            description="El sistema opera de forma 100% autónoma guiado por modelos de Machine Learning entrenados para su cultivo."
+            aside={
+              <Button
+                size="2"
+                color="purple"
+                variant="solid"
+                disabled={isCheckingMl || !isActuatorActive || isRiegoEnCurso || !modo.tieneModelo}
+                loading={isCheckingMl}
+                onClick={onCheckMlManual}
+                style={{ cursor: "pointer" }}
+              >
+                <Sparkles size={15} aria-hidden />
+                Evaluar IA ahora
+              </Button>
+            }
+          />
 
-          {/* Ayuda memoria sobre frecuencia del riego */}
-          <Card
-            size="2"
-            style={{
-              background: "rgba(59, 130, 246, 0.06)",
-              borderColor: "rgba(59, 130, 246, 0.25)",
-              borderRadius: "12px",
-              padding: "16px",
-            }}
-          >
-            <Flex gap="3" align="start">
-              <Text size="5" style={{ marginTop: "-2px" }}>
-                ℹ️
-              </Text>
-              <Box>
-                <Text size="2" weight="bold" style={{ color: "#93c5fd" }} as="div">
-                  Ayuda memoria: ¿Por qué el riego por IA tiene un cooldown de{" "}
-                  {controlData.cooldownMinutos ?? cooldownMinutes ?? 30} minutos?
-                </Text>
-                <Text
-                  size="1"
-                  color="gray"
-                  style={{ display: "block", marginTop: "4px", lineHeight: "1.4" }}
-                >
-                  El riego automático por Inteligencia Artificial (ML) opera con un{" "}
-                  <strong>
-                    cooldown mínimo de {controlData.cooldownMinutos ?? cooldownMinutes ?? 30} minutos
-                  </strong>{" "}
-                  entre activaciones. Esto permite que el agua aplicada se filtre y distribuya de
-                  manera uniforme a través del sustrato hasta llegar al sensor. Sin esta espera, el
-                  sistema podría realizar lecturas falsas de suelo seco debido a la lentitud de
-                  absorción natural, provocando un sobre-riego que podría ahogar o enfermar las raíces
-                  del cultivo.
-                </Text>
-              </Box>
-            </Flex>
-          </Card>
+          <HelpNote title={`¿Por qué el riego por IA tiene un cooldown de ${cooldownVigente} minutos?`}>
+            <p>
+              El riego automático por Inteligencia Artificial (ML) opera con un{" "}
+              <strong>cooldown mínimo de {cooldownVigente} minutos</strong> entre activaciones. Esto permite que el
+              agua aplicada se filtre y distribuya de manera uniforme a través del sustrato hasta llegar al sensor.
+              Sin esta espera, el sistema podría realizar lecturas falsas de suelo seco debido a la lentitud de
+              absorción natural, provocando un sobre-riego que podría ahogar o enfermar las raíces del cultivo.
+            </p>
+          </HelpNote>
 
-
-          {/* Tarjeta de Estado del Riego Inteligente */}
-          <Card
-            size="2"
-            style={{
-              background: "var(--surface2-mockup)",
-              borderColor: "var(--border-mockup)",
-              borderRadius: "12px",
-              padding: "16px",
-            }}
-          >
-            <Flex justify="between" align="center" wrap="wrap" gap="4">
-              <Box>
-                <Text size="3" weight="bold" color="indigo" as="div">
-                  Estado del Actuador (ML)
+          {/* Estado del riego inteligente */}
+          <Inset style={{ padding: 0 }}>
+            <Grid columns={{ initial: "1", sm: "2" }}>
+              <Box p="4">
+                <Text size="1" as="div" style={labelStyle}>
+                  Estado del actuador (ML)
                 </Text>
-                <Flex align="center" gap="2" mt="1">
-                  <Box
-                    style={{
-                      width: "10px",
-                      height: "10px",
-                      borderRadius: "50%",
-                      background:
-                        bomba.encendida && isActuatorActive
-                          ? "#22c55e"
-                          : !isActuatorActive
-                          ? "#ef4444"
-                          : "#6b7280",
-                      boxShadow:
-                        bomba.encendida && isActuatorActive ? "0 0 8px #22c55e" : "none",
-                    }}
-                  />
-                  <Text
-                    size="2"
-                    weight="bold"
-                    style={{
-                      color:
-                        bomba.encendida && isActuatorActive
-                          ? "#4ade80"
-                          : !isActuatorActive
-                          ? "#f87171"
-                          : "#9ca3af",
-                    }}
-                  >
-                    {bomba.encendida && isActuatorActive
-                      ? isConexionDirecta
-                        ? "Riego en curso (Válvula Abierta)"
-                        : "Riego en curso (Bomba Encendida)"
-                      : !isActuatorActive
-                      ? "Actuador Apagado"
-                      : isConexionDirecta
-                      ? "Válvula Cerrada"
-                      : "Bomba Apagada"}
+                <Flex align="center" gap="2" mt="2">
+                  <StatusDot t={actuadorTone} pulse={actuadorTone === "green"} />
+                  <Text size="3" weight="bold" style={{ color: tone(actuadorTone).fg }}>
+                    {actuadorTexto}
                   </Text>
                 </Flex>
+                <Text
+                  size="1"
+                  as="div"
+                  mt="2"
+                  style={{ color: lastMlCheck?.status === "error" ? tone("red").fg : "var(--muted-foreground)" }}
+                >
+                  {isCheckingMl ? "Verificando ML..." : lastMlCheck?.message || "Verificación ML lista."}
+                </Text>
               </Box>
 
-              <Box style={{ borderLeft: "1px solid var(--border-mockup)", paddingLeft: "16px", minWidth: "220px" }}>
-                <Text size="3" weight="bold" color="indigo" as="div">
-                  Última Decisión de la IA
+              <Box
+                p="4"
+                className="border-t sm:border-t-0 sm:border-l"
+                style={{ borderColor: "var(--border-mockup)" }}
+              >
+                <Text size="1" as="div" style={labelStyle}>
+                  Última decisión de la IA
                 </Text>
-                {(controlData as any).ultimaPrediccion ? (
-                  <Box mt="1">
-                    <Text size="2" style={{ display: "block", color: "white" }}>
-                      Recomendación:{" "}
+                {ultimaPrediccion ? (
+                  <Box mt="2">
+                    <Flex align="center" gap="2" wrap="wrap">
                       <Badge
-                        color={
-                          (controlData as any).ultimaPrediccion.recomendacion === "regar"
-                            ? "green"
-                            : "gray"
-                        }
+                        size="2"
+                        variant="soft"
+                        color={ultimaPrediccion.recomendacion === "regar" ? "green" : "gray"}
                       >
-                        {(controlData as any).ultimaPrediccion.recomendacion === "regar"
-                          ? "REGAR"
-                          : "NO REGAR"}
+                        {ultimaPrediccion.recomendacion === "regar" ? "REGAR" : "NO REGAR"}
                       </Badge>
-                    </Text>
-                    {(controlData as any).ultimaPrediccion.probabilidad !== null && (
-                      <Text size="1" color="gray" style={{ display: "block", marginTop: "2px" }}>
-                        Probabilidad:{" "}
-                        {((controlData as any).ultimaPrediccion.probabilidad * 100).toFixed(1)}%
+                      {ultimaPrediccion.probabilidad !== null && (
+                        <Text size="2" className="control-num" style={{ color: "var(--foreground)" }}>
+                          {(ultimaPrediccion.probabilidad * 100).toFixed(1)}%{" "}
+                          <Text size="1" color="gray">
+                            probabilidad
+                          </Text>
+                        </Text>
+                      )}
+                    </Flex>
+                    {ultimaPrediccion.nombre_modelo && (
+                      <Text size="1" color="gray" as="div" mt="2">
+                        Modelo: <span style={{ color: "var(--foreground)" }}>{ultimaPrediccion.nombre_modelo}</span>
                       </Text>
                     )}
-                    {(controlData as any).ultimaPrediccion.nombre_modelo && (
-                      <Text size="1" color="gray" style={{ display: "block", marginTop: "2px" }}>
-                        Modelo:{" "}
-                        <span style={{ color: "#d1d5db" }}>
-                          {(controlData as any).ultimaPrediccion.nombre_modelo}
-                        </span>
-                      </Text>
-                    )}
-                    <Text
-                      size="1"
-                      color="gray"
-                      style={{ display: "block", marginTop: "2px", fontFamily: "monospace" }}
-                    >
-                      Fecha: {(controlData as any).ultimaPrediccion.fecha}
+                    <Text size="1" color="gray" as="div" className="control-num" style={{ marginTop: 2 }}>
+                      Fecha: {ultimaPrediccion.fecha}
                     </Text>
                   </Box>
                 ) : (
-                  <Text size="2" color="gray" style={{ display: "block", marginTop: "2px" }}>
+                  <Text size="2" color="gray" as="div" mt="2">
                     No hay predicciones registradas aún.
                   </Text>
                 )}
               </Box>
-            </Flex>
-            <Flex justify="start" align="center" gap="3" mt="3">
-              <Text size="1" color={lastMlCheck?.status === "error" ? "red" : "gray"}>
-                {isCheckingMl
-                  ? "Verificando ML..."
-                  : lastMlCheck?.message || "Verificación ML lista."}
-              </Text>
-            </Flex>
-            {(controlData as any).ultimaPrediccion && (controlData as any).ultimaPrediccion.variables && (
-              <Box mt="3" pt="2" style={{ borderTop: "1px solid var(--border-mockup)" }}>
-                <Text size="1" color="gray" weight="bold" as="div">
-                  Variables de entrada analizadas:
+            </Grid>
+
+            {ultimaPrediccion && ultimaPrediccion.variables && (
+              <Box px="4" py="3" style={{ borderTop: "1px solid var(--border-mockup)" }}>
+                <Text size="1" as="div" style={labelStyle} mb="2">
+                  Variables de entrada analizadas
                 </Text>
-                <Flex gap="3" wrap="wrap" mt="1">
-                  <Badge size="1" color="indigo">
-                    Hum. Suelo: {(controlData as any).ultimaPrediccion.variables.humedad_suelo}%
-                  </Badge>
-                  <Badge size="1" color="indigo">
-                    Temp. Suelo: {(controlData as any).ultimaPrediccion.variables.temperatura_suelo}°C
-                  </Badge>
-                  <Badge size="1" color="indigo">
-                    Temp. Ambiente: {(controlData as any).ultimaPrediccion.variables.temperatura_ambiente}°C
-                  </Badge>
-                  <Badge size="1" color="indigo">
-                    Hum. Ambiente: {(controlData as any).ultimaPrediccion.variables.humedad_ambiente}%
-                  </Badge>
-                </Flex>
+                <Grid columns={{ initial: "2", md: "4" }} gap="3">
+                  {[
+                    ["Hum. suelo", `${ultimaPrediccion.variables.humedad_suelo}%`],
+                    ["Temp. suelo", `${ultimaPrediccion.variables.temperatura_suelo}°C`],
+                    ["Temp. ambiente", `${ultimaPrediccion.variables.temperatura_ambiente}°C`],
+                    ["Hum. ambiente", `${ultimaPrediccion.variables.humedad_ambiente}%`],
+                  ].map(([label, valor]) => (
+                    <Box key={label}>
+                      <Text size="1" color="gray" as="div">
+                        {label}
+                      </Text>
+                      <Text size="3" weight="bold" className="control-num" style={{ color: "var(--foreground)" }}>
+                        {valor}
+                      </Text>
+                    </Box>
+                  ))}
+                </Grid>
               </Box>
             )}
-          </Card>
+          </Inset>
 
           {/* MODELOS ML */}
           <Flex direction="column" gap="3" mt="1">
             <Flex justify="between" align="center" wrap="wrap" gap="2">
-              <Text size="3" weight="bold" color="indigo" as="div">
-                Modelos de Machine Learning Disponibles
+              <Text size="2" weight="bold" style={{ color: "var(--foreground)" }}>
+                Modelos de Machine Learning disponibles
               </Text>
               {isRiegoEnCurso && (
                 <Badge color="amber" variant="soft">
-                  🔒 Selección bloqueada mientras el riego esté en curso
+                  <Lock size={11} aria-hidden /> Selección bloqueada mientras el riego esté en curso
                 </Badge>
               )}
             </Flex>
             {isLoadingModelosML ? (
-              <Card
-                style={{
-                  background: "var(--surface2-mockup)",
-                  borderColor: "var(--border-mockup)",
-                  borderRadius: "12px",
-                  padding: "12px",
-                }}
-              >
+              <Inset>
                 <Text size="2" color="gray">
                   Cargando modelos inteligentes...
                 </Text>
-              </Card>
+              </Inset>
             ) : modelosML && modelosML.length > 0 ? (
               modelosML.map((m: any) => {
                 const isRF =
@@ -902,73 +745,70 @@ export function ActuadoresPanel({
                   m.nombre_modelo?.toLowerCase().includes("random") ||
                   m.algoritmo?.toLowerCase().includes("rf");
                 return (
-                  <Card
+                  <Inset
                     key={m.id_modelo}
                     style={{
-                      background: m.activo ? "rgba(139, 92, 246, 0.03)" : "var(--surface2-mockup)",
-                      borderColor: m.activo ? "#a855f7" : "var(--border-mockup)",
-                      borderWidth: m.activo ? "2px" : "1px",
-                      borderRadius: "12px",
-                      padding: "12px",
-                      transition: "all 0.2s",
+                      background: m.activo ? tone("purple").bg : "var(--surface2-mockup)",
+                      borderColor: m.activo ? tone("purple").brd : "var(--border-mockup)",
+                      transition: "background-color 200ms, border-color 200ms",
                     }}
                   >
                     <Flex justify="between" align="center" wrap="wrap" gap="3">
-                      <Box style={{ flex: "1 1 auto" }}>
-                        <Flex align="center" gap="2" mb="1">
-                          <Text size="3" weight="bold" style={{ color: "white" }}>
+                      <Box style={{ flex: "1 1 240px", minWidth: 0 }}>
+                        <Flex align="center" gap="2" mb="1" wrap="wrap">
+                          <Text size="3" weight="bold" style={{ color: "var(--foreground)" }}>
                             {m.nombre_modelo}
                           </Text>
-                          {isRF && <Badge color="indigo">Defecto / Recomendado</Badge>}
-                          {m.activo && <Badge color="purple">Activo</Badge>}
+                          {isRF && (
+                            <Badge color="gray" variant="soft" size="1">
+                              Defecto / Recomendado
+                            </Badge>
+                          )}
+                          {m.activo && (
+                            <Badge color="purple" variant="soft" size="1">
+                              Activo
+                            </Badge>
+                          )}
                         </Flex>
-                        <Text size="2" color="gray" style={{ display: "block", marginBottom: "2px" }}>
-                          Algoritmo: <span style={{ color: "#d1d5db" }}>{m.algoritmo}</span> · Versión:{" "}
-                          <span style={{ color: "#d1d5db" }}>{m.version || "1.0.0"}</span>
+                        <Text size="1" color="gray" as="div">
+                          Algoritmo: <span style={{ color: "var(--foreground)" }}>{m.algoritmo}</span>
+                          <span style={{ margin: "0 6px" }}>·</span>
+                          Versión: <span style={{ color: "var(--foreground)" }}>{m.version || "1.0.0"}</span>
+                          {m.precision_modelo !== null && (
+                            <>
+                              <span style={{ margin: "0 6px" }}>·</span>
+                              Precisión:{" "}
+                              <span className="control-num" style={{ color: tone("purple").fg, fontWeight: 700 }}>
+                                {/* precision_modelo ya viene como porcentaje (ej. 99.46) desde
+                                    la BD (columna Numeric(5,2)); multiplicar por 100 de nuevo
+                                    daba valores absurdos como "9946.0%". */}
+                                {Number(m.precision_modelo).toFixed(1)}%
+                              </span>
+                            </>
+                          )}
                         </Text>
                         {m.descripcion && (
-                          <Text
-                            size="1"
-                            color="gray"
-                            style={{ display: "block", fontStyle: "italic", marginBottom: "2px" }}
-                          >
+                          <Text size="1" color="gray" as="div" mt="1" style={{ maxWidth: "70ch" }}>
                             {m.descripcion}
-                          </Text>
-                        )}
-                        {m.precision_modelo !== null && (
-                          <Text size="1" color="gray" style={{ display: "block" }}>
-                            Precisión del modelo:{" "}
-                            <span style={{ color: "#c084fc", fontWeight: "bold" }}>
-                              {/* precision_modelo ya viene como porcentaje (ej. 99.46) desde
-                                  la BD (columna Numeric(5,2)); multiplicar por 100 de nuevo
-                                  daba valores absurdos como "9946.0%". */}
-                              {Number(m.precision_modelo).toFixed(1)}%
-                            </span>
                           </Text>
                         )}
                       </Box>
                       <Button
                         color="purple"
-                        variant={m.activo ? "solid" : "soft"}
+                        variant={m.activo ? "soft" : "outline"}
                         disabled={m.activo || isRiegoEnCurso || isPending}
                         onClick={() => onSelectModel(m.id_modelo)}
-                        style={{
-                          cursor: m.activo || isRiegoEnCurso ? "not-allowed" : "pointer",
-                        }}
+                        style={{ cursor: m.activo || isRiegoEnCurso ? "not-allowed" : "pointer" }}
                         title={
                           isRiegoEnCurso
                             ? "Bloqueado: espere a que finalice el riego en curso para cambiar de modelo"
                             : undefined
                         }
                       >
-                        {m.activo
-                          ? "Seleccionado"
-                          : isRiegoEnCurso
-                          ? "Bloqueado (Riego en curso)"
-                          : "Seleccionar"}
+                        {m.activo ? "Seleccionado" : isRiegoEnCurso ? "Bloqueado (riego en curso)" : "Seleccionar"}
                       </Button>
                     </Flex>
-                  </Card>
+                  </Inset>
                 );
               })
             ) : (
@@ -978,7 +818,7 @@ export function ActuadoresPanel({
             )}
           </Flex>
         </Flex>
-      </Card>
+      </Panel>
     </Flex>
   );
 }

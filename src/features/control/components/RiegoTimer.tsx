@@ -30,7 +30,7 @@ export function UltimoRiegoTimer({ ultimoRiegoFechaFin }: UltimoRiegoTimerProps)
   }, [ultimoRiegoFechaFin]);
 
   return (
-    <Text size="6" weight="bold" style={{ color: "#60a5fa", fontFamily: "monospace" }}>
+    <Text size="6" weight="bold" className="control-num" style={{ color: "var(--blue)", fontFamily: "var(--font-mono)", letterSpacing: "-0.02em" }}>
       {formatearTiempoDesdeUltimo(seconds)}
     </Text>
   );
@@ -110,7 +110,7 @@ export function RiegoActivoTimer({
   ]);
 
   return (
-    <Text size="6" weight="bold" style={{ color: "#34d399", fontFamily: "monospace", marginTop: "4px" }}>
+    <Text size="6" weight="bold" className="control-num" style={{ color: "var(--green)", fontFamily: "var(--font-mono)", letterSpacing: "-0.02em", marginTop: "4px" }}>
       {formatearSegundos(seconds)} / {formatearSegundos(plannedSeconds)}
     </Text>
   );

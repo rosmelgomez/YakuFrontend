@@ -18,6 +18,8 @@ import SearchableSelect from "@/components/ui/SearchableSelect";
 import { SensoresPanel } from "./SensoresPanel";
 import { ActuadoresPanel } from "./ActuadoresPanel";
 import { HorarioRiegoPanel } from "./HorarioRiegoPanel";
+import { SectionHeader, controlStyles } from "./ui";
+import { CalendarClock, Radio, ScrollText, SlidersHorizontal, Zap } from "lucide-react";
 import { useControlData } from "../hooks/useControlData";
 import { useControlEvents } from "../hooks/useControlEvents";
 import {
@@ -496,7 +498,7 @@ export function ControlPanel({
         setLastMlCheck({
           status: isCooldown ? "ok" : "error",
           message: isCooldown
-            ? `⏳ En reposo: ${res.error}`
+            ? `En reposo: ${res.error}`
             : (res.error || "No se pudo ejecutar la predicción ML."),
         });
         if (!silent && !isCooldown) {
@@ -534,68 +536,58 @@ export function ControlPanel({
         transition: "opacity 0.2s",
       }}
     >
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
-            .threshold-input::-webkit-outer-spin-button,
-            .threshold-input::-webkit-inner-spin-button {
-              -webkit-appearance: none;
-              margin: 0;
-            }
-            .threshold-input {
-              -moz-appearance: textfield;
-            }
-          `,
-        }}
-      />
+      <style dangerouslySetInnerHTML={{ __html: controlStyles }} />
 
       {/* HEADER RESPONSIVE */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-4 mb-2">
-            <h2 className="text-xl sm:text-2xl font-bold text-indigo-400 tracking-tight leading-tight m-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="flex items-start gap-3 min-w-0 flex-1">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+            <SlidersHorizontal className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden />
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-base sm:text-xl font-bold text-white tracking-tight leading-tight m-0">
               Control y configuración
             </h2>
-            <div className="w-full sm:w-60 shrink-0">
-              <SearchableSelect
-                value={idCultivo.toString()}
-                onValueChange={handleCultivoChange}
-                placeholder="Seleccionar cultivo"
-                searchPlaceholder="Buscar cultivo..."
-                style={{
-                  background: "var(--surface2-mockup)",
-                  borderColor: "var(--border-mockup)",
-                  width: "100%",
-                }}
-                options={cultivos.map((c: any) => ({
-                  value: c.id.toString(),
-                  label: c.nombre_planta,
-                }))}
-              />
-            </div>
-          </div>
-          <div className="text-xs sm:text-sm text-slate-400 font-mono leading-relaxed break-words">
-            Modo activo:{" "}
-            <span className="text-indigo-400 font-bold">
-              {modo?.actual || "Automático"}
-            </span>{" "}
-            · GPIO {bomba?.pin || "N/A"} → Relé → Bomba
+            <p className="text-slate-400 text-[11px] sm:text-xs mt-0.5 m-0">
+              Modo activo:{" "}
+              <span className="text-emerald-400 font-semibold">{modo?.actual || "Automático"}</span>
+              <span className="text-slate-600 mx-1.5">·</span>
+              <span className="font-mono">GPIO {bomba?.pin || "N/A"}</span> → Relé → Bomba
+            </p>
           </div>
         </div>
-        <div className="self-start sm:self-auto shrink-0">
+        <div className="flex flex-col-reverse sm:flex-row sm:items-center gap-3 shrink-0">
+          <div className="w-full sm:w-60">
+            <SearchableSelect
+              value={idCultivo.toString()}
+              onValueChange={handleCultivoChange}
+              placeholder="Seleccionar cultivo"
+              searchPlaceholder="Buscar cultivo..."
+              style={{
+                background: "var(--surface2-mockup)",
+                borderColor: "var(--border2-mockup)",
+                width: "100%",
+              }}
+              options={cultivos.map((c: any) => ({
+                value: c.id.toString(),
+                label: c.nombre_planta,
+              }))}
+            />
+          </div>
           <Badge
             color={badgeColor as any}
             size="2"
             variant="soft"
-            style={{ borderRadius: "8px", padding: "6px 12px" }}
+            style={{ borderRadius: "999px", padding: "5px 12px", alignSelf: "flex-start" }}
           >
             <Box
+              aria-hidden
               style={{
-                width: "8px",
-                height: "8px",
+                width: "7px",
+                height: "7px",
                 borderRadius: "50%",
                 background: badgeDotColor,
-                marginRight: "8px",
+                marginRight: "6px",
               }}
             />
             {badgeText}
@@ -617,63 +609,28 @@ export function ControlPanel({
           style={{ width: "100%" }}
         >
           <Tabs.List
+            className="control-tabs"
             style={{
-              marginBottom: "1.5rem",
-              background: "var(--bg-mockup)",
-              borderRadius: "10px",
-              padding: "4px",
-              border: "1px solid var(--border-mockup)",
+              marginBottom: "1.25rem",
               display: "flex",
               width: "100%",
+              boxShadow: "inset 0 -1px 0 0 var(--border-mockup)",
             }}
           >
-            <Tabs.Trigger
-              value="sensores"
-              style={{
-                cursor: "pointer",
-                padding: "8px 12px",
-                fontSize: "clamp(0.8rem, 2.5vw, 0.9rem)",
-                flex: 1,
-                textAlign: "center",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              <span className="sm:hidden">📡 Sensores</span>
-              <span className="hidden sm:inline">📡 Sensores de Captura</span>
+            <Tabs.Trigger value="sensores">
+              <Radio size={15} aria-hidden />
+              <span className="sm:hidden">Sensores</span>
+              <span className="hidden sm:inline">Sensores de captura</span>
             </Tabs.Trigger>
-            <Tabs.Trigger
-              value="actuadores"
-              style={{
-                cursor: "pointer",
-                padding: "8px 12px",
-                fontSize: "clamp(0.8rem, 2.5vw, 0.9rem)",
-                flex: 1,
-                textAlign: "center",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              <span className="sm:hidden">⚡ Actuadores</span>
-              <span className="hidden sm:inline">⚡ Actuadores Físicos</span>
+            <Tabs.Trigger value="actuadores">
+              <Zap size={15} aria-hidden />
+              <span className="sm:hidden">Actuadores</span>
+              <span className="hidden sm:inline">Actuadores físicos</span>
             </Tabs.Trigger>
-            <Tabs.Trigger
-              value="horarios"
-              style={{
-                cursor: "pointer",
-                padding: "8px 12px",
-                fontSize: "clamp(0.8rem, 2.5vw, 0.9rem)",
-                flex: 1,
-                textAlign: "center",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              <span className="sm:hidden">⏰ Horarios</span>
-              <span className="hidden sm:inline">⏰ Horarios de Riego</span>
+            <Tabs.Trigger value="horarios">
+              <CalendarClock size={15} aria-hidden />
+              <span className="sm:hidden">Horarios</span>
+              <span className="hidden sm:inline">Horarios de riego</span>
             </Tabs.Trigger>
           </Tabs.List>
 
@@ -720,30 +677,30 @@ export function ControlPanel({
         {seguridad?.esAdmin && (
           <Box>
             <Card
-              size="4"
+              size={{ initial: "2", sm: "3" }}
               style={{
                 background: "var(--surface-mockup)",
                 borderColor: "var(--border-mockup)",
-                borderRadius: "16px",
+                borderRadius: "14px",
                 display: "flex",
                 flexDirection: "column",
                 height: "100%",
               }}
             >
-              <Text size="3" weight="bold" color="indigo" mb="5" as="div">
-                Log de auditoría del sistema
-              </Text>
+              <Box mb="4">
+                <SectionHeader icon={ScrollText} t="gray" title="Log de auditoría del sistema" />
+              </Box>
 
               {/* VISTA RESUMIDA (3 Columnas, 5 Filas máximo) */}
               <Box style={{ flexGrow: 1 }}>
                 <Grid columns="1.5fr 1.5fr 2fr" gap="3" mb="3">
-                  <Text size="1" weight="bold" style={{ color: "#6b7280" }}>
+                  <Text size="1" weight="bold" style={{ color: "var(--muted-foreground)", letterSpacing: "0.04em" }}>
                     FECHA (LIMA)
                   </Text>
-                  <Text size="1" weight="bold" style={{ color: "#6b7280" }}>
+                  <Text size="1" weight="bold" style={{ color: "var(--muted-foreground)", letterSpacing: "0.04em" }}>
                     MÓDULO
                   </Text>
-                  <Text size="1" weight="bold" style={{ color: "#6b7280" }}>
+                  <Text size="1" weight="bold" style={{ color: "var(--muted-foreground)", letterSpacing: "0.04em" }}>
                     ACCIÓN
                   </Text>
                 </Grid>
@@ -756,7 +713,7 @@ export function ControlPanel({
                     py="3"
                     style={{ borderBottom: "1px solid var(--border-mockup)" }}
                   >
-                    <Text size="2" color="indigo" style={{ fontFamily: "monospace" }}>
+                    <Text size="2" style={{ fontFamily: "var(--font-mono)", color: "var(--foreground)" }}>
                       {l.fecha}
                     </Text>
                     <Text size="2" color="gray" style={{ fontFamily: "monospace" }}>
@@ -765,7 +722,7 @@ export function ControlPanel({
                     <Text
                       size="2"
                       weight="bold"
-                      style={{ color: "#38bdf8", fontFamily: "monospace" }}
+                      style={{ color: "var(--blue)", fontFamily: "monospace" }}
                     >
                       {l.accion}
                     </Text>
@@ -782,8 +739,8 @@ export function ControlPanel({
                     style={{
                       width: "100%",
                       marginTop: "20px",
-                      borderColor: "var(--border-mockup)",
-                      color: "#d1d5db",
+                      borderColor: "var(--border2-mockup)",
+                      color: "var(--foreground)",
                       cursor: "pointer",
                     }}
                   >
@@ -820,19 +777,19 @@ export function ControlPanel({
                         mb="3"
                         px="2"
                       >
-                        <Text size="1" weight="bold" style={{ color: "#6b7280" }}>
+                        <Text size="1" weight="bold" style={{ color: "var(--muted-foreground)", letterSpacing: "0.04em" }}>
                           FECHA (LIMA)
                         </Text>
-                        <Text size="1" weight="bold" style={{ color: "#6b7280" }}>
+                        <Text size="1" weight="bold" style={{ color: "var(--muted-foreground)", letterSpacing: "0.04em" }}>
                           MÓDULO
                         </Text>
-                        <Text size="1" weight="bold" style={{ color: "#6b7280" }}>
+                        <Text size="1" weight="bold" style={{ color: "var(--muted-foreground)", letterSpacing: "0.04em" }}>
                           ACCIÓN
                         </Text>
-                        <Text size="1" weight="bold" style={{ color: "#6b7280" }}>
+                        <Text size="1" weight="bold" style={{ color: "var(--muted-foreground)", letterSpacing: "0.04em" }}>
                           DESCRIPCIÓN
                         </Text>
-                        <Text size="1" weight="bold" style={{ color: "#6b7280" }}>
+                        <Text size="1" weight="bold" style={{ color: "var(--muted-foreground)", letterSpacing: "0.04em" }}>
                           IP
                         </Text>
                       </Grid>
@@ -855,8 +812,7 @@ export function ControlPanel({
                           >
                             <Text
                               size="2"
-                              color="indigo"
-                              style={{ fontFamily: "monospace" }}
+                              style={{ fontFamily: "var(--font-mono)", color: "var(--foreground)" }}
                             >
                               {l.fecha}
                             </Text>
@@ -871,7 +827,7 @@ export function ControlPanel({
                               size="2"
                               weight="bold"
                               style={{
-                                color: "#38bdf8",
+                                color: "var(--blue)",
                                 fontFamily: "monospace",
                               }}
                             >

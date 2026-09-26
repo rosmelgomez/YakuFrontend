@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Box, Card, Flex, Text, Badge } from "@radix-ui/themes";
+import { Box, Flex, Grid, Text, Badge } from "@radix-ui/themes";
+import { CalendarClock, Repeat } from "lucide-react";
+import { Inset, Panel, SectionHeader, StatusDot, tone, type Tone } from "./ui";
 import { listarHorariosRiego } from "@/actions/control";
 
 interface HorarioRiegoResumenProps {
@@ -103,89 +105,90 @@ export function HorarioRiegoResumen({ idAsignacion }: HorarioRiegoResumenProps) 
   const permite = horarioPermite(horarios, ahora);
   const proxima = permite ? null : proximaApertura(horarios, ahora);
 
+  const estadoTone: Tone = permite ? "green" : activos.length ? "amber" : "gray";
+
   return (
-    <Card
-      size="3"
-      style={{
-        background: "var(--surface-mockup)",
-        borderColor: "var(--border-mockup)",
-        borderRadius: "16px",
-      }}
-    >
+    <Panel>
       <Flex direction="column" gap="4">
-        <Flex justify="between" align="start" wrap="wrap" gap="2">
-          <Box>
-            <Text size="3" weight="bold" color="indigo" as="div">
-              ⏰ Programación de Riego
-            </Text>
-            <Text size="2" color="gray" mt="1" as="div">
-              Franjas horarias en las que la IA puede evaluar y regar automáticamente.
-            </Text>
-          </Box>
-          {!loading && (
-            <Badge color={permite ? "green" : activos.length ? "amber" : "gray"} variant="soft">
-              {permite ? "Dentro de horario" : activos.length ? "Fuera de horario" : "Sin programación"}
-            </Badge>
-          )}
-        </Flex>
+        <SectionHeader
+          icon={CalendarClock}
+          t="green"
+          title="Programación de riego"
+          description="Franjas horarias en las que la IA puede evaluar y regar automáticamente."
+          aside={
+            !loading && (
+              <Badge color={permite ? "green" : activos.length ? "amber" : "gray"} variant="soft">
+                <StatusDot t={estadoTone} pulse={permite} />
+                {permite ? "Dentro de horario" : activos.length ? "Fuera de horario" : "Sin programación"}
+              </Badge>
+            )
+          }
+        />
 
         {loading ? (
-          <Text color="gray" size="2">Cargando...</Text>
-        ) : horarios.length === 0 ? (
-          <Text color="gray" size="2">
-            No hay horarios configurados: el riego automático por IA no se ejecutará. Configúralos en la pestaña
-            &quot;Horarios de Riego&quot;.
-          </Text>
+          <Flex direction="column" gap="2" aria-busy="true" aria-label="Cargando horarios">
+            {[0, 1].map((i) => (
+              <Box
+                key={i}
+                style={{
+                  height: 40,
+                  borderRadius: 10,
+                  background: "var(--surface2-mockup)",
+                  animation: "pulse 1.5s infinite",
+                }}
+              />
+            ))}
+          </Flex>
+        ) : activos.length === 0 ? (
+          <Inset>
+            <Text color="gray" size="2">
+              No hay horarios activos: el riego automático por IA no se ejecutará. Configúralos o actívalos en la
+              pestaña &quot;Horarios de Riego&quot;.
+            </Text>
+          </Inset>
         ) : (
           <>
-            <Text size="2" color="gray">
+            <Text size="2" style={{ color: permite ? tone("green").fg : "var(--muted-foreground)" }}>
               {permite
                 ? "Ahora mismo la IA tiene permitido evaluar y regar si los sensores lo requieren."
-                : activos.length === 0
-                ? "Todos los horarios están pausados: el riego automático por IA no se ejecutará."
                 : proxima
                 ? `La IA no evaluará hasta la próxima ventana, ${formatearProxima(proxima, ahora)}.`
                 : "La IA no evaluará riegos en este momento."}
             </Text>
-            <Flex direction="column" gap="2">
-              {horarios.map((h) => (
-                <Flex
-                  key={h.id}
-                  align="center"
-                  justify="between"
-                  gap="2"
-                  wrap="wrap"
-                  p="2"
-                  style={{
-                    background: "var(--surface2-mockup)",
-                    border: "1px solid var(--border-mockup)",
-                    borderRadius: "10px",
-                    opacity: h.activo ? 1 : 0.6,
-                  }}
-                >
-                  <Flex align="center" gap="2" wrap="wrap">
-                    <Text weight="bold" style={{ color: "white", fontFamily: "monospace" }}>
-                      {h.siempre_activo
-                        ? "🔄 Siempre activo"
-                        : `${String(h.hora_inicio).slice(0, 5)} – ${String(h.hora_fin).slice(0, 5)}`}
-                    </Text>
-                    {!h.siempre_activo && (
-                      <Text size="1" color="gray">
+            <Grid columns={{ initial: "1", sm: "2", md: "3" }} gap="2">
+              {activos.map((h) => (
+                <Inset key={h.id} style={{ padding: "10px 12px" }}>
+                  {h.siempre_activo ? (
+                    <Flex align="center" gap="2">
+                      <Repeat size={14} aria-hidden style={{ color: tone("green").fg }} />
+                      <Text size="3" weight="bold" style={{ color: "var(--foreground)" }}>
+                        Siempre activo
+                      </Text>
+                    </Flex>
+                  ) : (
+                    <>
+                      <Text
+                        size="3"
+                        weight="bold"
+                        as="div"
+                        className="control-num"
+                        style={{ color: "var(--foreground)" }}
+                      >
+                        {String(h.hora_inicio).slice(0, 5)} – {String(h.hora_fin).slice(0, 5)}
+                      </Text>
+                      <Text size="1" color="gray" as="div" mt="1">
                         {(h.dias_semana || []).length === 0 || h.dias_semana.length === 7
                           ? "Todos los días"
                           : h.dias_semana.map((d: number) => DIAS[d]).join(", ")}
                       </Text>
-                    )}
-                  </Flex>
-                  <Badge color={h.activo ? "green" : "gray"} variant="soft" size="1">
-                    {h.activo ? "Activo" : "Pausado"}
-                  </Badge>
-                </Flex>
+                    </>
+                  )}
+                </Inset>
               ))}
-            </Flex>
+            </Grid>
           </>
         )}
       </Flex>
-    </Card>
+    </Panel>
   );
 }
