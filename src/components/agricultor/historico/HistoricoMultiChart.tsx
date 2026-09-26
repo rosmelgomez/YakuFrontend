@@ -4,6 +4,8 @@
 import { useState, useEffect, useMemo } from 'react';
 
 import { Box, Text, Flex, Card, Button, Grid, ScrollArea, Select, TextField } from '@radix-ui/themes';
+import { Activity, BarChart3, Droplets, Sigma } from 'lucide-react';
+import { IconTile } from '@/components/ui/yaku-ui';
 import HistoricoMultiLineChart from '@/components/charts/HistoricoMultiLineChart';
 import type { HistoricoResponse } from '@/services/historico';
 import { obtenerDatosHistoricoPorCultivo } from '@/actions/historico';
@@ -115,16 +117,16 @@ const [filterMode, setFilterMode] = useState<FilterMode>('relative');
     const values = filteredData
       .map(item => item[field])
       .filter(val => val !== null && val !== undefined);
-      
+
     if (values.length === 0) {
       return { sensor: sensorName, min: null, prom: null, max: null };
     }
-    
+
     const min = Math.min(...values);
     const max = Math.max(...values);
     const sum = values.reduce((acc, curr) => acc + curr, 0);
     const prom = sum / values.length;
-    
+
     return { sensor: sensorName, min, prom, max };
   };
 
@@ -198,50 +200,51 @@ const [filterMode, setFilterMode] = useState<FilterMode>('relative');
   const StatRow = ({ label, color, stat, isLast = false }: { label: string, color: string, stat: SensorStat, isLast?: boolean }) => (
     <Grid columns="2fr 2fr 1fr 1fr 1fr" gap="3" align="center" py="3" style={{ borderBottom: isLast ? 'none' : '1px solid var(--border-mockup)' }}>
       <Text size="2" weight="bold" style={{ color }}>{label}</Text>
-      <Text size="2" style={{ color: '#64748b', fontFamily: 'monospace' }}>{stat.sensor}</Text>
-      <Text size="2" color="indigo" style={{ fontFamily: 'monospace' }}>{stat.min !== null ? stat.min.toFixed(1) : '--'}</Text>
-      <Text size="2" weight="bold" style={{ color, fontFamily: 'monospace' }}>{stat.prom !== null ? stat.prom.toFixed(1) : '--'}</Text>
-      <Text size="2" color="indigo" style={{ fontFamily: 'monospace' }}>{stat.max !== null ? stat.max.toFixed(1) : '--'}</Text>
+      <Text size="1" color="gray" style={{ fontFamily: 'var(--font-mono)' }}>{stat.sensor}</Text>
+      <Text size="2" className="tabular-nums" style={{ color: 'var(--foreground)' }}>{stat.min !== null ? stat.min.toFixed(1) : '--'}</Text>
+      <Text size="2" weight="bold" className="tabular-nums" style={{ color }}>{stat.prom !== null ? stat.prom.toFixed(1) : '--'}</Text>
+      <Text size="2" className="tabular-nums" style={{ color: 'var(--foreground)' }}>{stat.max !== null ? stat.max.toFixed(1) : '--'}</Text>
     </Grid>
   );
 
   return (
     <Flex direction="column" gap="5" style={{ opacity: isLoadingData ? 0.5 : 1, transition: 'opacity 0.2s' }}>
-      
+
       {/* HEADER GLOBAL */}
       <Flex justify="between" align="end" mb="1" wrap="wrap" gap="4">
         <Box>
-          <Flex align="center" gap="4" mb="2">
-            <Text size="6" weight="bold" color="indigo" as="div">Análisis Histórico</Text>
+          <Flex align="center" gap="3" mb="2" wrap="wrap">
+            <IconTile icon={BarChart3} t="green" size={40} />
+            <Text size={{ initial: '5', sm: '6' }} weight="bold" as="div" style={{ color: 'var(--foreground)', letterSpacing: '-0.02em' }}>Análisis histórico</Text>
             <SearchableSelect
               value={idCultivo}
               onValueChange={handleCultivoChange}
               placeholder="Seleccionar cultivo"
               searchPlaceholder="Buscar cultivo..."
-              style={{ background: 'var(--surface2-mockup)', borderColor: 'var(--border-mockup)', width: 240 }}
+              style={{ background: 'var(--surface2-mockup)', borderColor: 'var(--border2-mockup)', width: 240 }}
               options={cultivos.map((c) => ({ value: c.id.toString(), label: c.nombre_planta }))}
             />
           </Flex>
-          <Text size="2" style={{ color: '#9ca3af' }}>
+          <Text size="2" color="gray">
             Visualización de telemetría a largo plazo e historial de riego
           </Text>
         </Box>
       </Flex>
 
       {/* FILTROS DE TIEMPO EXCLUYENTES */}
-      <Flex gap="3" wrap="wrap" mb="2" style={{ background: '#111827', padding: '12px 16px', borderRadius: '12px', border: '1px solid #1f2937' }} align="center">
+      <Flex gap="3" wrap="wrap" mb="2" style={{ background: 'var(--surface-mockup)', padding: '10px 14px', borderRadius: '12px', border: '1px solid var(--border-mockup)' }} align="center">
         <Text size="2" color="gray" weight="medium">Modo de tiempo:</Text>
 
-        <Flex gap="2" style={{ background: '#0f172a', padding: '4px', borderRadius: '8px', border: '1px solid #1f2937' }}>
+        <Flex gap="2" style={{ background: 'var(--bg-mockup)', padding: '3px', borderRadius: '8px', border: '1px solid var(--border2-mockup)' }}>
           <Button size="1" variant={filterMode === 'relative' ? 'solid' : 'ghost'} color="green" onClick={() => handleModeChange('relative')} style={{ cursor: 'pointer' }}>
             Reciente
           </Button>
-          <Button size="1" variant={filterMode === 'calendar' ? 'solid' : 'ghost'} color="blue" onClick={() => handleModeChange('calendar')} style={{ cursor: 'pointer' }}>
+          <Button size="1" variant={filterMode === 'calendar' ? 'solid' : 'ghost'} color="green" onClick={() => handleModeChange('calendar')} style={{ cursor: 'pointer' }}>
             Calendario
           </Button>
         </Flex>
 
-        <Flex gap="2" style={{ background: '#0f172a', padding: '4px', borderRadius: '8px', border: '1px solid #1f2937' }}>
+        <Flex gap="2" style={{ background: 'var(--bg-mockup)', padding: '3px', borderRadius: '8px', border: '1px solid var(--border2-mockup)' }}>
           {[
             { label: '6h', value: 0 },
             { label: '24h', value: 1 },
@@ -260,12 +263,12 @@ const [filterMode, setFilterMode] = useState<FilterMode>('relative');
             </Button>
           ))}
         </Flex>
-        
-        <TextField.Root type="date" value={startDateFilter} onChange={(e) => setStartDateFilter(e.target.value)} disabled={!dateRangeEnabled} style={{ background: '#0f172a', color: dateRangeEnabled ? 'white' : '#6b7280', opacity: dateRangeEnabled ? 1 : 0.55, borderColor: '#1f2937' }} />
-        <TextField.Root type="date" value={endDateFilter} onChange={(e) => setEndDateFilter(e.target.value)} disabled={!dateRangeEnabled} style={{ background: '#0f172a', color: dateRangeEnabled ? 'white' : '#6b7280', opacity: dateRangeEnabled ? 1 : 0.55, borderColor: '#1f2937' }} />
+
+        <TextField.Root type="date" value={startDateFilter} onChange={(e) => setStartDateFilter(e.target.value)} disabled={!dateRangeEnabled} style={{ background: 'var(--bg-mockup)', opacity: dateRangeEnabled ? 1 : 0.55 }} />
+        <TextField.Root type="date" value={endDateFilter} onChange={(e) => setEndDateFilter(e.target.value)} disabled={!dateRangeEnabled} style={{ background: 'var(--bg-mockup)', opacity: dateRangeEnabled ? 1 : 0.55 }} />
         {false && <Select.Root value="all">
-          <Select.Trigger style={{ background: '#0f172a', color: canUseWeekday ? 'white' : '#6b7280', opacity: canUseWeekday ? 1 : 0.55, borderColor: '#1f2937', minWidth: 145 }} />
-          <Select.Content style={{ background: '#0f172a', color: 'white' }}>
+          <Select.Trigger style={{ background: 'var(--bg-mockup)', opacity: canUseWeekday ? 1 : 0.55, minWidth: 145 }} />
+          <Select.Content>
             {WEEKDAY_OPTIONS.map((option) => (
               <Select.Item key={option.value} value={option.value}>{option.label}</Select.Item>
             ))}
@@ -273,8 +276,8 @@ const [filterMode, setFilterMode] = useState<FilterMode>('relative');
         </Select.Root>}
 
         {false && <Select.Root value="all">
-          <Select.Trigger style={{ background: '#0f172a', color: canUseMonthYear ? 'white' : '#6b7280', opacity: canUseMonthYear ? 1 : 0.55, borderColor: '#1f2937', minWidth: 155 }} />
-          <Select.Content style={{ background: '#0f172a', color: 'white' }}>
+          <Select.Trigger style={{ background: 'var(--bg-mockup)', opacity: canUseMonthYear ? 1 : 0.55, minWidth: 155 }} />
+          <Select.Content>
             {MONTH_OPTIONS.map((option) => (
               <Select.Item key={option.value} value={option.value}>{option.label}</Select.Item>
             ))}
@@ -282,36 +285,39 @@ const [filterMode, setFilterMode] = useState<FilterMode>('relative');
         </Select.Root>}
 
         {false && <Select.Root value="all">
-          <Select.Trigger style={{ background: '#0f172a', color: canUseMonthYear ? 'white' : '#6b7280', opacity: canUseMonthYear ? 1 : 0.55, borderColor: '#1f2937', minWidth: 110 }} />
-          <Select.Content style={{ background: '#0f172a', color: 'white' }}>
+          <Select.Trigger style={{ background: 'var(--bg-mockup)', opacity: canUseMonthYear ? 1 : 0.55, minWidth: 110 }} />
+          <Select.Content>
             <Select.Item value="all">Todos los años</Select.Item>
             {(availableYears.length > 0 ? availableYears : [new Date().getFullYear().toString()]).map((year) => (
               <Select.Item key={year} value={year}>{year}</Select.Item>
             ))}
           </Select.Content>
         </Select.Root>}
-        
+
         {(startDateFilter || endDateFilter) && (
           <Button size="1" color="red" variant="soft" onClick={() => { setStartDateFilter(''); setEndDateFilter(''); }} style={{ cursor: 'pointer', marginLeft: 'auto' }}>
             Limpiar filtros
           </Button>
         )}
-        <Text size="1" color="gray" style={{ fontFamily: 'monospace', marginLeft: 'auto' }}>
+        <Text size="1" color="gray" style={{ marginLeft: 'auto' }}>
           {filterMode === 'relative' ? 'Rangos rapidos activos.' : 'Selecciona fecha de inicio y fin.'}
         </Text>
       </Flex>
 
       {/* TARJETA 1: Gráfico Macro */}
-      <Card size={{ initial: "2", sm: "3", md: "4" }} style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '16px' }}>
+      <Card size={{ initial: "2", sm: "3", md: "4" }} style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '14px' }}>
         <Flex justify="between" align="center" mb="4" wrap="wrap" gap="3">
-          <Box>
-            <Text size={{ initial: "3", sm: "4" }} weight="bold" color="indigo" mb="1" as="div">
-              Historial de Parámetros
+          <Flex align="center" gap="3">
+            <IconTile icon={Activity} t="green" />
+            <Box>
+            <Text size="3" weight="bold" mb="1" as="div" style={{ color: 'var(--foreground)' }}>
+              Historial de parámetros
             </Text>
             <Text size="2" color="gray" as="div">
               Mostrando datos de las {rango === 0 ? 'últimas 6 horas' : rango === 1 ? 'últimas 24 horas' : `últimos ${rango} días`}
             </Text>
-          </Box>
+            </Box>
+          </Flex>
         </Flex>
 
         <Box className="w-full min-w-0 h-[240px] sm:h-[320px] md:h-[380px]">
@@ -320,21 +326,24 @@ const [filterMode, setFilterMode] = useState<FilterMode>('relative');
       </Card>
 
       <Grid columns={{ initial: '1', lg: '2' }} gap="4">
-        
+
         {/* TARJETA 2: Estadísticas */}
         {activeStats && (
-          <Card size={{ initial: "2", sm: "3", md: "4" }} style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '16px', height: '100%' }}>
-            <Text size={{ initial: "3", sm: "4" }} weight="bold" color="indigo" mb="4" as="div">
-              Estadísticas del período — {rango === 0 ? '6 horas' : rango === 1 ? '24 horas' : `${rango} días`}
-            </Text>
+          <Card size={{ initial: "2", sm: "3", md: "4" }} style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '14px', height: '100%' }}>
+            <Flex align="center" gap="3" mb="4">
+              <IconTile icon={Sigma} t="blue" />
+              <Text size="3" weight="bold" as="div" style={{ color: 'var(--foreground)' }}>
+                Estadísticas del período <Text size="2" color="gray" weight="regular">· {rango === 0 ? '6 horas' : rango === 1 ? '24 horas' : `${rango} días`}</Text>
+              </Text>
+            </Flex>
             <ScrollArea scrollbars="horizontal" style={{ width: '100%' }}>
               <Box style={{ minWidth: '450px' }}>
                 <Grid columns="2fr 2fr 1fr 1fr 1fr" gap="3" align="center" mb="2">
-                  <Text size="1" weight="bold" style={{ color: '#6b7280', letterSpacing: '1px' }}>PARÁMETRO</Text>
-                  <Text size="1" weight="bold" style={{ color: '#6b7280', letterSpacing: '1px' }}>SENSOR</Text>
-                  <Text size="1" weight="bold" style={{ color: '#6b7280', letterSpacing: '1px' }}>MÍN</Text>
-                  <Text size="1" weight="bold" style={{ color: '#6b7280', letterSpacing: '1px' }}>PROM.</Text>
-                  <Text size="1" weight="bold" style={{ color: '#6b7280', letterSpacing: '1px' }}>MÁX</Text>
+                  <Text size="1" weight="medium" color="gray">Parámetro</Text>
+                  <Text size="1" weight="medium" color="gray">Sensor</Text>
+                  <Text size="1" weight="medium" color="gray">Mín.</Text>
+                  <Text size="1" weight="medium" color="gray">Prom.</Text>
+                  <Text size="1" weight="medium" color="gray">Máx.</Text>
                 </Grid>
                 <Box>
                   <StatRow label="Hum. suelo (%)" color="#22c55e" stat={activeStats.humedadSuelo} />
@@ -348,15 +357,18 @@ const [filterMode, setFilterMode] = useState<FilterMode>('relative');
         )}
 
         {/* TARJETA 3: Log de Riegos */}
-        <Card size={{ initial: "2", sm: "3", md: "4" }} style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '16px', height: '100%' }}>
-          <Text size="4" weight="bold" color="indigo" mb="5" as="div">
-            Log de riegos
-          </Text>
-          
+        <Card size={{ initial: "2", sm: "3", md: "4" }} style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '14px', height: '100%' }}>
+          <Flex align="center" gap="3" mb="4">
+            <IconTile icon={Droplets} t="blue" />
+            <Text size="3" weight="bold" as="div" style={{ color: 'var(--foreground)' }}>
+              Log de riegos
+            </Text>
+          </Flex>
+
           <Grid columns={{ initial: '1.5fr 1fr 1fr', sm: '2fr 1.5fr 1fr' }} gap="3" align="center" mb="2">
-            <Text size="1" weight="bold" style={{ color: '#6b7280', letterSpacing: '1px' }}>FECHA/HORA</Text>
-            <Text size="1" weight="bold" style={{ color: '#6b7280', letterSpacing: '1px' }}>ORIGEN</Text>
-            <Text size="1" weight="bold" style={{ color: '#6b7280', letterSpacing: '1px' }}>LITROS</Text>
+            <Text size="1" weight="medium" color="gray">Fecha / hora</Text>
+            <Text size="1" weight="medium" color="gray">Origen</Text>
+            <Text size="1" weight="medium" color="gray">Litros</Text>
           </Grid>
 
           {filteredRiegoLog.length === 0 ? (
@@ -368,9 +380,9 @@ const [filterMode, setFilterMode] = useState<FilterMode>('relative');
               <Box>
                 {filteredRiegoLog.map((log: any, idx: number) => (
                   <Grid key={log.id} columns={{ initial: '1.5fr 1fr 1fr', sm: '2fr 1.5fr 1fr' }} gap="3" align="center" py="3" style={{ borderBottom: idx === filteredRiegoLog.length - 1 ? 'none' : '1px solid var(--border-mockup)' }}>
-                    <Text size="2" color="indigo" style={{ fontFamily: 'monospace' }}>{log.fechaStr}</Text>
-                    <Text size="2" weight="bold" style={{ color: log.colorOrigen, fontFamily: 'monospace' }}>{log.origen}</Text>
-                    <Text size="2" color="indigo" style={{ fontFamily: 'monospace' }}>{log.litros}{log.litros !== '--' ? 'L' : ''}</Text>
+                    <Text size="2" className="tabular-nums" style={{ color: 'var(--foreground)' }}>{log.fechaStr}</Text>
+                    <Text size="2" weight="bold" style={{ color: log.colorOrigen }}>{log.origen}</Text>
+                    <Text size="2" weight="medium" className="tabular-nums" style={{ color: 'var(--blue)' }}>{log.litros}{log.litros !== '--' ? ' L' : ''}</Text>
                   </Grid>
                 ))}
               </Box>

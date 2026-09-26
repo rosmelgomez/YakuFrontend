@@ -144,7 +144,7 @@ export default function SearchableSelect({
       ? createPortal(
           <div
             ref={dropdownRef}
-            className="z-[10001] rounded-lg border border-white/10 bg-[#111827] p-2 shadow-2xl"
+            className="z-[10001] rounded-lg border border-white/10 bg-[#131a1f] p-2 shadow-2xl"
             style={{
               position: "fixed",
               top: position.top,
@@ -224,7 +224,7 @@ export default function SearchableSelect({
         }}
         style={{
           alignItems: "center",
-          background: "#111827",
+          background: "#131a1f",
           border: "1px solid rgba(255,255,255,0.13)",
           borderRadius: 6,
           color: selectedOption ? "white" : "#8aa0b2",

@@ -17,7 +17,7 @@ import {
   ExclamationTriangleIcon,
   ReloadIcon,
 } from "@radix-ui/react-icons";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { ArrowLeft, Check, Circle, Loader2 } from "lucide-react";
 
 export default function RecuperarContrasenaClient() {
   const searchParams = useSearchParams();
@@ -384,25 +384,19 @@ export default function RecuperarContrasenaClient() {
                 </Text>
                 <Flex direction="column" gap="1">
                   <Flex align="center" gap="1">
-                    <span style={{ color: tieneLongitud ? "#22c55e" : "#94a3b8" }}>
-                      {tieneLongitud ? "✓" : "•"}
-                    </span>
+                    {tieneLongitud ? <Check size={13} aria-hidden style={{ color: "var(--green)" }} /> : <Circle size={6} aria-hidden style={{ color: "var(--muted-foreground)", margin: "0 3px" }} />}
                     <Text size="1" color={tieneLongitud ? "green" : "gray"}>
                       Al menos 10 caracteres
                     </Text>
                   </Flex>
                   <Flex align="center" gap="1">
-                    <span style={{ color: tieneMayus && tieneMinus ? "#22c55e" : "#94a3b8" }}>
-                      {tieneMayus && tieneMinus ? "✓" : "•"}
-                    </span>
+                    {tieneMayus && tieneMinus ? <Check size={13} aria-hidden style={{ color: "var(--green)" }} /> : <Circle size={6} aria-hidden style={{ color: "var(--muted-foreground)", margin: "0 3px" }} />}
                     <Text size="1" color={tieneMayus && tieneMinus ? "green" : "gray"}>
                       Mayúsculas y minúsculas
                     </Text>
                   </Flex>
                   <Flex align="center" gap="1">
-                    <span style={{ color: tieneNumero ? "#22c55e" : "#94a3b8" }}>
-                      {tieneNumero ? "✓" : "•"}
-                    </span>
+                    {tieneNumero ? <Check size={13} aria-hidden style={{ color: "var(--green)" }} /> : <Circle size={6} aria-hidden style={{ color: "var(--muted-foreground)", margin: "0 3px" }} />}
                     <Text size="1" color={tieneNumero ? "green" : "gray"}>
                       Al menos un número
                     </Text>

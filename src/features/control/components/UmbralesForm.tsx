@@ -46,7 +46,7 @@ export function UmbralesForm({
         borderRadius: "16px",
       }}
     >
-      <Text size="3" weight="bold" color="indigo" mb="4" as="div">
+      <Text size="3" weight="bold" mb="4" as="div" style={{ color: "var(--foreground)" }}>
         🌱 Configuración de Umbrales de Sensores
       </Text>
 
@@ -60,7 +60,7 @@ export function UmbralesForm({
             borderRadius: "8px",
           }}
         >
-          <Text size="2" color="indigo" weight="medium" mb="2" as="div">
+          <Text size="2" weight="medium" mb="2" as="div" style={{ color: "var(--foreground)" }}>
             🌱 Se han asignado umbrales recomendados por defecto (10% - 90%).
           </Text>
           <Button size="1" onClick={onConfirmDefault} style={{ cursor: "pointer" }}>

@@ -30,6 +30,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
 } from 'lucide-react';
+import YakuMark from '@/components/layout/YakuMark';
 
 interface NavItem {
   type: 'item';
@@ -220,8 +221,8 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
       <style dangerouslySetInnerHTML={{ __html: `
         .sidebar-container {
           position: fixed;
-          background: #07111d;
-          border: 1px solid #1e293b;
+          background: var(--sidebar);
+          border: 1px solid var(--sidebar-border);
           z-index: 100;
           display: flex;
           backdrop-filter: blur(12px);
@@ -261,20 +262,20 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #64748b;
+            color: #7f93a3;
             text-decoration: none;
             position: relative;
             touch-action: manipulation;
-            transition: all 0.2s ease;
+            transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
           }
           .mobile-nav-item:hover {
             color: #cbd5e1;
             background: rgba(255,255,255,0.05);
           }
           .mobile-nav-item.active {
-            color: #22c55e;
-            background: rgba(34,197,94,0.12);
-            border: 1px solid rgba(34,197,94,0.25);
+            color: var(--green);
+            background: var(--greenbg);
+            border: 1px solid var(--greenbrd);
           }
           .mobile-nav-item.active::before {
             content: '';
@@ -284,7 +285,7 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
             transform: translateX(-50%);
             width: 14px;
             height: 3px;
-            background-color: #22c55e;
+            background-color: var(--green);
             border-radius: 2px;
           }
           .more-menu {
@@ -294,8 +295,8 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
             width: 230px;
             max-height: 70vh;
             overflow-y: auto;
-            background: #081420;
-            border: 1px solid #1e293b;
+            background: var(--popover);
+            border: 1px solid var(--border2-mockup);
             border-radius: 16px;
             padding: 8px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.5);
@@ -344,9 +345,10 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
           border-radius: 12px;
           font-size: 13.5px;
           font-weight: 500;
-          color: #94a3b8;
+          border: 1px solid transparent;
+          color: #9fb3c3;
           text-decoration: none;
-          transition: all 0.15s ease;
+          transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
           position: relative;
           box-sizing: border-box;
         }
@@ -357,9 +359,9 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
         }
 
         .nav-item-expanded.active {
-          background: rgba(34, 197, 94, 0.12);
-          color: #22c55e;
-          border: 1px solid rgba(34, 197, 94, 0.25);
+          background: var(--greenbg);
+          color: var(--green);
+          border: 1px solid var(--greenbrd);
           font-weight: 600;
         }
 
@@ -371,7 +373,7 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
           transform: translateY(-50%);
           height: 18px;
           width: 3.5px;
-          background-color: #22c55e;
+          background-color: var(--green);
           border-radius: 0 3px 3px 0;
         }
 
@@ -383,9 +385,9 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #64748b;
+          color: #7f93a3;
           text-decoration: none;
-          transition: all 0.15s ease;
+          transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
           position: relative;
           margin: 0 auto;
         }
@@ -396,9 +398,9 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
         }
 
         .nav-item-collapsed.active {
-          background: rgba(34, 197, 94, 0.12);
-          color: #22c55e;
-          border: 1px solid rgba(34, 197, 94, 0.3);
+          background: var(--greenbg);
+          color: var(--green);
+          border: 1px solid var(--greenbrd);
         }
 
         .nav-item-collapsed.active::before {
@@ -409,8 +411,69 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
           transform: translateY(-50%);
           height: 20px;
           width: 3.5px;
-          background-color: #22c55e;
+          background-color: var(--green);
           border-radius: 0 4px 4px 0;
+        }
+
+        .menu-panel {
+          position: absolute;
+          width: 210px;
+          background: var(--popover);
+          border: 1px solid var(--border2-mockup);
+          border-radius: 14px;
+          padding: 6px;
+          box-shadow: 0 16px 40px -8px rgba(0,0,0,0.6);
+          z-index: 150;
+        }
+        .menu-head {
+          padding: 8px 10px;
+          font-size: 11px;
+          border-bottom: 1px solid var(--border-mockup);
+          margin-bottom: 4px;
+        }
+        .menu-item {
+          width: 100%;
+          min-height: 0;
+          background: transparent;
+          border: none;
+          text-decoration: none;
+          color: var(--foreground);
+          padding: 9px 10px;
+          border-radius: 9px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          cursor: pointer;
+          font-size: 0.875rem;
+          text-align: left;
+          transition: background-color 150ms ease;
+        }
+        .menu-item:hover { background: rgba(255,255,255,0.05); }
+        .menu-item.danger { color: #f87171; }
+        .menu-item.danger:hover { background: var(--redbg); }
+        .menu-item.active { color: var(--green); background: var(--greenbg); }
+        .menu-label {
+          padding: 6px 10px 4px;
+          font-size: 11px;
+          font-weight: 600;
+          color: var(--muted-foreground);
+        }
+        .nav-section-label {
+          padding: 14px 10px 4px;
+          font-size: 11px;
+          font-weight: 600;
+          color: var(--muted-foreground);
+          user-select: none;
+        }
+        .brand-tile {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 11px;
+          color: #04130a;
+          background: linear-gradient(145deg, #4ade80, #16a34a);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 4px 12px -4px rgba(22,163,74,0.55);
+          flex-shrink: 0;
         }
 
         /* Scrollbar personalizado para el menú */
@@ -442,39 +505,42 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
         <div className="desktop-sidebar-content">
           {/* HEADER DEL SIDEBAR */}
           {isExpanded ? (
-            <div className="flex items-center justify-between px-2 pb-3 mb-2 border-b border-slate-800/80">
+            <div className="flex items-center justify-between px-2 pb-3 mb-2 border-b border-[var(--border-mockup)]">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center text-white shadow-md shadow-emerald-950/40 text-base shrink-0">
-                  🌱
+                <div className="brand-tile w-9 h-9">
+                  <YakuMark size={20} />
                 </div>
                 <div className="flex flex-col min-w-0">
                   <span className="font-bold text-base text-white tracking-tight leading-tight">Yaku</span>
-                  <span className="text-[11px] text-emerald-400 font-medium truncate opacity-90">{roleLabel}</span>
+                  <span className="text-[11px] text-slate-400 font-medium truncate">{roleLabel}</span>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setUserCollapsed(true)}
                 title="Colapsar barra lateral"
+                aria-label="Colapsar barra lateral"
                 className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 transition-colors cursor-pointer border-none bg-transparent"
               >
                 <PanelLeftClose size={18} />
               </button>
             </div>
           ) : (
-            <div className="flex flex-col items-center pb-3 mb-2 border-b border-slate-800/80 gap-2">
+            <div className="flex flex-col items-center pb-3 mb-2 border-b border-[var(--border-mockup)] gap-2">
               <button
                 type="button"
                 onClick={() => setUserCollapsed(false)}
                 title="Expandir barra lateral"
-                className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center text-white shadow-md shadow-emerald-950/40 hover:scale-105 transition-all cursor-pointer border-none text-base"
+                aria-label="Expandir barra lateral"
+                className="brand-tile w-10 h-10 p-0 border-none cursor-pointer transition-transform hover:scale-105"
               >
-                🌱
+                <YakuMark size={21} />
               </button>
               <button
                 type="button"
                 onClick={() => setUserCollapsed(false)}
                 title="Expandir barra lateral"
+                aria-label="Expandir barra lateral"
                 className="p-1 text-slate-500 hover:text-emerald-400 transition-colors border-none bg-transparent cursor-pointer"
               >
                 <PanelLeftOpen size={15} />
@@ -488,15 +554,12 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
               if (entry.type === 'section') {
                 if (isExpanded) {
                   return (
-                    <div
-                      key={entry.id}
-                      className="px-2 pt-3 pb-1 text-[10.5px] font-bold tracking-wider text-emerald-400/80 uppercase select-none"
-                    >
+                    <div key={entry.id} className="nav-section-label">
                       {entry.title}
                     </div>
                   );
                 }
-                return <div key={entry.id} className="w-8 my-1.5 border-t border-slate-800/80" />;
+                return <div key={entry.id} className="w-8 my-1.5 border-t border-[var(--border-mockup)]" />;
               }
 
               const active = isRouteActive(entry.href);
@@ -508,6 +571,7 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
                     key={entry.id}
                     href={entry.href}
                     onMouseEnter={() => router.prefetch(entry.href)}
+                    aria-current={active ? 'page' : undefined}
                     className={`nav-item-expanded ${active ? 'active' : ''}`}
                   >
                     <IconComponent size={19} className="shrink-0" />
@@ -521,6 +585,8 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
                   key={entry.id}
                   href={entry.href}
                   title={entry.label}
+                  aria-label={entry.label}
+                  aria-current={active ? 'page' : undefined}
                   onMouseEnter={() => router.prefetch(entry.href)}
                   className={`nav-item-collapsed ${active ? 'active' : ''}`}
                 >
@@ -532,8 +598,8 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
 
           {/* PERFIL / PIE DE PÁGINA */}
           {isExpanded ? (
-            <div className="pt-2.5 mt-auto border-t border-slate-800/80">
-              <div className="flex items-center justify-between p-2 rounded-xl bg-slate-900/70 border border-slate-800/60">
+            <div className="pt-2.5 mt-auto border-t border-[var(--border-mockup)]">
+              <div className="flex items-center justify-between p-2 rounded-xl bg-white/[0.03] border border-[var(--border-mockup)]">
                 <Link
                   href={profileHref}
                   className="flex items-center gap-2.5 min-w-0 flex-1 hover:opacity-90 transition-opacity text-left text-decoration-none"
@@ -544,13 +610,14 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-white text-xs font-semibold truncate leading-tight">{userName}</p>
-                    <p className="text-emerald-400 text-[11px] truncate capitalize opacity-80 leading-tight mt-0.5">{roleLabel} · Mi perfil</p>
+                    <p className="text-slate-400 text-[11px] truncate leading-tight mt-0.5">{roleLabel} · Mi perfil</p>
                   </div>
                 </Link>
                 <button
                   type="button"
                   onClick={(e) => handleLogout(e)}
                   title="Cerrar sesión"
+                  aria-label="Cerrar sesión"
                   className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0 ml-1 border-none bg-transparent cursor-pointer"
                 >
                   <LogOut size={16} />
@@ -558,12 +625,14 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
               </div>
             </div>
           ) : (
-            <div ref={desktopProfileRef} className="pt-2 mt-auto border-t border-slate-800/80 flex flex-col items-center relative">
+            <div ref={desktopProfileRef} className="pt-2 mt-auto border-t border-[var(--border-mockup)] flex flex-col items-center relative">
               <button
                 type="button"
                 onClick={() => setOpenProfile(!openProfile)}
                 title="Mi cuenta"
-                className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 font-bold text-xs hover:border-emerald-500/50 transition-colors cursor-pointer"
+                aria-label="Mi cuenta"
+                aria-expanded={openProfile}
+                className="w-10 h-10 p-0 rounded-full bg-white/[0.05] border border-[var(--border2-mockup)] flex items-center justify-center text-slate-300 font-bold text-xs hover:border-emerald-500/50 transition-colors cursor-pointer"
               >
                 {initials}
               </button>
@@ -571,67 +640,21 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
               {/* DROPDOWN FLOTANTE CUANDO ESTÁ COLAPSADO */}
               {openProfile && (
                 <div
-                  className="dropdown-menu"
                   onMouseDown={(e) => e.stopPropagation()}
                   onTouchStart={(e) => e.stopPropagation()}
-                  style={{
-                    position: 'absolute',
-                    width: '210px',
-                    background: '#081420',
-                    border: '1px solid #1e293b',
-                    borderRadius: '16px',
-                    padding: '8px',
-                    boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
-                    zIndex: 150,
-                  }}
+                  role="menu"
+                  className="dropdown-menu menu-panel"
                 >
-                  <div style={{ padding: '6px 12px 6px', fontSize: '11px', color: '#94a3b8', fontWeight: 600, borderBottom: '1px solid #1e293b', marginBottom: '4px' }}>
-                    <div className="text-white font-bold truncate">{userName}</div>
-                    <div className="text-emerald-400 text-[10px] capitalize">{roleLabel}</div>
+                  <div className="menu-head">
+                    <div className="text-white font-semibold truncate text-[13px]">{userName}</div>
+                    <div className="text-slate-400">{roleLabel}</div>
                   </div>
-                  <Link
-                    href={profileHref}
-                    onClick={() => setOpenProfile(false)}
-                    style={{
-                      width: '100%',
-                      background: 'transparent',
-                      textDecoration: 'none',
-                      color: '#cbd5e1',
-                      padding: '10px 12px',
-                      borderRadius: '10px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      cursor: 'pointer',
-                      fontSize: '0.9rem',
-                    }}
-                    onMouseEnter={(e: React.MouseEvent<HTMLAnchorElement>) => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
-                    onMouseLeave={(e: React.MouseEvent<HTMLAnchorElement>) => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    <User size={18} />
-                    Mi Perfil
+                  <Link href={profileHref} role="menuitem" onClick={() => setOpenProfile(false)} className="menu-item">
+                    <User size={17} aria-hidden />
+                    Mi perfil
                   </Link>
-                  <button
-                    type="button"
-                    onClick={(e) => handleLogout(e)}
-                    style={{
-                      width: '100%',
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#ef4444',
-                      padding: '10px 12px',
-                      borderRadius: '10px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      cursor: 'pointer',
-                      fontSize: '0.9rem',
-                      textAlign: 'left',
-                    }}
-                    onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.background = 'rgba(239,68,68,0.08)')}
-                    onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    <LogOut size={18} />
+                  <button type="button" role="menuitem" onClick={(e) => handleLogout(e)} className="menu-item danger">
+                    <LogOut size={17} aria-hidden />
                     Cerrar sesión
                   </button>
                 </div>
@@ -654,6 +677,8 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
                   key={item.id}
                   href={item.href}
                   title={item.label}
+                  aria-label={item.label}
+                  aria-current={active ? 'page' : undefined}
                   className={`mobile-nav-item ${active ? 'active' : ''}`}
                 >
                   <IconComp size={22} />
@@ -666,12 +691,14 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
             <button
               type="button"
               title="Más opciones"
+              aria-label="Más opciones"
+              aria-expanded={openMore}
               onClick={() => {
                 setOpenMore(!openMore);
                 setOpenProfile(false);
               }}
-              className={`mobile-nav-item ${isMoreActive ? 'active' : ''}`}
-              style={{ border: 'none', background: isMoreActive ? 'rgba(34,197,94,0.12)' : 'transparent' }}
+              className={`mobile-nav-item p-0 ${isMoreActive ? 'active' : ''}`}
+              style={{ background: isMoreActive ? undefined : 'transparent', border: isMoreActive ? undefined : 'none' }}
             >
               <MoreHorizontal size={22} />
             </button>
@@ -682,7 +709,7 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
                 onMouseDown={(e) => e.stopPropagation()}
                 onTouchStart={(e) => e.stopPropagation()}
               >
-                <div style={{ padding: '6px 10px 4px', fontSize: '11px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <div className="menu-label">
                   {isAdmin ? 'Administración' : 'Más opciones'}
                 </div>
                 {navEntries
@@ -695,17 +722,8 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
                         key={item.id}
                         href={item.href}
                         onClick={() => setOpenMore(false)}
-                        style={{
-                          padding: '10px 12px',
-                          borderRadius: '10px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '10px',
-                          textDecoration: 'none',
-                          color: active ? '#22c55e' : '#cbd5e1',
-                          background: active ? 'rgba(34,197,94,0.12)' : 'transparent',
-                          fontSize: '0.9rem',
-                        }}
+                        aria-current={active ? 'page' : undefined}
+                        className={`menu-item ${active ? 'active' : ''}`}
                       >
                         <IconComp size={18} />
                         {item.label}
@@ -725,83 +743,30 @@ export default function Sidebar({ initials = "JR" }: { initials?: string }) {
                 setOpenMore(false);
               }}
               title="Mi cuenta"
-              style={{
-                width: '38px',
-                height: '38px',
-                borderRadius: '50%',
-                background: '#1e293b',
-                border: '1px solid #334155',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#94a3b8',
-                cursor: 'pointer',
-                fontWeight: 'bold',
-                fontSize: '12px',
-              }}
+              aria-label="Mi cuenta"
+              aria-expanded={openProfile}
+              className="w-[38px] h-[38px] p-0 rounded-full bg-white/[0.05] border border-[var(--border2-mockup)] flex items-center justify-center text-slate-300 font-bold text-xs cursor-pointer"
             >
               {initials}
             </button>
 
             {openProfile && (
               <div
-                className="dropdown-menu"
                 onMouseDown={(e) => e.stopPropagation()}
                 onTouchStart={(e) => e.stopPropagation()}
-                style={{
-                  position: 'absolute',
-                  width: '210px',
-                  background: '#081420',
-                  border: '1px solid #1e293b',
-                  borderRadius: '16px',
-                  padding: '8px',
-                  boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
-                  zIndex: 150,
-                }}
-              >
-                <div style={{ padding: '6px 12px 6px', fontSize: '11px', color: '#94a3b8', fontWeight: 600, borderBottom: '1px solid #1e293b', marginBottom: '4px' }}>
-                  <div className="text-white font-bold truncate">{userName}</div>
-                  <div className="text-emerald-400 text-[10px] capitalize">{roleLabel}</div>
-                </div>
-                <Link
-                  href={profileHref}
-                  onClick={() => setOpenProfile(false)}
-                  style={{
-                    width: '100%',
-                    background: 'transparent',
-                    textDecoration: 'none',
-                    color: '#cbd5e1',
-                    padding: '10px 12px',
-                    borderRadius: '10px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    cursor: 'pointer',
-                    fontSize: '0.9rem',
-                  }}
+                role="menu"
+                  className="dropdown-menu menu-panel"
                 >
-                  <User size={18} />
-                  Mi Perfil
-                </Link>
-                <button
-                  type="button"
-                  onClick={(e) => handleLogout(e)}
-                  style={{
-                    width: '100%',
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#ef4444',
-                    padding: '10px 12px',
-                    borderRadius: '10px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    cursor: 'pointer',
-                    fontSize: '0.9rem',
-                    textAlign: 'left',
-                  }}
-                >
-                  <LogOut size={18} />
+                  <div className="menu-head">
+                    <div className="text-white font-semibold truncate text-[13px]">{userName}</div>
+                    <div className="text-slate-400">{roleLabel}</div>
+                  </div>
+                  <Link href={profileHref} role="menuitem" onClick={() => setOpenProfile(false)} className="menu-item">
+                    <User size={17} aria-hidden />
+                    Mi perfil
+                  </Link>
+                  <button type="button" role="menuitem" onClick={(e) => handleLogout(e)} className="menu-item danger">
+                  <LogOut size={17} aria-hidden />
                   Cerrar sesión
                 </button>
               </div>

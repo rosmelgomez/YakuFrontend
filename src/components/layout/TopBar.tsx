@@ -61,7 +61,7 @@ function getNotificationIcon(severidad: AppNotification['severidad']) {
       return <CheckCircle2 size={16} className="text-emerald-400" />;
     case 'info':
     default:
-      return <Info size={16} className="text-indigo-400" />;
+      return <Info size={16} className="text-sky-400" />;
   }
 }
 
@@ -75,7 +75,7 @@ function getNotificationBg(severidad: AppNotification['severidad']) {
       return 'bg-emerald-500/15 border-emerald-500/30';
     case 'info':
     default:
-      return 'bg-indigo-500/15 border-indigo-500/30';
+      return 'bg-sky-500/15 border-sky-500/30';
   }
 }
 
@@ -134,7 +134,7 @@ export default function TopBar() {
   const isAdmin = location.pathname.startsWith('/dashboard/administrador');
 
   return (
-    <header className="w-full bg-[#030a1c]/90 backdrop-blur-md border-b border-slate-800/80 px-3.5 sm:px-6 py-2 sm:py-3 flex items-center justify-between shrink-0 sticky top-0 z-30">
+    <header className="w-full bg-[var(--background)]/85 backdrop-blur-md border-b border-[var(--border-mockup)] px-3.5 sm:px-6 py-2 sm:py-3 flex items-center justify-between shrink-0 sticky top-0 z-30">
       <div className="min-w-0 pr-2">
         <h1 className="font-bold text-white text-sm sm:text-lg leading-tight tracking-tight truncate">{currentInfo.title}</h1>
         {currentInfo.subtitle && (
@@ -143,9 +143,9 @@ export default function TopBar() {
       </div>
 
       <div className="flex items-center gap-4">
-        <span className="hidden sm:inline-block text-slate-400 text-xs font-mono capitalize">
+        <time className="hidden sm:inline-block text-slate-400 text-xs capitalize">
           {todayStr}
-        </span>
+        </time>
 
         {/* CONTENEDOR DEL BOTÓN Y PANEL FLOTANTE DE NOTIFICACIONES (SOLO PARA AGRICULTOR) */}
         {!isAdmin && (
@@ -153,17 +153,18 @@ export default function TopBar() {
           <button
             type="button"
             onClick={() => setIsOpen(!isOpen)}
-            className={`relative p-2.5 rounded-xl transition-all cursor-pointer border ${
+            className={`relative p-2 rounded-lg transition-colors cursor-pointer border ${
               isOpen
-                ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40 shadow-lg shadow-emerald-950/40'
-                : 'bg-slate-800/60 hover:bg-slate-800 text-slate-300 hover:text-white border-slate-700/50'
+                ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40'
+                : 'bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white border-[var(--border2-mockup)]'
             }`}
             title="Notificaciones y avisos"
-            aria-label="Ver notificaciones"
+            aria-label={unreadCount > 0 ? `Ver notificaciones (${unreadCount} sin leer)` : 'Ver notificaciones'}
+            aria-expanded={isOpen}
           >
             <Bell size={18} />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold shadow-md shadow-red-950/60 animate-pulse">
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold tabular-nums ring-2 ring-[var(--background)]">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
@@ -178,16 +179,16 @@ export default function TopBar() {
                 right: 0,
                 width: '380px',
                 maxWidth: 'calc(100vw - 32px)',
-                background: '#081420',
-                border: '1px solid #1e293b',
-                borderRadius: '20px',
-                boxShadow: '0 20px 50px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+                background: 'var(--popover)',
+                border: '1px solid var(--border2-mockup)',
+                borderRadius: '14px',
+                boxShadow: '0 20px 48px -12px rgba(0, 0, 0, 0.7)',
                 zIndex: 150,
                 overflow: 'hidden',
               }}
             >
               {/* CABECERA DE LA SECCIÓN FLOTANTE */}
-              <div className="px-4 py-3 border-b border-slate-800/80 flex items-center justify-between bg-slate-900/40">
+              <div className="px-4 py-3 border-b border-[var(--border-mockup)] flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-white text-sm">Notificaciones</span>
                   {unreadCount > 0 && (
@@ -211,6 +212,7 @@ export default function TopBar() {
                   <button
                     type="button"
                     onClick={() => setIsOpen(false)}
+                    aria-label="Cerrar notificaciones"
                     className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800/60 transition-colors bg-transparent border-none cursor-pointer"
                   >
                     <X size={15} />
@@ -237,6 +239,14 @@ export default function TopBar() {
                     return (
                       <div
                         key={item.id}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            (e.currentTarget as HTMLElement).click();
+                          }
+                        }}
                         onClick={() => {
                           markAsRead(item.id);
                           if (item.link) {
@@ -244,7 +254,7 @@ export default function TopBar() {
                             navigate(item.link);
                           }
                         }}
-                        className={`px-4 py-3 border-b border-slate-800/50 flex items-start gap-3 transition-colors cursor-pointer ${
+                        className={`px-4 py-3 border-b border-[var(--border-mockup)] flex items-start gap-3 transition-colors cursor-pointer ${
                           item.leida ? 'hover:bg-white/[0.03]' : 'bg-emerald-500/[0.04] hover:bg-emerald-500/[0.08]'
                         }`}
                       >
@@ -256,7 +266,7 @@ export default function TopBar() {
                             <p className={`text-xs font-semibold leading-tight truncate ${item.leida ? 'text-slate-300' : 'text-white'}`}>
                               {item.titulo}
                             </p>
-                            <span className="text-[10px] text-slate-500 font-mono shrink-0 ml-1">
+                            <span className="text-[11px] text-slate-500 tabular-nums shrink-0 ml-1">
                               {formatRelativeTime(item.timestamp)}
                             </span>
                           </div>
@@ -274,7 +284,7 @@ export default function TopBar() {
               </div>
 
               {/* PIE DE LA SECCIÓN FLOTANTE */}
-              <div className="px-4 py-2.5 bg-slate-900/60 border-t border-slate-800/80 flex items-center justify-between text-xs">
+              <div className="px-4 py-2.5 border-t border-[var(--border-mockup)] flex items-center justify-between text-xs">
                 <button
                   type="button"
                   onClick={() => {

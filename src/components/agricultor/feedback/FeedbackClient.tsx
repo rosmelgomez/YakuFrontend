@@ -5,6 +5,7 @@ import React, { useState } from "react";
 import { Icons } from "@/components/ui/Icons";
 import { crearFeedback } from "@/actions/feedback";
 import type { FeedbackPregunta, FeedbackItem } from "@/actions/feedback";
+import { Check, Sprout } from "lucide-react";
 
 interface FeedbackQuestionItem {
   id: number | string;
@@ -413,7 +414,7 @@ export default function FeedbackClient({
               <div className="metric-card p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="text-xs text-slate-400 text-center sm:text-left">
                   <p className="text-slate-300 font-medium mb-0.5">
-                    {allRequired ? "✓ Todas las preguntas obligatorias completadas" : "Faltan preguntas obligatorias por responder"}
+                    {allRequired ? <><Check size={13} className="inline -mt-0.5 mr-1 text-emerald-400" aria-hidden />Todas las preguntas obligatorias completadas</> : "Faltan preguntas obligatorias por responder"}
                   </p>
                   <p>Asegúrate de revisar tus respuestas antes de enviar.</p>
                 </div>
@@ -544,7 +545,7 @@ export default function FeedbackClient({
                             </h4>
                             {item.cultivo_nombre && (
                               <span className="chip status-water text-[10px] sm:text-xs">
-                                🌱 {item.cultivo_nombre}
+                                <Sprout size={11} aria-hidden />{item.cultivo_nombre}
                               </span>
                             )}
                             <span className="chip status-active text-[10px] sm:text-xs">
@@ -617,10 +618,10 @@ export default function FeedbackClient({
                                   <div className="pt-1">
                                     {resp.tipo === "select" ? (
                                       <span className="chip status-water text-xs font-medium inline-block">
-                                        ✓ {resp.respuesta_texto}
+                                        <Check size={11} aria-hidden className="inline -mt-0.5 mr-0.5" />{resp.respuesta_texto}
                                       </span>
                                     ) : (
-                                      <div className="bg-slate-950/60 border-l-2 border-emerald-500 pl-3 py-1.5 rounded-r text-xs text-slate-200">
+                                      <div className="bg-white/[0.03] border border-[var(--border-mockup)] px-3 py-1.5 rounded-lg text-xs text-slate-200">
                                         "{resp.respuesta_texto}"
                                       </div>
                                     )}

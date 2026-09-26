@@ -31,7 +31,7 @@ export default function DashboardConsumptionChart({ chartData, config, limite }:
     <div style={{ width: '100%', minWidth: '1px', height: '250px', minHeight: '220px', position: 'relative' }}>
       <ResponsiveContainer width="100%" height={250} minWidth={1} minHeight={200} initialDimension={{ width: 600, height: 250 }}>
         <LineChart data={safeData} margin={{ top: 10, right: 12, left: -6, bottom: 4 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#334155" strokeOpacity={0.5} vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#2c3a47" strokeOpacity={0.5} vertical={false} />
           <XAxis 
             dataKey="xLabel" 
             stroke="#94a3b8" 
@@ -50,8 +50,8 @@ export default function DashboardConsumptionChart({ chartData, config, limite }:
             tickFormatter={(val) => `${val}L`} 
           />
           <Tooltip 
-            contentStyle={{ background: '#111827', border: '1px solid #374151', borderRadius: '8px', color: '#fff', fontSize: '12px', padding: '6px 10px' }} 
-            labelStyle={{ color: '#9ca3af', marginBottom: '4px', fontWeight: 'bold' }} 
+            contentStyle={{ background: 'var(--popover)', border: '1px solid var(--border2-mockup)', borderRadius: '8px', color: 'var(--foreground)', boxShadow: '0 8px 24px -8px rgba(0,0,0,0.6)', fontSize: '12px', padding: '6px 10px' }} 
+            labelStyle={{ color: '#8fa6b7', marginBottom: '4px', fontWeight: 'bold' }} 
             formatter={(value: any) => [`${value} L`, config?.title || 'Consumo']} 
           />
           {limite !== null && Number.isFinite(Number(limite)) && (
@@ -68,7 +68,7 @@ export default function DashboardConsumptionChart({ chartData, config, limite }:
             stroke={config?.color || '#38bdf8'} 
             strokeWidth={2.5} 
             dot={{ r: 3.5, fill: config?.color || '#38bdf8' }} 
-            activeDot={{ r: 5.5, fill: config?.color || '#38bdf8', stroke: '#111827', strokeWidth: 2 }} 
+            activeDot={{ r: 5.5, fill: config?.color || '#38bdf8', stroke: '#131a1f', strokeWidth: 2 }} 
             connectNulls 
           />
         </LineChart>

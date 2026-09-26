@@ -5,6 +5,24 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Escala slate de Tailwind remapeada a la rampa neutra de Yaku (azul-verdosa,
+   la misma de --background/--card/--muted). Así las clases bg-slate-900,
+   text-slate-400... de todas las pantallas usan los grises del sistema en
+   lugar del slate azul marino por defecto, que chocaba con los tokens. */
+@theme {
+  --color-slate-50: #f3f7fa;
+  --color-slate-100: #e6eff6;
+  --color-slate-200: #d4e4f0;
+  --color-slate-300: #b4c6d3;
+  --color-slate-400: #8fa6b7;
+  --color-slate-500: #6b8aa0;
+  --color-slate-600: #4a6072;
+  --color-slate-700: #2c3a47;
+  --color-slate-800: #1c2631;
+  --color-slate-900: #121920;
+  --color-slate-950: #090d11;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -318,9 +336,6 @@
   margin-inline: auto;
 }
 
-section {
-  padding-block: var(--space-lg, clamp(2rem, 5vw, 5rem));
-}
 
 .card {
   padding: var(--space-md, clamp(1rem, 2vw, 2rem));
@@ -385,37 +400,63 @@ section {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Controles con target táctil accesible (WCAG 2.2 Target Size ~44x44px) */
-button, .button {
-  padding: 0.75rem 1rem;
-  touch-action: manipulation;
+/* Reglas de elementos en @layer base: antes estaban fuera de capa y, por
+   cascade layers, ganaban a TODAS las utilidades de Tailwind (un botón con
+   `h-8 px-2` se pintaba con 44px de alto y 12px 16px de padding). Dentro de
+   base siguen aplicando a elementos sin estilo, pero las utilidades mandan. */
+@layer base {
+  button, .button {
+    padding: 0.75rem 1rem;
+    touch-action: manipulation;
+  }
+
+  input, select, textarea {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* El <select> nativo hereda color-scheme para que su menú desplegable
+     (incluidas las <option>) se pinte oscuro en vez del blanco por defecto. */
+  select {
+    color-scheme: dark;
+  }
+
+  select option {
+    background-color: var(--popover);
+    color: var(--foreground);
+  }
+
+  ::selection {
+    background: rgba(34, 197, 94, 0.32);
+    color: #f0fdf4;
+  }
+
+  input, textarea {
+    caret-color: var(--green);
+  }
+
+  input[type="checkbox"], input[type="radio"], input[type="range"], progress {
+    accent-color: var(--green);
+  }
+
+  /* Números de tablas, métricas y relojes con ancho fijo por dígito. */
+  table, time, .tabular-nums, [data-numeric] {
+    font-variant-numeric: tabular-nums;
+  }
 }
 
-/* :not(.rt-TextFieldInput) excluye el input interno de Radix TextField.Root:
-   ese componente ya gestiona su propia altura via su wrapper .rt-TextFieldRoot,
-   y forzar min-height aquí solo hace que el input interno se desborde por
-   debajo del recuadro visible, descentrando el texto. */
-button:where(:not([role="switch"]):not([role="checkbox"]):not(.btn-compact)),
-input:not([type="checkbox"]):not([type="radio"]):not(.rt-TextFieldInput),
-select,
-textarea:not(.rt-TextAreaInput) {
-  min-height: 2.75rem;
-}
-
-input, select, textarea {
-  width: 100%;
-  max-width: 100%;
-}
-
-/* El <select> nativo hereda color-scheme para que su menú desplegable
-   (incluidas las <option>) se pinte oscuro en vez del blanco por defecto del SO/navegador. */
-select {
-  color-scheme: dark;
-}
-
-select option {
-  background-color: var(--popover);
-  color: var(--foreground);
+/* Target táctil de 44px solo con puntero grueso (WCAG 2.2 2.5.8 pide >=24px;
+   44px es la recomendación táctil). :not(.rt-TextFieldInput) excluye el input
+   interno de Radix TextField.Root, que ya gestiona su altura en su wrapper. */
+@media (pointer: coarse) {
+  @layer base {
+    button:where(:not([role="switch"]):not([role="checkbox"]):not(.btn-compact)),
+    input:not([type="checkbox"]):not([type="radio"]):not(.rt-TextFieldInput),
+    select,
+    textarea:not(.rt-TextAreaInput) {
+      min-height: 2.75rem;
+    }
+  }
 }
 
 /* =========================================================
@@ -644,4 +685,66 @@ select option {
 
 .fade-in {
   animation: fadeIn 0.3s ease;
+}
+
+/* =========================================================
+   RADIX THEMES ALINEADO A LOS TOKENS DE YAKU
+   Las tarjetas, diálogos y menús de Radix usan la misma superficie,
+   tipografía y cursores que el resto de la app, sin estilos inline.
+   ========================================================= */
+.radix-themes.radix-themes {
+  --default-font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --code-font-family: var(--font-mono);
+  --color-background: var(--background);
+  --color-panel-solid: var(--card);
+  --color-panel-translucent: color-mix(in srgb, var(--card) 88%, transparent);
+  --color-surface: rgba(255, 255, 255, 0.03);
+  --cursor-button: pointer;
+  --cursor-checkbox: pointer;
+  --cursor-switch: pointer;
+  --cursor-radio: pointer;
+  --cursor-link: pointer;
+  --cursor-menu-item: pointer;
+  --cursor-slider-thumb: grab;
+  --cursor-slider-thumb-active: grabbing;
+  --cursor-disabled: not-allowed;
+}
+
+/* Primitivas compartidas (HelpNote, números tabulares, pestañas de Control) */
+@layer components {
+  .control-help {
+    background: var(--bluebg);
+    border: 1px solid var(--bluebrd);
+    border-radius: 10px;
+  }
+  .control-help > summary {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #bae6fd;
+    border-radius: 10px;
+  }
+  .control-help > summary::-webkit-details-marker { display: none; }
+  .control-help > summary:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .control-help-chevron { color: var(--muted-foreground); transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1); }
+  .control-help[open] .control-help-chevron { transform: rotate(180deg); }
+  .control-help-body {
+    padding: 0 14px 12px 40px;
+    font-size: 0.8125rem;
+    line-height: 1.55;
+    color: #a5bccd;
+  }
+  .control-help-body p { margin: 0 0 6px; max-width: 70ch; }
+  .control-help-body strong { color: var(--foreground); }
+  .control-tabs [role="tab"] { cursor: pointer; flex: 1; gap: 8px; }
+  .control-tabs [role="tab"] svg { flex-shrink: 0; }
+  .control-num { font-variant-numeric: tabular-nums; }
+  .threshold-input::-webkit-outer-spin-button,
+  .threshold-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .threshold-input { -moz-appearance: textfield; }
 }

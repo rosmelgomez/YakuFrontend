@@ -48,7 +48,7 @@ export default function MLPredictionChart({ historial, umbral }: any) {
       <div className="w-full flex-1 min-w-0" style={{ height: '220px', minHeight: '200px' }}>
         <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={190}>
           <LineChart data={chartData} margin={{ top: 8, right: 10, left: -10, bottom: 2 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#334155" strokeOpacity={0.6} vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#2c3a47" strokeOpacity={0.6} vertical={false} />
             <XAxis dataKey="hora" stroke="#94a3b8" fontSize={10} tickMargin={6} tickLine={false} interval="preserveStartEnd" />
             
             {/* Eje Y para Humedad (%) */}
@@ -58,8 +58,8 @@ export default function MLPredictionChart({ historial, umbral }: any) {
             <YAxis yAxisId="temperatura" orientation="right" stroke="#94a3b8" fontSize={10} tickFormatter={(val) => `${val}°`} domain={[0, 50]} width={28} tickLine={false} />
             
             <Tooltip 
-              contentStyle={{ background: '#111827', border: '1px solid #374151', borderRadius: '8px', color: '#fff', fontSize: '11px', padding: '6px 10px' }} 
-              labelStyle={{ color: '#9ca3af', marginBottom: '2px', fontWeight: 'bold' }}
+              contentStyle={{ background: 'var(--popover)', border: '1px solid var(--border2-mockup)', borderRadius: '8px', color: 'var(--foreground)', boxShadow: '0 8px 24px -8px rgba(0,0,0,0.6)', fontSize: '11px', padding: '6px 10px' }} 
+              labelStyle={{ color: '#8fa6b7', marginBottom: '2px', fontWeight: 'bold' }}
             />
             <Legend verticalAlign="top" height={26} iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '10px', paddingBottom: '4px' }} />
 

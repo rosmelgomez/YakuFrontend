@@ -23,7 +23,7 @@ export default function DashboardHealthGauge({ saludData, colorSalud }: any) {
             isAnimationActive={false}
           >
             {safeData.map((_entry: any, index: number) => (
-              <Cell key={`cell-${index}`} fill={index === 0 ? (colorSalud || '#22c55e') : '#1e293b'} />
+              <Cell key={`cell-${index}`} fill={index === 0 ? (colorSalud || '#22c55e') : '#1c2631'} />
             ))}
           </Pie>
         </PieChart>

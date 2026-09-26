@@ -15,22 +15,26 @@ import {
   ScrollArea,
   Button
 } from '@radix-ui/themes';
-import { 
-  Users, 
-  Cpu, 
-  Leaf,
-  Droplets,
+import { IconTile } from "@/components/ui/yaku-ui";
+import {
   Activity,
-  Wifi,
-  Trophy,
-  Sprout,
-  UserPlus,
-  Layers,
   Brain,
-  Search,
+  BrainCircuit,
+  Cpu,
   Database,
-  Filter
-} from 'lucide-react';
+  Droplets,
+  Filter,
+  Layers,
+  LayoutDashboard,
+  Leaf,
+  Search,
+  Settings2,
+  Sprout,
+  Trophy,
+  UserPlus,
+  Users,
+  Wifi,
+} from "lucide-react";
 import SearchableSelect from '@/components/ui/SearchableSelect';
 import { 
   ResponsiveContainer, 
@@ -48,8 +52,8 @@ import {
   Area
 } from 'recharts';
 
-const CARD_STYLE = { background: '#111827', borderColor: '#1f2937' };
-const TOOLTIP_STYLE = { background: '#1f2937', borderColor: '#374151', color: 'white', fontSize: 11, borderRadius: 8 };
+const CARD_STYLE = { background: "var(--surface-mockup)", borderColor: "var(--border-mockup)" };
+const TOOLTIP_STYLE = { background: '#1c2631', borderColor: '#2c3a47', color: 'white', fontSize: 11, borderRadius: 8 };
 // Resaltado sutil al pasar el cursor sobre las barras (reemplaza el fondo blanco por defecto de Recharts)
 const BAR_CURSOR = { fill: 'rgba(148, 163, 184, 0.08)' };
 
@@ -57,7 +61,7 @@ const DEVICE_STATE_COLORS: Record<string, string> = {
   asignado: '#10b981',
   disponible: '#3b82f6',
   reparacion: '#f59e0b',
-  retirado: '#64748b',
+  retirado: '#6b8aa0',
 };
 
 const DEVICE_STATE_LABELS: Record<string, string> = {
@@ -67,7 +71,7 @@ const DEVICE_STATE_LABELS: Record<string, string> = {
   retirado: 'Retirados',
 };
 
-const PLANT_COLORS = ['#10b981', '#22c55e', '#84cc16', '#14b8a6', '#06b6d4', '#0ea5e9', '#6366f1'];
+const PLANT_COLORS = ['#10b981', '#22c55e', '#84cc16', '#14b8a6', '#06b6d4', '#0ea5e9', '#8b5cf6'];
 
 function ChartHeader({ icon, title, subtitle }: { icon: React.ReactNode; title: string; subtitle: string }) {
   return (
@@ -234,7 +238,7 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
       p.cultivo_nombre.toLowerCase().includes(predSearch.toLowerCase()) ||
       p.recomendacion.toLowerCase().includes(predSearch.toLowerCase()) ||
       p.modelo_nombre.toLowerCase().includes(predSearch.toLowerCase());
-    
+
     const matchesUserFilter = filterUserId === 'all' || p.id_usuario.toString() === filterUserId;
     const matchesCropFilter = filterCropId === 'all' || p.id_cultivo?.toString() === filterCropId;
 
@@ -245,7 +249,7 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
   const totalPreds = filteredPreds.length;
   const riegoPredsCount = filteredPreds.filter(p => p.recomendacion.toLowerCase() === 'riego').length;
   const noRiegoPredsCount = totalPreds - riegoPredsCount;
-  
+
   const executionRate = totalPreds > 0 
     ? Math.round((filteredPreds.filter(p => p.accion_ejecutada).length / totalPreds) * 100) 
     : 0;
@@ -257,7 +261,7 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
   // Pie chart data
   const pieData = [
     { name: 'Recomienda Riego', value: riegoPredsCount, color: '#3b82f6' },
-    { name: 'Recomienda No Riego', value: noRiegoPredsCount, color: '#64748b' }
+    { name: 'Recomienda No Riego', value: noRiegoPredsCount, color: '#6b8aa0' }
   ].filter(d => d.value > 0);
 
   const formatFecha = (isoString: string) => {
@@ -272,19 +276,22 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
   return (
     <Box style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* HEADER */}
-      <Flex direction="column" gap="1">
-        <Text size={{ initial: "5", sm: "6" }} weight="bold" color="indigo" as="div">
-          Resumen General del Sistema
-        </Text>
-        <Text size="2" color="gray" style={{ fontFamily: 'monospace' }}>
-          Métricas consolidadas de infraestructura, auditoría y análisis predictivo global.
-        </Text>
+      <Flex align="center" gap="3">
+        <IconTile icon={LayoutDashboard} t="green" size={40} />
+        <Flex direction="column" gap="1">
+          <Text size={{ initial: "5", sm: "6" }} weight="bold" as="div" style={{ color: "var(--foreground)", letterSpacing: "-0.02em" }}>
+            Resumen general del sistema
+          </Text>
+          <Text size="2" color="gray">
+            Métricas consolidadas de infraestructura, auditoría y análisis predictivo global.
+          </Text>
+        </Flex>
       </Flex>
 
       {/* FILTER BAR */}
-      <Card size={{ initial: "1", sm: "2" }} style={{ background: '#111827', borderColor: '#1f2937' }}>
+      <Card size={{ initial: "1", sm: "2" }} style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)" }}>
         <Flex direction={{ initial: 'column', sm: 'row' }} gap="3" align={{ sm: 'center' }}>
-          <Flex align="center" gap="2" style={{ color: '#818cf8' }}>
+          <Flex align="center" gap="2" style={{ color: '#a78bfa' }}>
             <Filter size={15} />
             <Text size="2" weight="bold">Filtros Globales:</Text>
           </Flex>
@@ -297,7 +304,7 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
               onValueChange={handleUserFilterChange}
               placeholder="Seleccionar agricultor..."
               searchPlaceholder="Buscar agricultor..."
-              style={{ background: '#1e293b' }}
+              style={{ background: 'var(--bg-mockup)' }}
               options={[
                 { value: 'all', label: 'Todos los agricultores' },
                 ...usuarios_filtro.map(u => ({ value: u.id.toString(), label: `${u.nombre} ${u.apellido || ''} (${u.correo})` })),
@@ -314,7 +321,7 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
               disabled={filterUserId === 'all'}
               placeholder={filterUserId === 'all' ? "Primero elija agricultor..." : "Seleccionar cultivo..."}
               searchPlaceholder="Buscar cultivo..."
-              style={{ background: '#1e293b' }}
+              style={{ background: 'var(--bg-mockup)' }}
               options={[
                 { value: 'all', label: 'Todos los cultivos' },
                 ...availableCropsForSelect.map(c => ({ value: c.id.toString(), label: c.nombre_planta })),
@@ -327,7 +334,7 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
       {/* METRIC CARDS */}
       <Grid columns={{ initial: '2', sm: '2', md: '4' }} gap={{ initial: "2", sm: "3" }}>
         {/* Usuarios */}
-        <Card size="1" style={{ background: '#111827', borderColor: '#1f2937' }}>
+        <Card size="1" style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)" }}>
           <Flex align="center" gap="2.5">
             <Box style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '8px', borderRadius: '10px' }}>
               <Users size={20} color="#3b82f6" />
@@ -343,7 +350,7 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
         </Card>
 
         {/* Dispositivos */}
-        <Card size="1" style={{ background: '#111827', borderColor: '#1f2937' }}>
+        <Card size="1" style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)" }}>
           <Flex align="center" gap="2.5">
             <Box style={{ background: 'rgba(168, 85, 247, 0.1)', padding: '8px', borderRadius: '10px' }}>
               <Cpu size={20} color="#a855f7" />
@@ -359,7 +366,7 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
         </Card>
 
         {/* Cultivos */}
-        <Card size="1" style={{ background: '#111827', borderColor: '#1f2937' }}>
+        <Card size="1" style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)" }}>
           <Flex align="center" gap="2.5">
             <Box style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '8px', borderRadius: '10px' }}>
               <Leaf size={20} color="#10b981" />
@@ -393,7 +400,7 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
       {/* CHARTS CONTAINER */}
       <Grid columns={{ initial: '1', lg: '3' }} gap={{ initial: "3", sm: "4" }}>
         {/* Consumo Semanal */}
-        <Card size={{ initial: "2", sm: "3" }} className="col-span-1 lg:col-span-2" style={{ background: '#111827', borderColor: '#1f2937' }}>
+        <Card size={{ initial: "2", sm: "3" }} className="col-span-1 lg:col-span-2" style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)" }}>
           <Flex direction="column" gap="2" mb="3">
             <Flex align="center" gap="2">
               <Activity size={18} color="#3b82f6" />
@@ -405,14 +412,14 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
           <Box style={{ width: '100%', minWidth: 0, height: '260px' }}>
             <ResponsiveContainer width="100%" height={260} minWidth={0}>
               <BarChart data={consumo_semanal} margin={{ top: 10, right: 10, left: -5, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
-                <XAxis dataKey="fecha" stroke="#94a3b8" fontSize={10} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#1c2631" vertical={false} />
+                <XAxis dataKey="fecha" stroke="#8fa6b7" fontSize={10} />
                 <YAxis yAxisId="left" stroke="#3b82f6" fontSize={10} label={{ value: 'Litros', angle: -90, position: 'insideLeft', fill: '#3b82f6', style: {fontSize: 10} }} />
                 <YAxis yAxisId="right" orientation="right" stroke="#10b981" fontSize={10} allowDecimals={false} label={{ value: 'Riegos', angle: 90, position: 'insideRight', fill: '#10b981', style: {fontSize: 10} }} />
                 <Tooltip
                   cursor={BAR_CURSOR}
                   contentStyle={TOOLTIP_STYLE}
-                  labelStyle={{ fontWeight: 'bold', color: '#818cf8' }}
+                  labelStyle={{ fontWeight: 'bold', color: '#a78bfa' }}
                 />
                 <Legend wrapperStyle={{ fontSize: 11, paddingTop: 6 }} />
                 <Bar yAxisId="left" dataKey="litros" name="Agua Consumida (L)" fill="#3b82f6" radius={[4, 4, 0, 0]} />
@@ -423,7 +430,7 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
         </Card>
 
         {/* ML Summary stats */}
-        <Card size={{ initial: "2", sm: "3" }} style={{ background: '#111827', borderColor: '#1f2937' }}>
+        <Card size={{ initial: "2", sm: "3" }} style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)" }}>
           <Flex direction="column" gap="2" mb="3">
             <Flex align="center" gap="2">
               <Brain size={18} color="#a855f7" />
@@ -433,15 +440,15 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
           </Flex>
 
           <Flex direction="column" gap="4">
-            <Flex justify="between" style={{ borderBottom: '1px solid #1f2937', paddingBottom: '8px' }}>
+            <Flex justify="between" style={{ borderBottom: '1px solid #1c2631', paddingBottom: '8px' }}>
               <Text size="2" color="gray">Confianza Promedio de Predicción</Text>
               <Text size="2" weight="bold" color="purple">{avgConfidence}%</Text>
             </Flex>
-            <Flex justify="between" style={{ borderBottom: '1px solid #1f2937', paddingBottom: '8px' }}>
+            <Flex justify="between" style={{ borderBottom: '1px solid #1c2631', paddingBottom: '8px' }}>
               <Text size="2" color="gray">Tasa de Adopción / Ejecución</Text>
               <Text size="2" weight="bold" color="green">{executionRate}%</Text>
             </Flex>
-            <Flex justify="between" style={{ borderBottom: '1px solid #1f2937', paddingBottom: '8px' }}>
+            <Flex justify="between" style={{ borderBottom: '1px solid #1c2631', paddingBottom: '8px' }}>
               <Text size="2" color="gray">Predicciones Totales Filtradas</Text>
               <Text size="2" weight="bold" style={{ color: 'white' }}>{totalPreds}</Text>
             </Flex>
@@ -538,9 +545,9 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
             {top_consumo.length > 0 ? (
               <ResponsiveContainer width="100%" height={230} minWidth={0}>
                 <BarChart data={top_consumo} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" horizontal={false} />
-                  <XAxis type="number" stroke="#94a3b8" fontSize={10} />
-                  <YAxis type="category" dataKey="nombre" stroke="#94a3b8" fontSize={10} width={90} tickFormatter={(v: string) => v.length > 13 ? `${v.slice(0, 12)}…` : v} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1c2631" horizontal={false} />
+                  <XAxis type="number" stroke="#8fa6b7" fontSize={10} />
+                  <YAxis type="category" dataKey="nombre" stroke="#8fa6b7" fontSize={10} width={90} tickFormatter={(v: string) => v.length > 13 ? `${v.slice(0, 12)}…` : v} />
                   <Tooltip
                     cursor={BAR_CURSOR}
                     contentStyle={TOOLTIP_STYLE}
@@ -567,9 +574,9 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
             {plantData.length > 0 ? (
               <ResponsiveContainer width="100%" height={230} minWidth={0}>
                 <BarChart data={plantData} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" horizontal={false} />
-                  <XAxis type="number" stroke="#94a3b8" fontSize={10} allowDecimals={false} />
-                  <YAxis type="category" dataKey="planta" stroke="#94a3b8" fontSize={10} width={90} tickFormatter={(v: string) => v.length > 13 ? `${v.slice(0, 12)}…` : v} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1c2631" horizontal={false} />
+                  <XAxis type="number" stroke="#8fa6b7" fontSize={10} allowDecimals={false} />
+                  <YAxis type="category" dataKey="planta" stroke="#8fa6b7" fontSize={10} width={90} tickFormatter={(v: string) => v.length > 13 ? `${v.slice(0, 12)}…` : v} />
                   <Tooltip
                     cursor={BAR_CURSOR}
                     contentStyle={TOOLTIP_STYLE}
@@ -595,19 +602,19 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
         {/* Riegos por tipo */}
         <Card size={{ initial: "2", sm: "3" }} style={CARD_STYLE}>
           <ChartHeader
-            icon={<Layers size={18} color="#818cf8" />}
+            icon={<Layers size={18} color="#4ade80" />}
             title="Origen de los Riegos"
             subtitle="Riegos diarios según su origen: automático (ML), programado o manual."
           />
           <Box style={{ height: '240px', width: '100%', minWidth: 0 }}>
             <ResponsiveContainer width="100%" height={240} minWidth={0}>
               <BarChart data={consumo_semanal} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
-                <XAxis dataKey="fecha" stroke="#94a3b8" fontSize={10} />
-                <YAxis stroke="#94a3b8" fontSize={10} allowDecimals={false} />
-                <Tooltip cursor={BAR_CURSOR} contentStyle={TOOLTIP_STYLE} labelStyle={{ fontWeight: 'bold', color: '#818cf8' }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#1c2631" vertical={false} />
+                <XAxis dataKey="fecha" stroke="#8fa6b7" fontSize={10} />
+                <YAxis stroke="#8fa6b7" fontSize={10} allowDecimals={false} />
+                <Tooltip cursor={BAR_CURSOR} contentStyle={TOOLTIP_STYLE} labelStyle={{ fontWeight: 'bold', color: '#a78bfa' }} />
                 <Legend wrapperStyle={{ fontSize: 11, paddingTop: 6 }} />
-                <Bar dataKey="automatico" name="Automático (ML)" stackId="tipo" fill="#6366f1" />
+                <Bar dataKey="automatico" name="Automático (ML)" stackId="tipo" fill="#8b5cf6" />
                 <Bar dataKey="programado" name="Programado" stackId="tipo" fill="#06b6d4" />
                 <Bar dataKey="manual" name="Manual" stackId="tipo" fill="#f59e0b" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -631,9 +638,9 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
                     <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
-                <XAxis dataKey="mes" stroke="#94a3b8" fontSize={10} />
-                <YAxis stroke="#94a3b8" fontSize={10} allowDecimals={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#1c2631" vertical={false} />
+                <XAxis dataKey="mes" stroke="#8fa6b7" fontSize={10} />
+                <YAxis stroke="#8fa6b7" fontSize={10} allowDecimals={false} />
                 <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={{ fontWeight: 'bold', color: '#60a5fa' }} formatter={(value: any) => [value, 'Nuevos agricultores']} />
                 <Area type="monotone" dataKey="agricultores" stroke="#3b82f6" strokeWidth={2} fill="url(#adminRegistrosGradient)" dot={{ r: 3, fill: '#3b82f6' }} activeDot={{ r: 5 }} />
               </AreaChart>
@@ -646,36 +653,36 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
       <Tabs.Root defaultValue="ml_preds">
         <Tabs.List style={{
           marginBottom: '1.25rem',
-          background: '#111827',
+          background: '#131a1f',
           borderRadius: '12px',
           padding: '4px',
-          border: '1px solid #1f2937',
+          border: '1px solid #1c2631',
           overflowX: 'auto',
           whiteSpace: 'nowrap',
           maxWidth: '100%'
         }}>
           <Tabs.Trigger value="ml_preds" style={{ cursor: 'pointer', padding: '6px 12px', fontSize: '0.8rem' }}>
-            🤖 Predicciones ML
+            <BrainCircuit size={14} aria-hidden /> Predicciones ML
           </Tabs.Trigger>
           <Tabs.Trigger value="ml_models" style={{ cursor: 'pointer', padding: '6px 12px', fontSize: '0.8rem' }}>
-            ⚙️ Modelos ML
+            <Settings2 size={14} aria-hidden /> Modelos ML
           </Tabs.Trigger>
         </Tabs.List>
 
         <Box pt="1">
           {/* TAB 1: PREDICCIONES */}
           <Tabs.Content value="ml_preds">
-            <Card size={{ initial: "2", sm: "3" }} style={{ background: '#111827', borderColor: '#1f2937', borderRadius: '16px' }}>
+            <Card size={{ initial: "2", sm: "3" }} style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: '16px' }}>
               <Flex justify="between" align={{ initial: 'stretch', sm: 'center' }} direction={{ initial: 'column', sm: 'row' }} mb="4" gap="3">
-                <Text size={{ initial: "2", sm: "3" }} weight="bold" color="indigo">Predicciones de Riego Recientes</Text>
+                <Text size="2" weight="bold" style={{ color: "var(--foreground)" }}>Predicciones de Riego Recientes</Text>
                 <TextField.Root 
                   placeholder="Buscar por agricultor o cultivo..." 
                   value={predSearch}
                   onChange={(e) => { setPredSearch(e.target.value); setCurrentPagePreds(1); }}
-                  style={{ background: '#1e293b', width: '100%', maxWidth: '300px', color: 'white' }}
+                  style={{ background: '#1c2631', width: '100%', maxWidth: '300px', color: 'white' }}
                 >
                   <TextField.Slot>
-                    <Search size={14} color="#94a3b8" />
+                    <Search size={14} color="#8fa6b7" />
                   </TextField.Slot>
                 </TextField.Root>
               </Flex>
@@ -697,7 +704,7 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
                   <Table.Body>
                     {filteredPreds.length === 0 ? (
                       <Table.Row>
-                        <Table.Cell colSpan={7} style={{ textAlign: 'center', color: '#64748b' }}>
+                        <Table.Cell colSpan={7} style={{ textAlign: 'center', color: '#6b8aa0' }}>
                           No hay predicciones disponibles para el filtro actual.
                         </Table.Cell>
                       </Table.Row>
@@ -759,7 +766,7 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
                     >
                       ‹
                     </Button>
-                    <Flex align="center" px="2" style={{ background: '#1e293b', borderRadius: '4px', height: '24px' }}>
+                    <Flex align="center" px="2" style={{ background: '#1c2631', borderRadius: '4px', height: '24px' }}>
                       <Text size="1" weight="bold" style={{ color: 'white' }}>
                         {currentPagePreds} / {Math.ceil(filteredPreds.length / pageSizePreds)}
                       </Text>
@@ -792,8 +799,8 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
 
           {/* TAB 2: MODELOS */}
           <Tabs.Content value="ml_models">
-            <Card size={{ initial: "2", sm: "3" }} style={{ background: '#111827', borderColor: '#1f2937', borderRadius: '16px' }}>
-              <Text size={{ initial: "2", sm: "3" }} weight="bold" color="indigo" mb="4" as="div">Modelos de Aprendizaje Automático Disponibles</Text>
+            <Card size={{ initial: "2", sm: "3" }} style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: '16px' }}>
+              <Text size="2" weight="bold" mb="4" as="div" style={{ color: "var(--foreground)" }}>Modelos de Aprendizaje Automático Disponibles</Text>
 
               <ScrollArea style={{ height: '500px' }}>
                 <Table.Root variant="surface" style={{ background: 'transparent' }}>
@@ -819,7 +826,7 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
                             <Text size="2" weight="bold" style={{ color: 'white' }}>{m.nombre_modelo}</Text>
                           </Flex>
                         </Table.RowHeaderCell>
-                        <Table.Cell style={{ fontFamily: 'monospace', fontSize: '11px' }}>{m.algoritmo}</Table.Cell>
+                        <Table.Cell style={{ fontSize: '12px' }}>{m.algoritmo}</Table.Cell>
                         <Table.Cell>
                           <Text style={{ color: '#f43f5e' }} weight="bold">
                             {m.precision_modelo !== null ? `${m.precision_modelo.toFixed(2)} %` : '--'}
@@ -877,7 +884,7 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
                     >
                       ‹
                     </Button>
-                    <Flex align="center" px="2" style={{ background: '#1e293b', borderRadius: '4px', height: '24px' }}>
+                    <Flex align="center" px="2" style={{ background: '#1c2631', borderRadius: '4px', height: '24px' }}>
                       <Text size="1" weight="bold" style={{ color: 'white' }}>
                         {currentPageModels} / {Math.ceil(modelos.length / pageSizeModels)}
                       </Text>

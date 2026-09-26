@@ -5,6 +5,7 @@ import { Badge, Box, Button, Card, Flex, Grid, ScrollArea, Table, Text, TextFiel
 import { Plus, Warehouse } from "lucide-react";
 import { eliminarAlmacen, registrarAlmacen } from "@/actions/almacenes";
 import SearchableSelect from "@/components/ui/SearchableSelect";
+import { IconTile } from "@/components/ui/yaku-ui";
 
 export default function AlmacenesClient({ initialAlmacenes = [], initialDevices = [], regiones = [], provincias = [], distritos = [] }: any) {
   const [almacenesList] = useState(initialAlmacenes);
@@ -63,17 +64,20 @@ export default function AlmacenesClient({ initialAlmacenes = [], initialDevices 
   return (
     <Box style={{ opacity: isPending ? 0.6 : 1, transition: "opacity 0.2s" }}>
       <Flex direction="column" gap="4" mb="5">
-        <Box>
-          <Text size={{ initial: "5", sm: "6" }} weight="bold" color="indigo" as="div">Almacenes</Text>
-          <Text size={{ initial: "1", sm: "2" }} color="gray" style={{ fontFamily: "monospace" }}>Gestiona ubicaciones físicas e inventario.</Text>
-        </Box>
+        <Flex align="center" gap="3">
+          <IconTile icon={Warehouse} t="green" size={40} />
+          <Box>
+            <Text size={{ initial: "5", sm: "6" }} weight="bold" as="div" style={{ color: "var(--foreground)", letterSpacing: "-0.02em" }}>Almacenes</Text>
+            <Text size={{ initial: "1", sm: "2" }} color="gray">Gestiona ubicaciones físicas e inventario.</Text>
+          </Box>
+        </Flex>
       </Flex>
 
       <Grid columns={{ initial: "1", lg: "3" }} gap="5">
         <Card size={{ initial: "2", sm: "3" }} style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
-          <Flex align="center" gap="2" mb="4">
-            <Plus size={20} color="#818cf8" />
-            <Text size={{ initial: "3", sm: "4" }} weight="bold" color="indigo" as="div">Registrar Nuevo Almacén</Text>
+          <Flex align="center" gap="3" mb="4">
+            <IconTile icon={Plus} t="green" />
+            <Text size="3" weight="bold" as="div">Registrar Nuevo Almacén</Text>
           </Flex>
           <form onSubmit={handleRegisterAlmacenSubmit}>
             <Flex direction="column" gap="3">
@@ -102,16 +106,16 @@ export default function AlmacenesClient({ initialAlmacenes = [], initialDevices 
                 options={filteredDistritos.map((dist: any) => ({ value: dist.id.toString(), label: dist.nombre }))}
               />
               <TextField.Root placeholder="Direccion fisica" value={newAlmacenDireccion} onChange={(e) => setNewAlmacenDireccion(e.target.value)} />
-              <Button type="submit" color="indigo" mt="3" disabled={!newAlmacenNombre || !newAlmacenDistritoId}>Crear Almacen</Button>
+              <Button type="submit" mt="3" disabled={!newAlmacenNombre || !newAlmacenDistritoId}>Crear Almacen</Button>
             </Flex>
           </form>
         </Card>
 
         <Box className="col-span-1 lg:col-span-2">
           <Card size={{ initial: "2", sm: "3" }} style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
-            <Flex align="center" gap="2" mb="4">
-              <Warehouse size={20} color="#34d399" />
-              <Text size={{ initial: "3", sm: "4" }} weight="bold" color="indigo" as="div">Almacenes y Stock Físico</Text>
+            <Flex align="center" gap="3" mb="4">
+              <IconTile icon={Warehouse} t="green" />
+              <Text size="3" weight="bold" as="div">Almacenes y Stock Físico</Text>
             </Flex>
             <ScrollArea scrollbars="horizontal" style={{ width: "100%" }}>
               <Table.Root variant="surface" style={{ background: "transparent", minWidth: "500px" }}>

@@ -39,14 +39,14 @@ export default function FloatingToast({ alerta, onClose }: FloatingToastProps) {
       border: 'border-amber-500/30 hover:border-amber-500/50',
       shadow: 'shadow-amber-500/5',
       text: 'text-amber-400',
-      icon: <AlertTriangle className="w-5 h-5 text-amber-400 animate-bounce" />
+      icon: <AlertTriangle className="w-5 h-5 text-amber-400" />
     },
     critica: {
       gradient: 'from-red-500/10 to-rose-500/10',
       border: 'border-red-500/30 hover:border-red-500/50',
       shadow: 'shadow-red-500/5',
       text: 'text-red-400',
-      icon: <AlertTriangle className="w-5 h-5 text-red-400 animate-bounce" />
+      icon: <AlertTriangle className="w-5 h-5 text-red-400" />
     },
     exito: {
       gradient: 'from-emerald-500/10 to-teal-500/10',

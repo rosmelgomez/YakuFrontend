@@ -80,7 +80,7 @@ export default function DashboardHistoryChart({ chartData, config, umbralVisual,
                 <stop offset="100%" stopColor={color} stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#334155" strokeOpacity={0.5} vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#2c3a47" strokeOpacity={0.5} vertical={false} />
             <XAxis
               dataKey="ts"
               type="number"
@@ -104,8 +104,8 @@ export default function DashboardHistoryChart({ chartData, config, umbralVisual,
             />
             <Tooltip
               cursor={{ stroke: '#94a3b8', strokeDasharray: '3 3' }}
-              contentStyle={{ background: '#111827', border: '1px solid #374151', borderRadius: '8px', color: '#fff', fontSize: '12px', padding: '6px 10px' }}
-              labelStyle={{ color: '#9ca3af', marginBottom: '4px', fontWeight: 'bold' }}
+              contentStyle={{ background: 'var(--popover)', border: '1px solid var(--border2-mockup)', borderRadius: '8px', color: 'var(--foreground)', boxShadow: '0 8px 24px -8px rgba(0,0,0,0.6)', fontSize: '12px', padding: '6px 10px' }}
+              labelStyle={{ color: '#8fa6b7', marginBottom: '4px', fontWeight: 'bold' }}
               labelFormatter={(ts: any) => formatTooltipLabel(Number(ts))}
               formatter={(value: any) => [`${value}${unidad}`, config?.title || 'Valor']}
             />
@@ -125,7 +125,7 @@ export default function DashboardHistoryChart({ chartData, config, umbralVisual,
               strokeWidth={2}
               fill={`url(#${gradientId})`}
               dot={data.length === 1 ? { r: 4, fill: color } : false}
-              activeDot={{ r: 5, fill: color, stroke: '#111827', strokeWidth: 2 }}
+              activeDot={{ r: 5, fill: color, stroke: '#131a1f', strokeWidth: 2 }}
               isAnimationActive={false}
             />
           </AreaChart>

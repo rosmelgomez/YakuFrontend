@@ -1,5 +1,6 @@
 // src/screens/auth/RegisterScreen.tsx
 import React from 'react';
+import YakuMark from '@/components/layout/YakuMark';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import RegisterForm from '@/components/auth/RegisterForm';
@@ -26,18 +27,8 @@ export default function RegisterScreen() {
     <div className="auth-page-wrapper">
       <Container size="1" style={{ width: '100%' }}>
         <Box style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{ 
-            width: '80px', 
-            height: '80px', 
-            margin: '0 auto 1rem',
-            background: 'white',
-            borderRadius: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '2rem'
-          }}>
-            🌊
+          <div className="mx-auto mb-4 flex h-[72px] w-[72px] items-center justify-center rounded-2xl text-[#04130a]" style={{ background: "linear-gradient(145deg, #4ade80, #16a34a)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.35), 0 12px 32px -10px rgba(22,163,74,0.6)" }}>
+            <YakuMark size={38} />
           </div>
           <h1 style={{ color: 'white', marginBottom: '0.5rem', fontSize: '2.5rem', fontWeight: 'bold' }}>
             Yaku
@@ -70,7 +61,7 @@ export default function RegisterScreen() {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: #020817;
+          background: #0c1014;
           padding: 1rem;
           width: 100%;
           box-sizing: border-box;

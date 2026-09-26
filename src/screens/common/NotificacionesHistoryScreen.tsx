@@ -104,7 +104,6 @@ export default function NotificacionesHistoryScreen() {
             {unreadCount > 0 && (
               <Button
                 variant="soft"
-                color="indigo"
                 size="2"
                 onClick={markAllAsRead}
                 style={{ cursor: 'pointer' }}
@@ -184,10 +183,10 @@ export default function NotificacionesHistoryScreen() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             size="2"
-            style={{ background: '#0b1329', color: 'white', borderColor: '#1e293b', borderRadius: '10px' }}
+            style={{ background: '#121920', color: 'white', borderColor: '#1c2631', borderRadius: '10px' }}
           >
             <TextField.Slot>
-              <Search size={15} color="#94a3b8" />
+              <Search size={15} color="#8fa6b7" />
             </TextField.Slot>
           </TextField.Root>
         </div>
@@ -203,7 +202,7 @@ export default function NotificacionesHistoryScreen() {
                 size="1"
                 style={{
                   background: item.leida ? '#0a1020' : '#0d1730',
-                  borderColor: item.leida ? '#1e293b' : '#334155',
+                  borderColor: item.leida ? '#1c2631' : '#2c3a47',
                   borderRadius: '12px',
                   padding: '10px 14px',
                   transition: 'all 0.2s ease',

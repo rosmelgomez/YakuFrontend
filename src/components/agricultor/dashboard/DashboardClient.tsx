@@ -9,6 +9,20 @@ import DashboardHealthGauge from '@/components/charts/DashboardHealthGauge';
 import NoCropsEmptyState from '@/components/layout/NoCropsEmptyState';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 import CountdownTimer from './CountdownTimer';
+import {
+  Activity,
+  AlertTriangle,
+  CloudFog,
+  Cpu,
+  Droplets,
+  Gauge,
+  LayoutDashboard,
+  Sprout,
+  Thermometer,
+  ThermometerSun,
+  Waves,
+} from 'lucide-react';
+import { IconTile, StatusDot } from '@/components/ui/yaku-ui';
 
 const DASHBOARD_REFRESH_SECONDS = 60;
 const DEFAULT_DASHBOARD_TIME_ZONE = 'America/Lima';
@@ -403,7 +417,8 @@ export default function DashboardClient({
             >
               <Box>
                 <Flex align="center" gap="3" mb="2" wrap="wrap">
-                  <Text size={{ initial: "5", sm: "6" }} weight="bold" color="indigo" as="div">
+                  <IconTile icon={LayoutDashboard} t="green" size={40} />
+                  <Text size={{ initial: "5", sm: "6" }} weight="bold" as="div" style={{ color: 'var(--foreground)', letterSpacing: '-0.02em' }}>
                     Dashboard
                   </Text>
                   <SearchableSelect
@@ -414,13 +429,14 @@ export default function DashboardClient({
                     style={{
                       width: 240,
                       height: '38px',
-                      background: '#111827',
-                      borderColor: '#1f2937'
+                      background: 'var(--surface2-mockup)',
+                      borderColor: 'var(--border2-mockup)'
                     }}
                     options={localCultivos.map((c) => ({ value: c.idCultivo.toString(), label: c.nombreCultivo }))}
                   />
                 </Flex>
-                <Text size="2" color="gray" style={{ fontFamily: 'monospace' }}>
+                <Text size="2" color="gray" as="div" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Sprout size={14} aria-hidden style={{ color: 'var(--green)' }} />
                   {cultivoActivo.conceptoPlanta} {cultivoActivo.etapaCrecimiento ? `· Fase ${cultivoActivo.etapaCrecimiento.toLowerCase()}` : ''}
                 </Text>
               </Box>
@@ -428,33 +444,26 @@ export default function DashboardClient({
               <Flex gap="2" align="center" wrap="wrap">
                 {/* Live indicator badge */}
                 <Flex align="center" gap="2" style={{
-                  background: recolectorActivo ? 'var(--greenbg)' : 'rgba(107, 114, 128, 0.12)',
-                  color: recolectorActivo ? 'var(--green)' : '#9ca3af',
-                  border: `1px solid ${recolectorActivo ? 'var(--greenbrd)' : 'rgba(156, 163, 175, 0.25)'}`,
+                  background: recolectorActivo ? 'var(--greenbg)' : 'rgba(255, 255, 255, 0.04)',
+                  color: recolectorActivo ? 'var(--green)' : 'var(--muted-foreground)',
+                  border: `1px solid ${recolectorActivo ? 'var(--greenbrd)' : 'var(--border2-mockup)'}`,
                   padding: '6px 12px',
-                  borderRadius: '8px',
+                  borderRadius: '999px',
                   fontSize: '13px',
-                  fontFamily: 'var(--font-mono)',
                   fontWeight: 600,
                 }}>
-                  <div style={{
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    background: recolectorActivo ? 'var(--green)' : '#6b7280',
-                    animation: recolectorActivo ? 'pulse 2s infinite' : 'none'
-                  }} />
+                  <StatusDot t={recolectorActivo ? 'green' : 'gray'} pulse={recolectorActivo} />
                   {recolectorActivo ? 'En vivo' : 'Recolector inactivo'}
                 </Flex>
                 <div style={{
-                  background: 'rgba(56,189,248,0.1)',
-                  color: '#38bdf8',
-                  border: '1px solid rgba(56,189,248,0.25)',
+                  background: 'var(--bluebg)',
+                  color: 'var(--blue)',
+                  border: '1px solid var(--bluebrd)',
                   padding: '6px 12px',
-                  borderRadius: '8px',
+                  borderRadius: '999px',
                   fontSize: '13px',
-                  fontFamily: 'var(--font-mono)',
                   fontWeight: 600,
+                  fontVariantNumeric: 'tabular-nums',
                 }}>
                    <CountdownTimer recolectorActivo={recolectorActivo} />
                 </div>
@@ -462,21 +471,21 @@ export default function DashboardClient({
             </Flex>
 
             {/* FILTROS GLOBALES DE CALENDARIO */}
-            <Flex gap="3" wrap="wrap" mb="2" style={{ background: '#111827', padding: '12px 16px', borderRadius: '12px', border: '1px solid #1f2937', width: '100%', boxSizing: 'border-box' }} align="center">
+            <Flex gap="3" wrap="wrap" mb="2" style={{ background: 'var(--surface-mockup)', padding: '10px 14px', borderRadius: '12px', border: '1px solid var(--border-mockup)', width: '100%', boxSizing: 'border-box' }} align="center">
               <Text size="2" color="gray" weight="medium">Modo de tiempo:</Text>
 
-              <Flex gap="2" style={{ background: '#0f172a', padding: '4px', borderRadius: '8px', border: '1px solid #1f2937' }}>
+              <Flex gap="2" style={{ background: 'var(--bg-mockup)', padding: '3px', borderRadius: '8px', border: '1px solid var(--border2-mockup)' }}>
                 <Button size="1" variant={filterMode === 'relative' ? 'solid' : 'ghost'} color="green" onClick={() => setFilterMode('relative')} style={{ cursor: 'pointer' }}>
                   Reciente
                 </Button>
-                <Button size="1" variant={filterMode === 'calendar' ? 'solid' : 'ghost'} color="blue" onClick={() => setFilterMode('calendar')} style={{ cursor: 'pointer' }}>
+                <Button size="1" variant={filterMode === 'calendar' ? 'solid' : 'ghost'} color="green" onClick={() => setFilterMode('calendar')} style={{ cursor: 'pointer' }}>
                   Calendario
                 </Button>
               </Flex>
 
               <Flex gap="2" align="center">
                 <Text size="1" color="gray">Sensores:</Text>
-                <Flex gap="2" style={{ background: '#0f172a', padding: '4px', borderRadius: '8px', border: '1px solid #1f2937' }}>
+                <Flex gap="2" style={{ background: 'var(--bg-mockup)', padding: '3px', borderRadius: '8px', border: '1px solid var(--border2-mockup)' }}>
                   {(['6h', '24h', '7d'] as HistoryRange[]).map((range) => (
                     <Button
                       key={range}
@@ -495,7 +504,7 @@ export default function DashboardClient({
 
               <Flex gap="2" align="center">
                 <Text size="1" color="gray">Consumo:</Text>
-                <Flex gap="2" style={{ background: '#0f172a', padding: '4px', borderRadius: '8px', border: '1px solid #1f2937' }}>
+                <Flex gap="2" style={{ background: 'var(--bg-mockup)', padding: '3px', borderRadius: '8px', border: '1px solid var(--border2-mockup)' }}>
                   {(['6h', '24h', '7d'] as HistoryRange[]).map((range) => (
                     <Button
                       key={range}
@@ -511,9 +520,9 @@ export default function DashboardClient({
                   ))}
                 </Flex>
               </Flex>
-              
+
               {false && <Select.Root value={weekdayFilter} onValueChange={setWeekdayFilter} disabled={!canUseWeekday}>
-                <Select.Trigger style={{ background: '#0f172a', color: canUseWeekday ? 'white' : '#6b7280', opacity: canUseWeekday ? 1 : 0.55, borderColor: '#1f2937', minWidth: 145 }} />
+                <Select.Trigger style={{ background: 'var(--bg-mockup)', opacity: canUseWeekday ? 1 : 0.55, minWidth: 145 }} />
                 <Select.Content>
                   {WEEKDAY_OPTIONS.map((option) => (
                     <Select.Item key={option.value} value={option.value}>{option.label}</Select.Item>
@@ -522,7 +531,7 @@ export default function DashboardClient({
               </Select.Root>}
 
               {false && <Select.Root value={monthFilter} onValueChange={setMonthFilter} disabled={!canUseMonthYear}>
-                <Select.Trigger style={{ background: '#0f172a', color: canUseMonthYear ? 'white' : '#6b7280', opacity: canUseMonthYear ? 1 : 0.55, borderColor: '#1f2937', minWidth: 155 }} />
+                <Select.Trigger style={{ background: 'var(--bg-mockup)', opacity: canUseMonthYear ? 1 : 0.55, minWidth: 155 }} />
                 <Select.Content>
                   {MONTH_OPTIONS.map((option) => (
                     <Select.Item key={option.value} value={option.value}>{option.label}</Select.Item>
@@ -531,7 +540,7 @@ export default function DashboardClient({
               </Select.Root>}
 
               {false && <Select.Root value={yearFilter} onValueChange={setYearFilter} disabled={!canUseMonthYear}>
-                <Select.Trigger style={{ background: '#0f172a', color: canUseMonthYear ? 'white' : '#6b7280', opacity: canUseMonthYear ? 1 : 0.55, borderColor: '#1f2937', minWidth: 110 }} />
+                <Select.Trigger style={{ background: 'var(--bg-mockup)', opacity: canUseMonthYear ? 1 : 0.55, minWidth: 110 }} />
                 <Select.Content>
                   <Select.Item value="all">Todos los años</Select.Item>
                   {(availableYears.length > 0 ? availableYears : [new Date().getFullYear().toString()]).map((year) => (
@@ -539,16 +548,16 @@ export default function DashboardClient({
                   ))}
                 </Select.Content>
               </Select.Root>}
-              
-              <TextField.Root type="date" value={startDateFilter} onChange={(e) => setStartDateFilter(e.target.value)} disabled={!canUseMonthYear} style={{ background: '#0f172a', color: canUseMonthYear ? 'white' : '#6b7280', opacity: canUseMonthYear ? 1 : 0.55, borderColor: '#1f2937' }} />
-              <TextField.Root type="date" value={endDateFilter} onChange={(e) => setEndDateFilter(e.target.value)} disabled={!canUseMonthYear} style={{ background: '#0f172a', color: canUseMonthYear ? 'white' : '#6b7280', opacity: canUseMonthYear ? 1 : 0.55, borderColor: '#1f2937' }} />
+
+              <TextField.Root type="date" value={startDateFilter} onChange={(e) => setStartDateFilter(e.target.value)} disabled={!canUseMonthYear} style={{ background: 'var(--bg-mockup)', opacity: canUseMonthYear ? 1 : 0.55 }} />
+              <TextField.Root type="date" value={endDateFilter} onChange={(e) => setEndDateFilter(e.target.value)} disabled={!canUseMonthYear} style={{ background: 'var(--bg-mockup)', opacity: canUseMonthYear ? 1 : 0.55 }} />
 
               {hasActiveFilter && (
                 <Button size="1" color="red" variant="soft" onClick={() => { setWeekdayFilter('all'); setMonthFilter('all'); setYearFilter('all'); setStartDateFilter(''); setEndDateFilter(''); }} style={{ cursor: 'pointer', marginLeft: 'auto' }}>
                   Limpiar filtros
                 </Button>
               )}
-              <Text size="1" color="gray" style={{ fontFamily: 'monospace', marginLeft: 'auto' }}>
+              <Text size="1" color="gray" style={{ marginLeft: 'auto' }}>
                 {filterMode === 'relative'
                   ? ((sensorRange === '7d' || consumoRange === '7d') ? 'En 7d solo se habilita dia de semana.' : 'Calendario deshabilitado en rangos cortos.')
                   : 'Mes, anio y dia habilitados para historico.'}
@@ -639,7 +648,14 @@ const getTimeAgo = (date: Date | null) => {
 
 // --- SUB-COMPONENTE: TARJETA DE SENSOR ---
 const SensorCard = ({ sensor, type }: { sensor: SensorData; type: 'soil_moisture' | 'env_humidity' | 'env_temp' | 'soil_temp' }) => {
-  if (!sensor) return <Card size="2" style={{ background: '#111827', borderColor: 'rgba(255,255,255,0.07)', borderRadius: '16px' }}><Text size="3" color="gray">Sensor sin datos</Text></Card>;
+  if (!sensor) return (
+    <Card size="2" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderStyle: 'dashed', borderRadius: '14px' }}>
+      <Flex align="center" gap="2">
+        <Activity size={16} aria-hidden style={{ color: 'var(--muted-foreground)' }} />
+        <Text size="2" color="gray">Sensor sin datos</Text>
+      </Flex>
+    </Card>
+  );
 
   const metricNameMap = {
     soil_moisture: 'Humedad de Suelo',
@@ -671,38 +687,44 @@ const SensorCard = ({ sensor, type }: { sensor: SensorData; type: 'soil_moisture
   );
 
   const themeMap = {
-    soil_moisture: { border: 'var(--greenbrd)', color: 'var(--green)', bg: 'var(--greenbg)' },
-    env_humidity: { border: 'var(--tealbrd)', color: 'var(--teal)', bg: 'var(--tealbg)' },
-    env_temp: { border: 'var(--amberbrd)', color: 'var(--amber)', bg: 'var(--amberbg)' },
-    soil_temp: { border: 'var(--bluebrd)', color: 'var(--blue)', bg: 'var(--bluebg)' }
+    soil_moisture: { border: 'var(--greenbrd)', color: 'var(--green)', bg: 'var(--greenbg)', icon: Droplets },
+    env_humidity: { border: 'var(--tealbrd)', color: 'var(--teal)', bg: 'var(--tealbg)', icon: CloudFog },
+    env_temp: { border: 'var(--amberbrd)', color: 'var(--amber)', bg: 'var(--amberbg)', icon: ThermometerSun },
+    soil_temp: { border: 'var(--bluebrd)', color: 'var(--blue)', bg: 'var(--bluebg)', icon: Thermometer }
   };
 
   const theme = themeMap[type];
   const cardBorder = fuera ? 'var(--redbrd)' : theme.border;
   const valueColor = fuera ? 'var(--red)' : theme.color;
+  const MetricIcon = theme.icon;
 
   return (
-    <Card size="2" style={{ background: '#131a1f', border: `1px solid ${cardBorder}`, borderRadius: '16px' }}>
+    <Card size="2" style={{ background: 'var(--surface-mockup)', border: `1px solid ${fuera ? cardBorder : 'var(--border-mockup)'}`, borderRadius: '14px' }}>
       <Flex direction="column" gap="3">
-        <Flex justify="between" align="center">
-          <Text size="1" color="gray" style={{ fontFamily: 'monospace' }}>{sensor.modelo}</Text>
+        <Flex justify="between" align="center" gap="2">
+          <Flex align="center" gap="2" style={{ minWidth: 0 }}>
+            <span aria-hidden style={{ width: 28, height: 28, borderRadius: 8, background: theme.bg, border: `1px solid ${theme.border}`, color: theme.color, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <MetricIcon size={15} />
+            </span>
+            <Text size="2" weight="medium" style={{ color: 'var(--foreground)' }} truncate>{metricaNombre}</Text>
+          </Flex>
           <Badge color={fuera ? "red" : "green"} variant="soft">{fuera ? "Fuera de rango" : "Óptimo"}</Badge>
         </Flex>
-        
+
         <Box>
-          <Text size="2" color="gray" mb="1" as="div" style={{ textTransform: 'uppercase', letterSpacing: '1px' }}>{metricaNombre}</Text>
           <Flex align="baseline" gap="1">
-            <Text size={{ initial: "6", sm: "7", md: "8" }} weight="bold" style={{ color: valueColor }}>{sensor.valor.toFixed(1)}</Text>
+            <Text size={{ initial: "7", md: "8" }} weight="bold" className="tabular-nums" style={{ color: valueColor, letterSpacing: '-0.03em', lineHeight: 1 }}>{sensor.valor.toFixed(1)}</Text>
             <Text size={{ initial: "3", sm: "4" }} style={{ color: valueColor }} weight="medium">{metricaUnidad}</Text>
           </Flex>
         </Box>
 
         <Box mt="2">
-          <Text size="1" color="gray" mb="2" as="div" style={{ fontFamily: 'monospace' }}>
-            Objetivo: {formatObjetivo()}
-          </Text>
+          <Flex justify="between" align="center" mb="2" gap="2">
+            <Text size="1" color="gray" className="tabular-nums">Objetivo: {formatObjetivo()}</Text>
+            <Text size="1" color="gray" style={{ fontFamily: 'var(--font-mono)' }} truncate>{sensor.modelo}</Text>
+          </Flex>
           {sensor.porcentaje !== null && (
-            <div style={{ height: '4px', background: 'var(--dim-mockup)', borderRadius: '2px', overflow: 'hidden' }}>
+            <div style={{ height: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '2px', overflow: 'hidden' }}>
               <div style={{ height: '100%', width: `${Math.min(Math.max(sensor.porcentaje, 0), 100)}%`, background: valueColor, borderRadius: '2px' }} />
             </div>
           )}
@@ -736,7 +758,7 @@ const HistoricoSensoresCard = ({
     temperaturaSuelo: { title: 'Temperatura suelo', color: '#f97316', key: 'temperaturaSuelo', isPercentage: false, umbralRef: 'max' },
     temperaturaAmbiente: { title: 'Temperatura ambiente', color: '#ef4444', key: 'temperaturaAmbiente', isPercentage: false, umbralRef: 'max' }
   };
-  
+
   const config = metricConfig[activeMetric];
   const rawData = historial[activeMetric as keyof HistorialData];
   const sensorInfo = sensores[activeMetric as keyof typeof sensores];
@@ -761,11 +783,12 @@ const HistoricoSensoresCard = ({
     : null;
 
   return (
-    <Card size="3" style={{ background: '#111827', borderColor: '#1f2937', borderRadius: '16px', height: '100%' }}>
+    <Card size="3" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '14px', height: '100%' }}>
       <Flex justify="between" align="center" mb="4" wrap="wrap" gap="3">
         <Flex gap="3" align="center">
+          <IconTile icon={Activity} t="green" />
           <Select.Root value={activeMetric} onValueChange={(val: any) => setActiveMetric(val)}>
-            <Select.Trigger style={{ background: 'transparent', color: 'white', fontWeight: 'bold', fontSize: '1.1rem', border: 'none', padding: 0 }} />
+            <Select.Trigger variant="ghost" aria-label="Métrica del gráfico" style={{ color: 'var(--foreground)', fontWeight: 700, fontSize: '1rem' }} />
             <Select.Content>
               <Select.Item value="humedadSuelo">Humedad del suelo</Select.Item>
               <Select.Item value="humedadAmbiente">Humedad ambiente</Select.Item>
@@ -773,20 +796,21 @@ const HistoricoSensoresCard = ({
               <Select.Item value="temperaturaAmbiente">Temperatura ambiente</Select.Item>
             </Select.Content>
           </Select.Root>
-          <Text size="3" color="gray">— últimas {effectiveRange}</Text>
+          <Text size="2" color="gray">últimas {effectiveRange}</Text>
         </Flex>
       </Flex>
 
       {/* Filtros movidos al nivel de página principal */}
 
       {effectiveRange !== timeRange && (
-        <Text size="1" color="gray" mb="1" as="div" style={{ fontFamily: 'monospace' }}>
+        <Text size="1" color="gray" mb="1" as="div">
           Sin datos en {timeRange}; mostrando {effectiveRange}.
         </Text>
       )}
 
       {isStale && lastPointLabel && (
-        <Text size="1" color="amber" mb="3" as="div" style={{ fontFamily: 'monospace' }}>
+        <Text size="1" color="amber" mb="3" as="div" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <AlertTriangle size={13} aria-hidden />
           Sin lecturas recientes: la última fue el {lastPointLabel}.
         </Text>
       )}
@@ -809,12 +833,15 @@ const HistoricoSensoresCard = ({
 // --- SUB-COMPONENTE: ESTADO DEL SISTEMA ---
 const EstadoSistemaCard = ({ dispositivos }: { dispositivos: DispositivoData[] }) => {
   return (
-    <Card size="3" style={{ background: '#111827', borderColor: '#1f2937', borderRadius: '16px' }}>
+    <Card size="3" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '14px' }}>
       <Flex justify="between" align="center" mb="3">
-        <Text size="3" weight="bold" color="indigo">
-          Estado del sistema
-        </Text>
-        <Badge color="indigo" variant="soft" style={{ borderRadius: '6px' }}>
+        <Flex align="center" gap="3">
+          <IconTile icon={Cpu} t="green" />
+          <Text size="3" weight="bold" style={{ color: 'var(--foreground)' }}>
+            Estado del sistema
+          </Text>
+        </Flex>
+        <Badge color="gray" variant="soft" className="tabular-nums">
           {dispositivos.length} {dispositivos.length === 1 ? 'dispositivo' : 'dispositivos'}
         </Badge>
       </Flex>
@@ -826,14 +853,14 @@ const EstadoSistemaCard = ({ dispositivos }: { dispositivos: DispositivoData[] }
             {dispositivos.map((disp, index) => {
               const isOnline = disp.estado === 'activo' || disp.funcionamientoActivo === true;
               return (
-                <Flex key={disp.id} justify="between" align="center" style={{ borderBottom: index !== dispositivos.length - 1 ? '1px solid #1f2937' : 'none', paddingBottom: index !== dispositivos.length - 1 ? '10px' : '0' }}>
+                <Flex key={disp.id} justify="between" align="center" style={{ borderBottom: index !== dispositivos.length - 1 ? '1px solid var(--border-mockup)' : 'none', paddingBottom: index !== dispositivos.length - 1 ? '10px' : '0' }}>
                   <Flex align="center" gap="3">
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: isOnline ? '#22c55e' : '#ef4444', boxShadow: isOnline ? '0 0 8px #22c55e' : '0 0 8px #ef4444' }} />
-                    <Text size="2" color="gray" style={{ fontFamily: 'monospace' }}>{disp.nombre}</Text>
+                    <StatusDot t={isOnline ? 'green' : 'red'} />
+                    <Text size="2" style={{ color: 'var(--foreground)' }}>{disp.nombre}</Text>
                   </Flex>
-                  <Text size="2" style={{ color: isOnline ? '#22c55e' : '#ef4444', fontFamily: 'monospace' }}>
+                  <Badge color={isOnline ? 'green' : 'red'} variant="soft" size="1">
                     {isOnline ? 'Online' : 'Offline'}
-                  </Text>
+                  </Badge>
                 </Flex>
               );
             })}
@@ -847,10 +874,10 @@ const EstadoSistemaCard = ({ dispositivos }: { dispositivos: DispositivoData[] }
 // --- SUB-COMPONENTE: TARJETA DE CONEXIÓN DIRECTA ---
 const ConexionDirectaCard = ({ fuenteAgua }: { fuenteAgua?: { id?: number; nombre?: string; tipo?: string } | null }) => {
   return (
-    <Card size="3" style={{ background: '#111827', borderColor: '#1f2937', borderRadius: '16px' }}>
+    <Card size="3" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '14px' }}>
       <Flex direction="column" gap="3">
         <Flex justify="between" align="center">
-          <Text size="3" weight="bold" color="indigo">
+          <Text size="3" weight="bold" style={{ color: 'var(--foreground)' }}>
             {fuenteAgua?.nombre || 'Fuente de Agua'}
           </Text>
           <Badge color="cyan" variant="soft" style={{ borderRadius: '6px' }}>
@@ -859,22 +886,9 @@ const ConexionDirectaCard = ({ fuenteAgua }: { fuenteAgua?: { id?: number; nombr
         </Flex>
 
         <Flex align="center" gap="3">
-          <div style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '12px',
-            background: 'rgba(56, 189, 248, 0.12)',
-            border: '1px solid rgba(56, 189, 248, 0.25)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '1.4rem',
-            flexShrink: 0
-          }}>
-            🚰
-          </div>
+          <IconTile icon={Waves} t="blue" size={42} />
           <Box>
-            <Text size="2" weight="bold" style={{ color: '#f3f4f6' }} as="div">
+            <Text size="2" weight="bold" style={{ color: 'var(--foreground)' }} as="div">
               Suministro de Red Continua
             </Text>
             <Text size="1" color="gray" as="div">
@@ -883,11 +897,11 @@ const ConexionDirectaCard = ({ fuenteAgua }: { fuenteAgua?: { id?: number; nombr
           </Box>
         </Flex>
 
-        <Flex justify="between" align="center" style={{ borderTop: '1px solid #1f2937', paddingTop: '8px' }}>
-          <Text size="1" color="gray" style={{ fontFamily: 'monospace' }}>
+        <Flex justify="between" align="center" style={{ borderTop: '1px solid var(--border-mockup)', paddingTop: '8px' }}>
+          <Text size="1" color="gray">
             Apertura por electroválvula
           </Text>
-          <Badge color="green" variant="surface" size="1" style={{ borderRadius: '4px' }}>
+          <Badge color="green" variant="soft" size="1">
             Red Disponible
           </Badge>
         </Flex>
@@ -899,7 +913,7 @@ const ConexionDirectaCard = ({ fuenteAgua }: { fuenteAgua?: { id?: number; nombr
 // --- SUB-COMPONENTE: TARJETA DEL TANQUE ---
 const TanqueCard = ({ tanque }: { tanque: TanqueData }) => {
   const [bombaActiva, setBombaActiva] = useState(tanque?.bombaEncendida || false);
-  
+
   useEffect(() => {
     if (tanque) {
       setBombaActiva(tanque.bombaEncendida);
@@ -910,9 +924,9 @@ const TanqueCard = ({ tanque }: { tanque: TanqueData }) => {
 
   if (tanque.dispositivoActivo === false) {
     return (
-      <Card size="3" style={{ background: '#111827', borderColor: 'rgba(245, 158, 11, 0.25)', borderRadius: '16px' }}>
-        <Flex direction="column" gap="3" align="center" style={{ textAlign: 'center', padding: '12px' }}>
-          <Text size="7" style={{ filter: 'drop-shadow(0 0 8px rgba(245, 158, 11, 0.25))' }}></Text>
+      <Card size="3" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--amberbrd)', borderRadius: '14px' }}>
+        <Flex direction="column" gap="3" align="center" style={{ textAlign: 'center', padding: '8px' }}>
+          <IconTile icon={AlertTriangle} t="amber" size={40} />
           <Box>
             <Text size="3" weight="bold" color="amber" as="div" mb="2">
               Dispositivo del Tanque Inactivo
@@ -920,8 +934,7 @@ const TanqueCard = ({ tanque }: { tanque: TanqueData }) => {
             <Text size="2" color="gray" as="div" mb="3">
               Para visualizar el nivel de agua ({tanque.nombre}), los litros disponibles y el porcentaje en vivo, debes activar la captura de datos de este dispositivo.
             </Text>
-            <Text size="1" color="indigo" weight="medium" style={{ fontFamily: 'monospace' }}>Actívalo en la sección de Control.
-            </Text>
+            <Text size="1" color="amber" weight="medium">Actívalo en la sección de Control.</Text>
           </Box>
         </Flex>
       </Card>
@@ -930,17 +943,20 @@ const TanqueCard = ({ tanque }: { tanque: TanqueData }) => {
 
 
   return (
-    <Card size="3" style={{ background: '#111827', borderColor: '#1f2937', borderRadius: '16px' }}>
+    <Card size="3" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '14px' }}>
       <Flex direction="column" gap="2">
         <Box>
-          <Text size="3" weight="bold" color="indigo" as="div">{tanque.nombre}</Text>
-          <Flex align="baseline" gap="2" mt="1">
-            <Text size="8" weight="bold" color="sky" style={{ letterSpacing: '-1px' }}>{tanque.litrosActuales}</Text>
+          <Flex align="center" gap="3">
+            <IconTile icon={Gauge} t="blue" />
+            <Text size="3" weight="bold" style={{ color: 'var(--foreground)' }} as="div">{tanque.nombre}</Text>
+          </Flex>
+          <Flex align="baseline" gap="2" mt="3">
+            <Text size="8" weight="bold" color="sky" className="tabular-nums" style={{ letterSpacing: '-0.03em', lineHeight: 1 }}>{tanque.litrosActuales}</Text>
             <Text size="3" color="gray" weight="medium">/ {tanque.litrosTotales} L</Text>
           </Flex>
           <Box mt="1">
-            <Progress value={tanque.porcentaje} size="2" color={tanque.porcentaje < 20 ? 'red' : 'blue'} style={{ background: '#1f2937' }} />
-            <Text size="1" color="gray" mt="2" as="div" style={{ fontFamily: 'monospace' }}>{tanque.porcentaje}% · {tanque.sensorModelo.replace('Sensor Ultrasónico ', '')} · Nivel {tanque.estadoNivel}</Text>
+            <Progress value={tanque.porcentaje} size="2" color={tanque.porcentaje < 20 ? 'red' : 'sky'} aria-label="Nivel del tanque" />
+            <Text size="1" color="gray" mt="2" as="div" className="tabular-nums">{tanque.porcentaje}% · {tanque.sensorModelo.replace('Sensor Ultrasónico ', '')} · Nivel {tanque.estadoNivel}</Text>
           </Box>
         </Box>
       </Flex>
@@ -1006,11 +1022,16 @@ const ConsumoChartCard = ({
   const rangeLabel = effectiveRange === '7d' ? 'últimos 7 días' : effectiveRange === '24h' ? 'últimas 24h' : 'últimas 6h';
 
   return (
-    <Card size="3" style={{ background: '#111827', borderColor: '#1f2937', borderRadius: '16px', height: '100%' }}>
-      <Text size="3" weight="bold" color="indigo" mb="3" as="div">Consumo de agua — {rangeLabel}</Text>
+    <Card size="3" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '14px', height: '100%' }}>
+      <Flex align="center" gap="3" mb="3">
+        <IconTile icon={Droplets} t="blue" />
+        <Text size="3" weight="bold" style={{ color: 'var(--foreground)' }} as="div">
+          Consumo de agua <Text size="2" color="gray" weight="regular">· {rangeLabel}</Text>
+        </Text>
+      </Flex>
 
       {effectiveRange !== requestedRange && (
-        <Text size="1" color="gray" mb="3" as="div" style={{ fontFamily: 'monospace' }}>
+        <Text size="1" color="gray" mb="3" as="div">
           Sin datos en {requestedRange}; mostrando {effectiveRange}.
         </Text>
       )}
@@ -1047,7 +1068,7 @@ const ResumenDiaCard = ({
     sensores?.temperaturaAmbiente,
     sensores?.temperaturaSuelo
   ];
-  
+
   const sensoresActivos = sensoresEvaluados.filter(
     s => s && s.valor !== null && s.valor !== undefined
   );
@@ -1094,16 +1115,19 @@ const ResumenDiaCard = ({
   const colorSalud = getSaludColor(salud, tieneLecturas);
   const textoSalud = getSaludTexto(salud, tieneLecturas);
 
-  const Row = ({ label, value, color = '#38bdf8', isLast = false }: { label: string, value: string, color?: string, isLast?: boolean }) => (
-    <Flex justify="between" align="center" py="3" style={{ borderBottom: isLast ? 'none' : '1px solid #1f2937' }}>
-      <Text size="2" style={{ color: '#9ca3af', fontFamily: 'monospace' }}>{label}</Text>
-      <Text size="2" weight="bold" style={{ color, fontFamily: 'monospace' }}>{value}</Text>
+  const Row = ({ label, value, color = 'var(--foreground)', isLast = false }: { label: string, value: string, color?: string, isLast?: boolean }) => (
+    <Flex justify="between" align="center" py="2" style={{ borderBottom: isLast ? 'none' : '1px solid var(--border-mockup)' }}>
+      <Text size="2" color="gray">{label}</Text>
+      <Text size="2" weight="bold" className="tabular-nums" style={{ color }}>{value}</Text>
     </Flex>
   );
 
   return (
-    <Card size="3" style={{ background: '#111827', borderColor: '#1f2937', borderRadius: '16px', height: '100%' }}>
-      <Text size="3" weight="bold" color="indigo" mb="3" as="div">Resumen del día</Text>
+    <Card size="3" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '14px', height: '100%' }}>
+      <Flex align="center" gap="3" mb="3">
+        <IconTile icon={Gauge} t="green" />
+        <Text size="3" weight="bold" style={{ color: 'var(--foreground)' }} as="div">Resumen del día</Text>
+      </Flex>
 
       <Flex direction="column" align="center" mb="2" style={{ position: 'relative', width: '100%', minWidth: 0, height: '110px' }}>
         {!isClientMounted ? (
@@ -1121,10 +1145,10 @@ const ResumenDiaCard = ({
           textAlign: 'center',
           width: '100%'
         }}>
-          <Text size="5" weight="bold" style={{ color: 'white', display: 'block', fontFamily: 'monospace', lineHeight: 1 }}>
+          <Text size="6" weight="bold" className="tabular-nums" style={{ color: 'white', display: 'block', lineHeight: 1, letterSpacing: '-0.02em' }}>
             {tieneLecturas ? `${salud}%` : '--'}
           </Text>
-          <Text size="1" weight="medium" style={{ color: colorSalud, textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '2px', display: 'inline-block' }}>
+          <Text size="1" weight="medium" style={{ color: colorSalud, marginTop: '4px', display: 'inline-block' }}>
             {tieneLecturas ? `Salud: ${textoSalud}` : 'Sin telemetría'}
           </Text>
         </div>
@@ -1133,9 +1157,9 @@ const ResumenDiaCard = ({
       <Box>
         <Row label={hasFilter ? "Riegos prom. diario" : "Riegos hoy"} value={hasFilter ? "--" : `${resumen.riegosHoy} evento${resumen.riegosHoy !== 1 ? 's' : ''}`} />
         <Row label={hasFilter ? "Consumo prom. diario" : "Litros consumidos"} value={`${resumen.litrosHoy} L`} />
-        <Row label="Último riego" value={getTimeAgo(resumen.ultimoRiego)} />
-        <Row label="Hum. suelo prom." value={resumen.humedadSueloProm !== null ? `${resumen.humedadSueloProm.toFixed(1)}%` : '--'} color="#4ade80" />
-        <Row label="Hum. ambiental" value={resumen.humedadAmbiental !== null ? `${resumen.humedadAmbiental.toFixed(1)}%` : '--'} color="#4ade80" isLast />
+        <Row label="Último riego" value={getTimeAgo(resumen.ultimoRiego)} color="var(--blue)" />
+        <Row label="Hum. suelo prom." value={resumen.humedadSueloProm !== null ? `${resumen.humedadSueloProm.toFixed(1)}%` : '--'} color="var(--green)" />
+        <Row label="Hum. ambiental" value={resumen.humedadAmbiental !== null ? `${resumen.humedadAmbiental.toFixed(1)}%` : '--'} color="var(--green)" isLast />
       </Box>
     </Card>
   );

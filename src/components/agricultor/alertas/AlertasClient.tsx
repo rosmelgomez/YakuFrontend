@@ -34,7 +34,7 @@ const TIPOS_NOTIFICACION = [
     codigo: "RIEGO_ML",
     titulo: "Riego activado por IA",
     descripcion: "Avisos del ciclo de riego: inicio con las lecturas de las 4 variables de la IA, y finalización con los litros de agua consumidos durante el riego.",
-    badgeColor: "indigo",
+    badgeColor: "blue",
   },
   {
     id_tipo_alerta: 12,
@@ -183,12 +183,12 @@ export default function AlertasClient({
       setPushStatus('not-supported');
       return;
     }
-    
+
     setIsSubscribing(true);
     try {
       const permission = await Notification.requestPermission();
       setPushStatus(permission);
-      
+
       if (permission === 'granted' && 'serviceWorker' in navigator) {
         const reg = await navigator.serviceWorker.ready;
         const resKey = await getVapidPublicKey();
@@ -272,11 +272,11 @@ export default function AlertasClient({
   const handleCultivoChange = async (newIdStr: string) => {
     const newId = parseInt(newIdStr, 10);
     if (isNaN(newId)) return;
-    
+
     setIsLoadingCropData(true);
     setSelectedCultivoId(newId);
     setCurrentPage(1);
-    
+
     try {
       const res = await obtenerDatosAlertaPorCultivo(newId);
       if (res.success && res.data) {
@@ -295,7 +295,7 @@ export default function AlertasClient({
   return (
     <Box style={{ opacity: isLoadingCropData ? 0.6 : 1, transition: 'opacity 0.2s ease-in-out' }}>
       <Flex justify="between" align={{ initial: 'start', sm: 'center' }} direction={{ initial: 'column', sm: 'row' }} gap="3" mb={{ initial: "4", sm: "6" }}>
-        <Text size={{ initial: "5", sm: "6" }} weight="bold" color="indigo">Notificaciones y Alertas</Text>
+        <Text size={{ initial: "5", sm: "6" }} weight="bold" style={{ color: "var(--foreground)" }}>Notificaciones y Alertas</Text>
         <Box style={{ width: '100%', maxWidth: '280px' }}>
           <SearchableSelect
             value={selectedCultivoId.toString()}
@@ -345,7 +345,7 @@ export default function AlertasClient({
         <Card size={{ initial: "1", sm: "2" }} mb="4" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)' }}>
           <Flex justify="between" align={{ initial: 'start', sm: 'center' }} gap="3" wrap="wrap">
             <Box>
-              <Text size={{ initial: "2", sm: "3" }} weight="bold" color="indigo" as="div">Notificaciones del navegador</Text>
+              <Text size="2" weight="bold" as="div" style={{ color: "var(--foreground)" }}>Notificaciones del navegador</Text>
               <Text size={{ initial: "1", sm: "2" }} color="gray" as="div">
                 {pushStatus === 'granted' && 'Activadas y sincronizadas con Yaku.'}
                 {pushStatus === 'default' && 'Actívalas para recibir alertas aunque el panel no esté abierto.'}
@@ -370,9 +370,9 @@ export default function AlertasClient({
 
         {/* Card 2: Preferencias de Notificaciones */}
         <Card size={{ initial: "2", sm: "3" }} style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', display: 'flex', flexDirection: 'column', height: 'auto' }}>
-          <Text size={{ initial: "3", sm: "4" }} weight="bold" color="indigo" mb="3" as="div">Preferencias de notificaciones</Text>
+          <Text size="3" weight="bold" mb="3" as="div" style={{ color: "var(--foreground)" }}>Preferencias de notificaciones</Text>
           <Flex direction="column" gap="3" style={{ flexGrow: 1 }}>
-            
+
             <Box style={{ flexGrow: 1 }}>
               {isLoadingNotifConfig ? (
                 <Flex direction="column" align="center" justify="center" p="5" style={{ minHeight: '160px' }}>
@@ -397,7 +397,7 @@ export default function AlertasClient({
                         <Text size="1" color="gray" mb="3" as="div" style={{ lineHeight: '1.4', minHeight: '34px' }}>
                           {tipo.descripcion}
                         </Text>
-                        
+
                         <Box pt="2" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
                           <Flex justify="between" align="center">
                             <Flex align="center" gap="2">
@@ -429,7 +429,7 @@ export default function AlertasClient({
 
       {/* Card 3: Historial y Alertas Activas (a lo ancho completo debajo) */}
       <Card size={{ initial: "2", sm: "3" }} style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)' }}>
-        <Text size={{ initial: "3", sm: "4" }} weight="bold" color="indigo" mb="4" as="div">Historial y estado de alertas</Text>
+        <Text size="3" weight="bold" mb="4" as="div" style={{ color: "var(--foreground)" }}>Historial y estado de alertas</Text>
         {(() => {
             const isVariableAlert = (alert: any) => {
               const t = (alert.titulo || alert.tipo || '').toLowerCase();
@@ -465,10 +465,10 @@ export default function AlertasClient({
                   <Table.Root variant="surface" style={{ background: 'rgba(30, 41, 59, 0.2)', minWidth: '520px' }}>
                     <Table.Header>
                       <Table.Row style={{ borderColor: 'var(--border-mockup)' }}>
-                        <Table.ColumnHeaderCell style={{ color: 'var(--indigo-11)' }}>Estado</Table.ColumnHeaderCell>
-                        <Table.ColumnHeaderCell style={{ color: 'var(--indigo-11)' }}>Alerta</Table.ColumnHeaderCell>
-                        <Table.ColumnHeaderCell style={{ color: 'var(--indigo-11)' }}>Detalle / Mensaje</Table.ColumnHeaderCell>
-                        <Table.ColumnHeaderCell style={{ color: 'var(--indigo-11)' }}>Fecha</Table.ColumnHeaderCell>
+                        <Table.ColumnHeaderCell style={{ color: 'var(--emerald-11)' }}>Estado</Table.ColumnHeaderCell>
+                        <Table.ColumnHeaderCell style={{ color: 'var(--emerald-11)' }}>Alerta</Table.ColumnHeaderCell>
+                        <Table.ColumnHeaderCell style={{ color: 'var(--emerald-11)' }}>Detalle / Mensaje</Table.ColumnHeaderCell>
+                        <Table.ColumnHeaderCell style={{ color: 'var(--emerald-11)' }}>Fecha</Table.ColumnHeaderCell>
                       </Table.Row>
                     </Table.Header>
                     <Table.Body>
@@ -476,8 +476,8 @@ export default function AlertasClient({
                         if (item.itemType === 'active') {
                           const isWarning = item.titulo?.toLowerCase().includes('advertencia') || item.severidad === 'advertencia';
                           const isInfo = item.severidad === 'info' || item.titulo?.toLowerCase().includes('ia') || item.titulo?.toLowerCase().includes('iniciado');
-                          const textCol = isInfo ? 'var(--indigo-11)' : (isWarning ? 'var(--amber)' : 'var(--red)');
-                          const badgeCol = isInfo ? 'indigo' : (isWarning ? 'orange' : 'red');
+                          const textCol = isInfo ? 'var(--emerald-11)' : (isWarning ? 'var(--amber)' : 'var(--red)');
+                          const badgeCol = isInfo ? 'blue' : (isWarning ? 'orange' : 'red');
                           return (
                             <Table.Row key={`act-${item.id}`} style={{ background: isInfo ? 'rgba(99, 102, 241, 0.04)' : 'rgba(239, 68, 68, 0.04)', borderColor: 'var(--border-mockup)' }}>
                               <Table.Cell>

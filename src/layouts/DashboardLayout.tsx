@@ -15,7 +15,7 @@ export default function DashboardLayout() {
   const initials = name.split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2).toUpperCase() || "JR";
 
   return (
-    <Box style={{ minHeight: '100vh', background: '#020817' }}>
+    <Box style={{ minHeight: '100vh', background: 'var(--background)' }}>
       <NotificationProvider>
         <PushNotificationManager />
         <Box className="app-container">

@@ -24,6 +24,7 @@ import {
   CartesianGrid,
   Cell,
 } from "recharts";
+import { Trophy } from "lucide-react";
 
 interface AdminQuestionItem {
   id: number;
@@ -611,7 +612,7 @@ export default function FeedbackAdminClient({
                 {chartCompletionData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartCompletionData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#2c3a47" opacity={0.5} />
                       <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} />
                       <YAxis stroke="#94a3b8" fontSize={12} domain={[0, 100]} unit="%" />
                       <Tooltip content={<CustomChartTooltip />} cursor={false} />
@@ -657,7 +658,7 @@ export default function FeedbackAdminClient({
                 {chartRatingData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartRatingData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#2c3a47" opacity={0.5} />
                       <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} />
                       <YAxis stroke="#94a3b8" fontSize={12} domain={[0, 5]} />
                       <Tooltip content={<CustomChartTooltip />} cursor={false} />
@@ -873,7 +874,7 @@ export default function FeedbackAdminClient({
                       <div className="space-y-3 pt-1">
                         {qKpi.opcion_mas_votada && (
                           <div className="flex items-center gap-2 text-xs text-blue-300 bg-blue-950/40 border border-blue-800/50 p-2.5 rounded-lg">
-                            <span>🏆 Opción líder:</span>
+                            <Trophy size={14} className="text-amber-300 shrink-0" aria-hidden /><span>Opción líder:</span>
                             <strong className="text-white">{qKpi.opcion_mas_votada}</strong>
                           </div>
                         )}
@@ -918,11 +919,11 @@ export default function FeedbackAdminClient({
                             qKpi.ultimas_respuestas_texto.map((item, tIdx) => (
                               <div
                                 key={tIdx}
-                                className="bg-slate-950/70 border-l-2 border-purple-500 p-2.5 rounded-r-lg text-xs text-slate-300 space-y-1"
+                                className="bg-white/[0.03] border border-[var(--border-mockup)] p-2.5 rounded-lg text-xs text-slate-300 space-y-1"
                               >
                                 <p className="italic">"{item.texto}"</p>
                                 {item.fecha && (
-                                  <p className="text-[10px] text-slate-500 font-mono">
+                                  <p className="text-[11px] text-slate-500 tabular-nums">
                                     {new Date(item.fecha).toLocaleDateString("es-PE")}
                                   </p>
                                 )}

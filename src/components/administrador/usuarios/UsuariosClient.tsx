@@ -2,9 +2,10 @@
 
 import React, { useState, useTransition } from "react";
 import { Badge, Box, Button, Card, Checkbox, Dialog, Flex, Grid, ScrollArea, Select, Table, Text, TextField } from "@radix-ui/themes";
-import { KeyRound, Plus, Power, RefreshCw, Shield, User } from "lucide-react";
+import { KeyRound, MapPin, Plus, Power, RefreshCw, Shield, User, Users } from "lucide-react";
 import { cambiarEstadoUsuario, cambiarRolUsuario, registrarUsuario } from "@/actions/admin";
 import { listarCatalogoPermisos, listarPermisosUsuario, asignarPermisosUsuario } from "@/actions/permisos";
+import { IconTile } from "@/components/ui/yaku-ui";
 
 export default function UsuariosClient({ initialUsers = [], initialDevices = [], initialCrops = [] }: any) {
   const [users, setUsers] = useState(initialUsers);
@@ -153,10 +154,13 @@ export default function UsuariosClient({ initialUsers = [], initialDevices = [],
   return (
     <Box style={{ opacity: isPending ? 0.6 : 1, transition: "opacity 0.2s" }}>
       <Flex direction="column" gap="4" mb="5">
-        <Box>
-          <Text size={{ initial: "5", sm: "6" }} weight="bold" color="indigo" as="div">Usuarios</Text>
-          <Text size={{ initial: "1", sm: "2" }} color="gray" style={{ fontFamily: "monospace" }}>Gestiona roles, estados y cuentas del sistema.</Text>
-        </Box>
+        <Flex align="center" gap="3">
+          <IconTile icon={Users} t="green" size={40} />
+          <Box>
+            <Text size={{ initial: "5", sm: "6" }} weight="bold" as="div" style={{ color: "var(--foreground)", letterSpacing: "-0.02em" }}>Usuarios</Text>
+            <Text size={{ initial: "1", sm: "2" }} color="gray">Gestiona roles, estados y cuentas del sistema.</Text>
+          </Box>
+        </Flex>
       </Flex>
 
       <Card size={{ initial: "2", sm: "3" }} style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
@@ -167,11 +171,10 @@ export default function UsuariosClient({ initialUsers = [], initialDevices = [],
           gap="3"
           mb="4"
         >
-          <Text size={{ initial: "3", sm: "4" }} weight="bold" color="indigo" as="div">
+          <Text size="3" weight="bold" as="div" style={{ color: "var(--foreground)" }}>
             Usuarios del Sistema
           </Text>
           <Button
-            color="indigo"
             size="2"
             onClick={() => setIsOpenRegisterUser(true)}
             style={{ cursor: "pointer", minHeight: "44px" }}
@@ -211,12 +214,12 @@ export default function UsuariosClient({ initialUsers = [], initialDevices = [],
                     </Table.RowHeaderCell>
                     <Table.Cell>
                       <Flex direction="column" gap="1">
-                        <Text size="1" color="gray" style={{ fontFamily: "monospace" }}>{u.correo}</Text>
+                        <Text size="1" color="gray">{u.correo}</Text>
                         <Text size="1" style={{ color: "#94a3b8" }}>{u.telefono || "Sin telefono"}</Text>
                         {u.dni && <Text size="1" color="cyan">DNI: {u.dni}</Text>}
                         {u.direccion && (
                           <Text size="1" color="gray" style={{ maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={u.direccion}>
-                            📍 {u.direccion}
+                            <MapPin size={11} aria-hidden style={{ display: "inline", verticalAlign: "-1px", marginRight: 3 }} />{u.direccion}
                           </Text>
                         )}
                       </Flex>
@@ -246,7 +249,7 @@ export default function UsuariosClient({ initialUsers = [], initialDevices = [],
                           <RefreshCw size={12} style={{ marginRight: "4px" }} /> Cambiar Rol
                         </Button>
                         {!isAdmin && (
-                          <Button size="1" color="indigo" variant="outline" onClick={() => handleAbrirPermisos(u.id)} style={{ cursor: "pointer" }}>
+                          <Button size="1" variant="outline" onClick={() => handleAbrirPermisos(u.id)} style={{ cursor: "pointer" }}>
                             <KeyRound size={12} style={{ marginRight: "4px" }} /> Permisos
                           </Button>
                         )}
@@ -322,9 +325,9 @@ export default function UsuariosClient({ initialUsers = [], initialDevices = [],
                       width: "100%",
                       padding: "6px 10px",
                       borderRadius: "6px",
-                      background: "#1e293b",
+                      background: "#1c2631",
                       color: "white",
-                      border: "1px solid #334155",
+                      border: "1px solid #2c3a47",
                       fontSize: "0.85rem",
                       height: "32px",
                     }}
@@ -395,7 +398,7 @@ export default function UsuariosClient({ initialUsers = [], initialDevices = [],
             <Dialog.Close>
               <Button variant="soft" color="gray" style={{ cursor: "pointer" }}>Cancelar</Button>
             </Dialog.Close>
-            <Button color="indigo" onClick={handleGuardarPermisos} disabled={savingPermisos || loadingPermisos} style={{ cursor: "pointer" }}>
+            <Button onClick={handleGuardarPermisos} disabled={savingPermisos || loadingPermisos} style={{ cursor: "pointer" }}>
               {savingPermisos ? "Guardando..." : "Guardar permisos"}
             </Button>
           </Flex>

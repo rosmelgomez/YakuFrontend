@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Box, Card, Flex, Text, Button, TextField, Switch } from "@radix-ui/themes";
-import { Radio } from "lucide-react";
+import { Info, Radio } from "lucide-react";
 import { obtenerMqttConfig, actualizarMqttConfig } from "@/actions/mqttConfig";
 
 export default function MqttConfigClient() {
@@ -60,7 +60,7 @@ export default function MqttConfigClient() {
     <Box>
       <Flex direction="column" gap="4" mb="5">
         <Box>
-          <Text size={{ initial: "5", sm: "6" }} weight="bold" color="indigo" as="div">Configuración MQTT</Text>
+          <Text size={{ initial: "5", sm: "6" }} weight="bold" as="div" style={{ color: "var(--foreground)" }}>Configuración MQTT</Text>
           <Text size={{ initial: "1", sm: "2" }} color="gray">
             Broker al que se conectan los nodos ESP32. Al guardar, la conexión del backend se reinicia en caliente.
           </Text>
@@ -79,9 +79,7 @@ export default function MqttConfigClient() {
         }}
       >
         <Flex gap="3" align="start">
-          <Text size="5" style={{ marginTop: "-2px" }}>
-            ℹ️
-          </Text>
+          <Info size={18} aria-hidden style={{ color: "var(--blue)", flexShrink: 0, marginTop: 1 }} />
           <Box>
             <Text size="2" weight="bold" style={{ color: "#93c5fd" }} as="div">
               Ayuda memoria: ¿cómo configuro el broker MQTT?
@@ -128,8 +126,8 @@ export default function MqttConfigClient() {
         ) : (
           <Flex direction="column" gap="4">
             <Flex align="center" gap="3" mb="1">
-              <div className="w-10 h-10 rounded-lg bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center">
-                <Radio className="w-5 h-5 text-indigo-400" />
+              <div className="w-10 h-10 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center">
+                <Radio className="w-5 h-5 text-emerald-400" />
               </div>
               <Box>
                 <Text weight="bold" style={{ color: "white" }} as="div">Broker MQTT</Text>
@@ -192,7 +190,7 @@ export default function MqttConfigClient() {
             )}
 
             <Flex justify="end">
-              <Button color="indigo" onClick={handleGuardar} disabled={saving} style={{ cursor: "pointer" }}>
+              <Button onClick={handleGuardar} disabled={saving} style={{ cursor: "pointer" }}>
                 {saving ? "Guardando..." : "Guardar y reconectar"}
               </Button>
             </Flex>

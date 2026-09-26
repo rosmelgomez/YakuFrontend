@@ -50,7 +50,7 @@ function classifyAlert(message: string): ToastTone {
 }
 
 function cleanAlertText(message: string) {
-  return message.replace(/^[✅❌⚠️\s]+/u, "").trim();
+  return message.replace(/^[\p{Extended_Pictographic}️‍\s]+/u, "").trim();
 }
 
 export default function FormToastProvider() {

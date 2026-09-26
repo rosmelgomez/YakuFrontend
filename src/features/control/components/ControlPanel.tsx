@@ -758,7 +758,7 @@ export function ControlPanel({
                   <Dialog.Title style={{ color: "white" }}>
                     Log completo de auditoría
                   </Dialog.Title>
-                  <Dialog.Description size="2" mb="4" style={{ color: "#9ca3af" }}>
+                  <Dialog.Description size="2" mb="4" style={{ color: "#8fa6b7" }}>
                     Historial detallado de eventos del sistema y acciones manuales registradas.
                   </Dialog.Description>
 

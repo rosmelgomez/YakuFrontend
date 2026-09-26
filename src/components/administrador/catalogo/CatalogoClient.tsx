@@ -5,6 +5,7 @@ import { Badge, Box, Button, Card, Dialog, Flex, Grid, ScrollArea, Select, Tabs,
 import { Gauge, MapPin, Plus, Tag } from "lucide-react";
 import { actualizarParametrosPlanta, registrarDistrito, registrarPlanta, registrarProvincia, registrarRegion } from "@/actions/admin";
 import SearchableSelect from "@/components/ui/SearchableSelect";
+import { IconTile } from "@/components/ui/yaku-ui";
 
 type RangoParametro = {
   minimo: string;
@@ -193,14 +194,17 @@ export default function CatalogoClient({ catalogPlantas = [], regiones = [], pro
   return (
     <Box style={{ opacity: isPending ? 0.6 : 1, transition: "opacity 0.2s" }}>
       <Flex direction="column" gap="4" mb="5">
-        <Box>
-          <Text size={{ initial: "5", sm: "6" }} weight="bold" color="indigo" as="div">Catálogo</Text>
-          <Text size={{ initial: "1", sm: "2" }} color="gray" style={{ fontFamily: "monospace" }}>Administra plantas y ubicaciones geográficas.</Text>
-        </Box>
+        <Flex align="center" gap="3">
+          <IconTile icon={MapPin} t="green" size={40} />
+          <Box>
+            <Text size={{ initial: "5", sm: "6" }} weight="bold" as="div" style={{ color: "var(--foreground)", letterSpacing: "-0.02em" }}>Catálogo</Text>
+            <Text size={{ initial: "1", sm: "2" }} color="gray">Administra plantas y ubicaciones geográficas.</Text>
+          </Box>
+        </Flex>
       </Flex>
 
       <Flex gap="3" mb="4">
-        <Button color="indigo" onClick={() => setIsOpenRegisterPlant(true)} style={{ cursor: "pointer" }}>
+        <Button onClick={() => setIsOpenRegisterPlant(true)} style={{ cursor: "pointer" }}>
           <Plus size={16} style={{ marginRight: "4px" }} /> Registrar Planta
         </Button>
         <Button color="teal" onClick={() => setIsOpenRegisterGeo(true)} style={{ cursor: "pointer" }}>
@@ -210,9 +214,9 @@ export default function CatalogoClient({ catalogPlantas = [], regiones = [], pro
 
       <Grid columns={{ initial: "1", lg: "2" }} gap="5">
         <Card size={{ initial: "2", sm: "3" }} style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
-          <Flex align="center" gap="2" mb="4">
-            <Tag size={20} color="#818cf8" />
-            <Text size={{ initial: "3", sm: "4" }} weight="bold" color="indigo">Catálogo Botánico</Text>
+          <Flex align="center" gap="3" mb="4">
+            <IconTile icon={Tag} t="green" />
+            <Text size="3" weight="bold">Catálogo Botánico</Text>
           </Flex>
           <Text size="2" color="gray" mb="3" as="div" style={{ fontWeight: "bold" }}>Especies Registradas ({catalogPlantas.length})</Text>
           <ScrollArea style={{ height: 350 }}>
@@ -222,13 +226,12 @@ export default function CatalogoClient({ catalogPlantas = [], regiones = [], pro
                   <Flex justify="between" align="start" gap="2">
                     <Box>
                       <Text size="2" weight="bold" style={{ color: "white" }}>{p.nombre}</Text>
-                      {p.tipo && <Badge color="indigo" size="1" ml="2">{p.tipo}</Badge>}
+                      {p.tipo && <Badge color="gray" size="1" ml="2">{p.tipo}</Badge>}
                     </Box>
                     <Button
                       type="button"
                       size="1"
                       variant="soft"
-                      color="indigo"
                       aria-label={`Agregar o modificar parámetros de ${p.nombre}`}
                       title="Agregar o modificar parámetros"
                       onClick={() => openPlantParametros(p)}
@@ -238,7 +241,7 @@ export default function CatalogoClient({ catalogPlantas = [], regiones = [], pro
                     </Button>
                   </Flex>
                   <Text size="1" color="gray" style={{ display: "block", marginTop: "2px" }}>{p.descripcion || "Sin descripción"}</Text>
-                  <Text size="1" color="indigo" style={{ display: "block", marginTop: "5px" }}>
+                  <Text size="1" style={{ color: "var(--foreground)", display: "block", marginTop: "5px" }}>
                     {p.umbrales?.filter((umbral) => idsMetricasPlanta.has(umbral.id_tipo_metrica)).length ?? 0} parámetros configurados
                   </Text>
                 </Card>
@@ -248,9 +251,9 @@ export default function CatalogoClient({ catalogPlantas = [], regiones = [], pro
         </Card>
 
         <Card size={{ initial: "2", sm: "3" }} style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
-          <Flex align="center" gap="2" mb="4">
-            <MapPin size={20} color="#f87171" />
-            <Text size={{ initial: "3", sm: "4" }} weight="bold" color="indigo">Divisiones Geográficas</Text>
+          <Flex align="center" gap="3" mb="4">
+            <IconTile icon={MapPin} t="green" />
+            <Text size="3" weight="bold">Divisiones Geográficas</Text>
           </Flex>
           <Tabs.Root defaultValue="reg">
             <Tabs.List size="2" style={{ marginBottom: "16px" }}>
@@ -293,7 +296,7 @@ export default function CatalogoClient({ catalogPlantas = [], regiones = [], pro
               <TextField.Root placeholder="Descripcion" value={newPlantDesc} onChange={(e) => setNewPlantDesc(e.target.value)} />
               <Box mt="2">
                 <Flex align="center" gap="2" mb="1">
-                  <Gauge size={17} color="#818cf8" />
+                  <Gauge size={17} color="#4ade80" />
                   <Text size="3" weight="bold" style={{ color: "white" }}>Parámetros recomendados</Text>
                 </Flex>
                 <Text size="1" color="gray" as="div" mb="3">

@@ -67,7 +67,7 @@ export default function MaintenanceHistoryClient() {
     <Box>
       <Flex direction="column" gap="4" mb="5">
         <Box>
-          <Text size={{ initial: "5", sm: "6" }} weight="bold" color="indigo" as="div">Auditoría y mantenimiento</Text>
+          <Text size={{ initial: "5", sm: "6" }} weight="bold" as="div" style={{ color: "var(--foreground)" }}>Auditoría y mantenimiento</Text>
           <Text size={{ initial: "1", sm: "2" }} color="gray">
             {esAdminReal
               ? "Bitácora completa del sistema: mantenimiento técnico (calibraciones, desconexiones), inicios de sesión, cambios de rol/permisos y errores de red del broker MQTT."
@@ -83,7 +83,7 @@ export default function MaintenanceHistoryClient() {
               key={m.value}
               size="1"
               variant={modulo === m.value ? "solid" : "soft"}
-              color={modulo === m.value ? "indigo" : "gray"}
+              color={modulo === m.value ? "green" : "gray"}
               onClick={() => handleFiltroRapido(m.value)}
               style={{ cursor: "pointer" }}
             >
@@ -112,7 +112,7 @@ export default function MaintenanceHistoryClient() {
               style={{ background: "var(--surface2-mockup)", border: "1px solid var(--border-mockup)" }}
             />
           </Box>
-          <Button variant="soft" color="indigo" onClick={() => cargar(modulo)} style={{ cursor: "pointer" }}>
+          <Button variant="soft" onClick={() => cargar(modulo)} style={{ cursor: "pointer" }}>
             Filtrar
           </Button>
         </Flex>
@@ -133,17 +133,17 @@ export default function MaintenanceHistoryClient() {
             <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
               <thead>
                 <tr style={{ borderBottom: "1px solid var(--border-mockup)" }}>
-                  <th style={{ padding: "8px 10px", color: "#9ca3af", fontSize: "0.75rem" }}>Fecha</th>
-                  <th style={{ padding: "8px 10px", color: "#9ca3af", fontSize: "0.75rem" }}>Acción</th>
-                  <th style={{ padding: "8px 10px", color: "#9ca3af", fontSize: "0.75rem" }}>Módulo</th>
-                  <th style={{ padding: "8px 10px", color: "#9ca3af", fontSize: "0.75rem" }}>Descripción</th>
+                  <th style={{ padding: "8px 10px", color: "var(--muted-foreground)", fontSize: "0.75rem" }}>Fecha</th>
+                  <th style={{ padding: "8px 10px", color: "var(--muted-foreground)", fontSize: "0.75rem" }}>Acción</th>
+                  <th style={{ padding: "8px 10px", color: "var(--muted-foreground)", fontSize: "0.75rem" }}>Módulo</th>
+                  <th style={{ padding: "8px 10px", color: "var(--muted-foreground)", fontSize: "0.75rem" }}>Descripción</th>
                 </tr>
               </thead>
               <tbody>
                 {paginados.map((log) => (
                   <tr key={log.id} style={{ borderBottom: "1px solid var(--border-mockup)" }}>
                     <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
-                      <Text size="1" color="gray" style={{ fontFamily: "monospace" }}>
+                      <Text size="1" color="gray">
                         {log.fecha ? new Date(log.fecha).toLocaleString() : "—"}
                       </Text>
                     </td>
@@ -151,7 +151,7 @@ export default function MaintenanceHistoryClient() {
                       <Text size="1" weight="bold" style={{ color: "white" }}>{log.accion}</Text>
                     </td>
                     <td style={{ padding: "8px 10px" }}>
-                      {log.modulo && <Badge color="indigo" variant="soft" size="1">{log.modulo}</Badge>}
+                      {log.modulo && <Badge color="gray" variant="soft" size="1">{log.modulo}</Badge>}
                     </td>
                     <td style={{ padding: "8px 10px" }}>
                       <Text size="1" color="gray">{log.descripcion}</Text>

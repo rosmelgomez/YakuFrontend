@@ -10,7 +10,7 @@ import FormToastProvider from '@/components/ui/FormToastProvider';
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <Theme appearance="dark" accentColor="green" radius="medium">
+      <Theme appearance="dark" accentColor="green" grayColor="slate" radius="medium">
         <FormToastProvider />
         <div className="min-h-full flex flex-col flex-1">
           <Outlet />

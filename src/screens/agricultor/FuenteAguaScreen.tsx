@@ -1,6 +1,7 @@
 // src/screens/agricultor/FuenteAguaScreen.tsx
 import React, { useState, useEffect, useTransition } from "react";
 import { useNavigate } from "react-router-dom";
+import { Dialog } from "@radix-ui/themes";
 import {
   Droplets,
   Plus,
@@ -12,6 +13,8 @@ import {
   Power,
   ExternalLink,
   Sprout,
+  Waves,
+  Container,
 } from "lucide-react";
 import { listarFuentesAgua, registrarFuenteAgua } from "@/actions/crops";
 import { getDashboardData } from "@/services/dashboard";
@@ -26,6 +29,94 @@ interface WaterSourceItem {
   altura_seguridad_cm?: number;
 }
 
+type NivelTone = { fill: string; text: string; label: string };
+
+function nivelTone(pct: number): NivelTone {
+  if (pct >= 50) return { fill: "var(--blue)", text: "text-sky-300", label: "Nivel óptimo" };
+  if (pct >= 25) return { fill: "var(--amber)", text: "text-amber-300", label: "Nivel bajo" };
+  return { fill: "var(--red)", text: "text-rose-300", label: "Nivel crítico" };
+}
+
+const focusRing =
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400";
+
+const inputClass =
+  "w-full bg-[var(--bg-mockup)] border border-[var(--border2-mockup)] rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/25 transition-colors tabular-nums";
+
+// Tanque dibujado: la columna de agua sube/baja con el porcentaje real y la
+// franja superior marca la distancia de seguridad sensor-techo.
+function TankGauge({
+  pct,
+  hasData,
+  safetyRatio,
+  color,
+}: {
+  pct: number;
+  hasData: boolean;
+  safetyRatio: number;
+  color: string;
+}) {
+  const level = Math.min(100, Math.max(0, pct));
+  return (
+    <div
+      className="relative w-16 sm:w-[72px] h-28 shrink-0 rounded-xl overflow-hidden"
+      style={{
+        background: "var(--bg-mockup)",
+        border: hasData ? "1px solid var(--border2-mockup)" : "1px dashed var(--border2-mockup)",
+      }}
+      role={hasData ? "meter" : undefined}
+      aria-valuenow={hasData ? level : undefined}
+      aria-valuemin={hasData ? 0 : undefined}
+      aria-valuemax={hasData ? 100 : undefined}
+      aria-label={hasData ? `Nivel del tanque ${level}%` : "Sin lectura del tanque"}
+    >
+      {/* Zona de seguridad (no utilizable) */}
+      <div
+        className="absolute inset-x-0 top-0"
+        style={{
+          height: `${Math.min(30, Math.max(6, safetyRatio * 100))}%`,
+          background:
+            "repeating-linear-gradient(135deg, rgba(255,255,255,0.05) 0 4px, transparent 4px 8px)",
+          borderBottom: "1px dashed rgba(255,255,255,0.12)",
+        }}
+      />
+      {/* Marcas de 25/50/75 */}
+      {[25, 50, 75].map((m) => (
+        <div
+          key={m}
+          className="absolute right-0 w-2 h-px bg-white/15"
+          style={{ bottom: `${m}%` }}
+        />
+      ))}
+      {hasData ? (
+        <div
+          className="absolute inset-x-0 bottom-0 transition-[height] duration-700 ease-out"
+          style={{
+            height: `${Math.max(3, level)}%`,
+            background: `linear-gradient(to top, color-mix(in srgb, ${color} 55%, transparent), color-mix(in srgb, ${color} 30%, transparent))`,
+            borderTop: `2px solid ${color}`,
+          }}
+        />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center text-slate-600">
+          <Radio size={18} aria-hidden />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Stat({ label, value, accent }: { label: string; value: React.ReactNode; accent?: string }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-[11px] text-slate-400 leading-tight">{label}</dt>
+      <dd className={`m-0 mt-0.5 text-sm font-semibold tabular-nums truncate ${accent || "text-slate-100"}`}>
+        {value}
+      </dd>
+    </div>
+  );
+}
+
 export default function FuenteAguaScreen() {
   const navigate = useNavigate();
   const [fuentes, setFuentes] = useState<WaterSourceItem[]>([]);
@@ -35,7 +126,8 @@ export default function FuenteAguaScreen() {
 
   // Modal registration state
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [registradaNombre, setRegistradaNombre] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const [newNombre, setNewNombre] = useState("");
@@ -66,28 +158,35 @@ export default function FuenteAguaScreen() {
     void loadData();
   }, []);
 
+  const abrirModal = () => {
+    setFormError(null);
+    setIsModalOpen(true);
+  };
+
   const handleCreateFuente = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newNombre.trim()) {
-      alert("Ingrese el nombre de la fuente de agua.");
+      setFormError("Ingrese el nombre de la fuente de agua.");
       return;
     }
 
     if (newTipo === "tanque") {
       if (!newCapacidad || Number(newCapacidad) <= 0) {
-        alert("Ingrese una capacidad válida en litros.");
+        setFormError("Ingrese una capacidad válida en litros.");
         return;
       }
       if (!newAltura || Number(newAltura) <= 0) {
-        alert("Ingrese una altura válida en centímetros.");
+        setFormError("Ingrese una altura válida en centímetros.");
         return;
       }
     }
+    setFormError(null);
 
     startTransition(async () => {
       try {
+        const nombre = newNombre.trim();
         const payload = {
-          nombre: newNombre.trim(),
+          nombre,
           tipo: newTipo,
           capacidad_litros: newTipo === "tanque" ? parseFloat(newCapacidad) : undefined,
           altura_tanque_cm: newTipo === "tanque" ? parseFloat(newAltura) : undefined,
@@ -103,11 +202,11 @@ export default function FuenteAguaScreen() {
         setNewCapacidad("");
         setNewAltura("");
         setNewAlturaSeguridad("10");
-        setIsSuccessModalOpen(true);
+        setRegistradaNombre(nombre);
 
         void loadData();
       } catch (err: any) {
-        alert(`Error al registrar fuente: ${err.message || "Error desconocido"}`);
+        setFormError(`Error al registrar fuente: ${err.message || "Error desconocido"}`);
       }
     });
   };
@@ -117,93 +216,129 @@ export default function FuenteAguaScreen() {
   const filteredFuentes = filter === "all" ? fuentes : fuentes.filter((f) => f.tipo === filter);
 
   return (
-    <div className="page-content w-full px-2 sm:px-4 md:px-6 py-3 sm:py-4 md:py-5 space-y-4 sm:space-y-6">
-      {/* Header with Title, Counts and Actions */}
+    <div className="page-content w-full px-2 sm:px-4 md:px-6 py-3 sm:py-4 md:py-5 space-y-4 sm:space-y-5">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
-        <div>
-          <div className="flex items-center gap-2 sm:gap-2.5">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
-              <Droplets className="w-4 h-4 sm:w-5 sm:h-5" />
-            </div>
-            <div>
-              <h2 className="text-base sm:text-xl md:text-2xl font-bold text-white tracking-tight">Fuentes de Agua</h2>
-              <p className="text-slate-400 text-xs sm:text-sm">
-                {fuentes.length} fuente{fuentes.length !== 1 ? "s" : ""} registrada{fuentes.length !== 1 ? "s" : ""} ·{" "}
-                {tanquesCount} tanque{tanquesCount !== 1 ? "s" : ""} · {redesCount} red{redesCount !== 1 ? "es" : ""} directa{redesCount !== 1 ? "s" : ""}
-              </p>
-            </div>
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
+            <Droplets className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden />
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-base sm:text-xl font-bold text-white tracking-tight m-0">Fuentes de agua</h2>
+            <p className="text-slate-400 text-[11px] sm:text-xs m-0 tabular-nums">
+              {fuentes.length} fuente{fuentes.length !== 1 ? "s" : ""} registrada{fuentes.length !== 1 ? "s" : ""} ·{" "}
+              {tanquesCount} tanque{tanquesCount !== 1 ? "s" : ""} · {redesCount} red{redesCount !== 1 ? "es" : ""}{" "}
+              directa{redesCount !== 1 ? "s" : ""}
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 w-full sm:w-auto">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <button
             onClick={() => navigate("/dashboard/agricultor/cultivos")}
-            className="flex-1 sm:flex-none px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white text-xs sm:text-sm font-medium border border-slate-700/60 flex items-center justify-center gap-2 transition-colors"
+            className={`flex-1 sm:flex-none h-9 px-3.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 text-xs sm:text-sm font-medium border border-[var(--border2-mockup)] flex items-center justify-center gap-2 transition-colors ${focusRing}`}
           >
-            <Sprout size={16} className="text-emerald-400" />
-            Mis Cultivos
+            <Sprout size={16} className="text-emerald-400" aria-hidden />
+            Mis cultivos
           </button>
 
           <button
-            onClick={() => setIsModalOpen(true)}
-            className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs sm:text-sm font-medium flex items-center justify-center gap-2 shadow-lg shadow-sky-900/30 transition-all"
+            onClick={abrirModal}
+            className={`flex-1 sm:flex-none h-9 px-4 rounded-lg bg-sky-500 hover:bg-sky-400 text-sky-950 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${focusRing}`}
           >
-            <Plus size={16} />
-            Nueva Fuente de Agua
+            <Plus size={16} aria-hidden />
+            Nueva fuente de agua
           </button>
         </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {[
-          { key: "all", label: "Todas las Fuentes", count: fuentes.length },
-          { key: "tanque", label: "Tanques / Reservorios", count: tanquesCount },
-          { key: "conexion_directa", label: "Red Directa", count: redesCount },
-        ].map((tab) => (
+      {/* Confirmación de registro (en línea, no bloquea la pantalla) */}
+      {registradaNombre && (
+        <div
+          role="status"
+          className="flex items-start gap-3 rounded-xl border border-sky-500/25 bg-sky-500/10 px-4 py-3"
+        >
+          <CheckCircle2 size={18} className="text-sky-300 shrink-0 mt-0.5" aria-hidden />
+          <div className="flex-1 min-w-0">
+            <p className="m-0 text-sm font-semibold text-sky-100">
+              Fuente de agua registrada: {registradaNombre}
+            </p>
+            <p className="m-0 text-xs text-sky-200/80">
+              La fuente ha sido registrada con éxito y ya está lista para vincularse a tus cultivos y sensores.
+            </p>
+          </div>
           <button
-            key={tab.key}
-            onClick={() => setFilter(tab.key as any)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex items-center gap-2 ${
-              filter === tab.key
-                ? "bg-sky-600 text-white shadow-md shadow-sky-900/30"
-                : "bg-slate-900/70 text-slate-400 hover:text-white border border-slate-800/80 hover:border-slate-700"
-            }`}
+            onClick={() => setRegistradaNombre(null)}
+            aria-label="Cerrar aviso"
+            className={`p-1 rounded-md text-sky-200/70 hover:text-white hover:bg-white/10 transition-colors ${focusRing}`}
           >
-            {tab.label}
-            <span
-              className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-                filter === tab.key ? "bg-white/20 text-white" : "bg-slate-800 text-slate-400"
+            <X size={16} aria-hidden />
+          </button>
+        </div>
+      )}
+
+      {/* Filtros */}
+      <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none" role="group" aria-label="Filtrar fuentes">
+        {[
+          { key: "all", label: "Todas", count: fuentes.length, icon: Droplets },
+          { key: "tanque", label: "Tanques / reservorios", count: tanquesCount, icon: Container },
+          { key: "conexion_directa", label: "Red directa", count: redesCount, icon: Waves },
+        ].map((tab) => {
+          const active = filter === tab.key;
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setFilter(tab.key as any)}
+              aria-pressed={active}
+              className={`h-8 px-3 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2 border ${focusRing} ${
+                active
+                  ? "bg-sky-500/15 text-sky-200 border-sky-500/40"
+                  : "bg-transparent text-slate-400 hover:text-white border-[var(--border2-mockup)] hover:bg-white/[0.04]"
               }`}
             >
-              {tab.count}
-            </span>
-          </button>
-        ))}
+              <Icon size={14} aria-hidden />
+              {tab.label}
+              <span
+                className={`min-w-5 px-1.5 rounded-md text-[11px] font-semibold tabular-nums ${
+                  active ? "bg-sky-400/20 text-sky-100" : "bg-white/[0.06] text-slate-400"
+                }`}
+              >
+                {tab.count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Loading Skeleton */}
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 animate-pulse space-y-4">
-              <div className="h-6 bg-slate-800 rounded w-2/3" />
-              <div className="grid grid-cols-3 gap-2">
-                <div className="h-10 bg-slate-800/60 rounded" />
-                <div className="h-10 bg-slate-800/60 rounded" />
-                <div className="h-10 bg-slate-800/60 rounded" />
+        /* Loading skeleton con la misma silueta que la tarjeta real */
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" aria-busy="true">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="bg-[var(--surface-mockup)] border border-[var(--border-mockup)] rounded-2xl p-4 sm:p-5 animate-pulse space-y-4"
+            >
+              <div className="h-5 bg-white/[0.06] rounded w-2/3" />
+              <div className="flex gap-4">
+                <div className="w-16 h-28 bg-white/[0.05] rounded-xl" />
+                <div className="flex-1 space-y-2 pt-2">
+                  <div className="h-8 bg-white/[0.06] rounded w-1/2" />
+                  <div className="h-3 bg-white/[0.04] rounded w-3/4" />
+                  <div className="h-3 bg-white/[0.04] rounded w-2/3" />
+                </div>
               </div>
-              <div className="h-16 bg-slate-800/40 rounded-xl" />
+              <div className="h-10 bg-white/[0.04] rounded-lg" />
             </div>
           ))}
         </div>
       ) : filteredFuentes.length === 0 ? (
-        /* Empty State */
-        <div className="text-center py-16 px-4 bg-slate-900/40 border border-slate-800/80 rounded-2xl">
-          <div className="w-16 h-16 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center mx-auto mb-4 text-sky-400">
-            <Droplets size={32} />
+        /* Empty state */
+        <div className="text-center py-14 px-4 bg-[var(--surface-mockup)] border border-dashed border-[var(--border2-mockup)] rounded-2xl">
+          <div className="w-14 h-14 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center mx-auto mb-4 text-sky-400">
+            <Droplets size={28} aria-hidden />
           </div>
-          <h3 className="text-lg font-semibold text-white mb-1">
+          <h3 className="text-base sm:text-lg font-semibold text-white mb-1">
             {filter === "all" ? "No tienes fuentes de agua registradas" : "Sin fuentes en esta categoría"}
           </h3>
           <p className="text-slate-400 text-sm max-w-md mx-auto mb-6">
@@ -212,16 +347,15 @@ export default function FuenteAguaScreen() {
               : "Prueba cambiando de filtro o registra una nueva fuente en esta categoría."}
           </p>
           <button
-            onClick={() => setIsModalOpen(true)}
-            className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-medium inline-flex items-center gap-2 shadow-lg shadow-sky-900/30 transition-all"
+            onClick={abrirModal}
+            className={`h-9 px-4 rounded-lg bg-sky-500 hover:bg-sky-400 text-sky-950 text-sm font-semibold inline-flex items-center gap-2 transition-colors ${focusRing}`}
           >
-            <Plus size={16} />
-            Registrar Fuente de Agua
+            <Plus size={16} aria-hidden />
+            Registrar fuente de agua
           </button>
         </div>
       ) : (
-        /* Water Sources Grid */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filteredFuentes.map((fuente) => {
             const isTanque = fuente.tipo === "tanque";
             const linkedCrop = dashboardCrops.find(
@@ -248,14 +382,7 @@ export default function FuenteAguaScreen() {
             const tankHeight = fuente.altura_tanque_cm || 0;
             const tankSafety = fuente.altura_seguridad_cm || 10;
             const bombaEncendida = Boolean(tanqueTelemetry?.bombaEncendida);
-
-            const levelColor = tankPct >= 50 ? "#0ea5e9" : tankPct >= 25 ? "#f59e0b" : "#ef4444";
-            const levelBadgeClass =
-              tankPct >= 50
-                ? "bg-sky-950/70 text-sky-400 border-sky-800/60"
-                : tankPct >= 25
-                ? "bg-amber-950/70 text-amber-400 border-amber-800/60"
-                : "bg-rose-950/70 text-rose-400 border-rose-800/60";
+            const nivel = nivelTone(tankPct);
 
             // Red Directa telemetry
             const isValveOpen = Boolean(linkedCrop?.dispositivos?.some((d: any) => d.funcionamientoActivo));
@@ -266,372 +393,393 @@ export default function FuenteAguaScreen() {
             // Cut-off detection
             const isCutOff = !isTanque && isValveOpen && litrosHoy === 0;
 
+            const ultimoRiegoTexto = ultimoRiego
+              ? new Date(ultimoRiego).toLocaleDateString("es-PE", {
+                  day: "numeric",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "Ninguno registrado";
+
             return (
-              <div
+              <article
                 key={fuente.id}
-                className="bg-slate-900/85 border border-slate-800/90 hover:border-slate-700/80 transition-all rounded-2xl p-3.5 sm:p-5 shadow-lg flex flex-col justify-between"
+                className={`bg-[var(--surface-mockup)] border rounded-2xl p-4 sm:p-5 flex flex-col gap-4 transition-colors ${
+                  isCutOff ? "border-rose-500/40" : "border-[var(--border-mockup)] hover:border-[var(--border2-mockup)]"
+                }`}
               >
-                <div>
-                  {/* Card Header */}
-                  <div className="flex items-start justify-between gap-2 mb-2.5 sm:mb-3">
-                    <div className="min-w-0">
-                      <h3 className="font-bold text-white text-sm sm:text-base truncate">{fuente.nombre}</h3>
-                      <p className="text-slate-400 text-xs mt-0.5 flex items-center gap-1 truncate">
-                        {linkedCrop ? (
-                          <>
-                            <Sprout size={12} className="text-emerald-400 shrink-0" />
-                            <span>
-                              Parcela: <strong className="text-slate-200">{linkedCrop.nombreCultivo}</strong>
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-slate-500 italic">Sin cultivo asignado</span>
-                        )}
-                      </p>
-                    </div>
-                    <span
-                      className={`px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-[11px] font-semibold border shrink-0 ${
-                        isTanque
-                          ? "bg-sky-950/80 text-sky-400 border-sky-800/60"
-                          : "bg-emerald-950/80 text-emerald-400 border-emerald-800/60"
-                      }`}
-                    >
-                      {isTanque ? "Tanque" : "Red Directa"}
-                    </span>
-                  </div>
-
-                  {/* Status Badge */}
-                  <div className="mb-3 sm:mb-4">
-                    {isTanque ? (
-                      hasTanqueTelemetry ? (
-                        <span
-                          className={`px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-semibold border inline-flex items-center gap-1.5 ${levelBadgeClass}`}
-                        >
-                          <span className="w-2 h-2 rounded-full bg-current animate-pulse" />
-                          {tankPct >= 50 ? "Nivel Óptimo" : tankPct >= 25 ? "Nivel Bajo" : "Nivel Crítico"} · {tankPct}%
-                        </span>
+                {/* Cabecera */}
+                <header className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="m-0 font-bold text-white text-sm sm:text-base leading-snug truncate">
+                      {fuente.nombre}
+                    </h3>
+                    <p className="m-0 text-slate-400 text-xs mt-0.5 flex items-center gap-1 min-w-0">
+                      {linkedCrop ? (
+                        <>
+                          <Sprout size={12} className="text-emerald-400 shrink-0" aria-hidden />
+                          <span className="truncate">
+                            Parcela: <strong className="text-slate-200 font-medium">{linkedCrop.nombreCultivo}</strong>
+                          </span>
+                        </>
                       ) : (
-                        <span className="px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-medium bg-slate-800/80 text-slate-400 border border-slate-700/70 inline-flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
-                          Esperando lectura ultrasónica
-                        </span>
-                      )
-                    ) : isCutOff ? (
-                      <span className="px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-bold bg-rose-950 text-rose-400 border border-rose-800 inline-flex items-center gap-1.5 animate-pulse">
-                        <AlertTriangle size={12} />
-                        ¡Corte de Suministro Detectado!
-                      </span>
-                    ) : isValveOpen ? (
-                      <span className="px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800 inline-flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                        Riego Activo · Flujo Normal
-                      </span>
-                    ) : (
-                      <span className="px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-medium bg-slate-800 text-slate-300 border border-slate-700 inline-flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
-                        Válvula Cerrada · En Reposo
-                      </span>
-                    )}
+                        <span className="text-slate-500">Sin cultivo asignado</span>
+                      )}
+                    </p>
                   </div>
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold shrink-0 border ${
+                      isTanque
+                        ? "bg-sky-500/10 text-sky-300 border-sky-500/25"
+                        : "bg-emerald-500/10 text-emerald-300 border-emerald-500/25"
+                    }`}
+                  >
+                    {isTanque ? <Container size={12} aria-hidden /> : <Waves size={12} aria-hidden />}
+                    {isTanque ? "Tanque" : "Red directa"}
+                  </span>
+                </header>
 
-                  {/* Specs Overview */}
-                  <div className="grid grid-cols-3 gap-1.5 sm:gap-2 text-[11px] sm:text-xs bg-slate-950/50 p-2.5 sm:p-3 rounded-xl border border-slate-800/60 mb-3 sm:mb-4 font-mono">
-                    {isTanque ? (
-                      <>
-                        <div>
-                          <span className="text-[9px] sm:text-[10px] text-slate-400 block mb-0.5">Capacidad</span>
-                          <span className="font-bold text-white">{tankCapacidad.toLocaleString("es-PE")} L</span>
-                        </div>
-                        <div>
-                          <span className="text-[9px] sm:text-[10px] text-slate-400 block mb-0.5">Altura Tanque</span>
-                          <span className="font-semibold text-slate-200">
-                            {tankHeight > 0 ? `${tankHeight} cm` : "--"}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-[9px] sm:text-[10px] text-slate-400 block mb-0.5">Seguridad</span>
-                          <span className="font-semibold text-slate-300">{tankSafety} cm</span>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div>
-                          <span className="text-[9px] sm:text-[10px] text-slate-400 block mb-0.5">Suministro</span>
-                          <span className="font-bold text-white">Continua</span>
-                        </div>
-                        <div>
-                          <span className="text-[9px] sm:text-[10px] text-slate-400 block mb-0.5">Electroválvula</span>
-                          <span className="font-semibold text-emerald-400">GPIO 25</span>
-                        </div>
-                        <div>
-                          <span className="text-[9px] sm:text-[10px] text-slate-400 block mb-0.5">Sensor Flujo</span>
-                          <span className="font-semibold text-sky-400">GPIO 27</span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Telemetry & Consumption Box */}
-                  <div className="mb-3 sm:mb-4 bg-slate-950/60 p-2.5 sm:p-3.5 rounded-xl border border-slate-800/60 space-y-2">
-                    {isTanque ? (
-                      <>
-                        {hasTanqueTelemetry ? (
-                          <>
-                            <div className="space-y-1.5">
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="text-slate-400">Nivel de agua:</span>
-                                <span className="font-mono font-bold text-sky-400">
-                                  {tankPct}% ({tankLitros.toLocaleString("es-PE")} L)
-                                </span>
-                              </div>
-                              <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                                <div
-                                  className="h-full rounded-full transition-all duration-700"
-                                  style={{
-                                    width: `${Math.min(100, Math.max(3, tankPct))}%`,
-                                    backgroundColor: levelColor,
-                                  }}
-                                />
-                              </div>
-                            </div>
-
-                            <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-800/60">
-                              <span>Bomba de riego:</span>
-                              <span
-                                className={`font-semibold flex items-center gap-1 ${
-                                  bombaEncendida ? "text-emerald-400" : "text-slate-400"
-                                }`}
-                              >
-                                <Power
-                                  size={12}
-                                  className={bombaEncendida ? "text-emerald-400 animate-pulse" : "text-slate-500"}
-                                />
-                                {bombaEncendida ? "Encendida" : "En Reposo"}
-                              </span>
-                            </div>
-                          </>
-                        ) : (
-                          <div className="text-xs text-slate-400 flex items-center gap-2 py-0.5">
-                            <Radio size={14} className="text-slate-500 shrink-0" />
-                            <span>Esperando lecturas de sensor ultrasónico</span>
+                {isTanque ? (
+                  /* Lectura principal: tanque */
+                  <div className="flex items-stretch gap-4">
+                    <TankGauge
+                      pct={tankPct}
+                      hasData={hasTanqueTelemetry}
+                      safetyRatio={tankHeight > 0 ? tankSafety / tankHeight : 0.1}
+                      color={nivel.fill}
+                    />
+                    <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
+                      {hasTanqueTelemetry ? (
+                        <>
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-3xl sm:text-4xl font-bold tracking-tight text-white tabular-nums leading-none">
+                              {tankPct}
+                            </span>
+                            <span className="text-lg font-semibold text-slate-400">%</span>
                           </div>
-                        )}
-
-                        <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-800/60">
-                          <span>Consumo registrado hoy:</span>
-                          <span className="text-slate-200 font-mono font-semibold">
-                            {litrosHoy.toFixed(1)} L ({riegosHoy} riegos)
-                          </span>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-slate-400">Electroválvula:</span>
-                          <span
-                            className={`font-semibold flex items-center gap-1 ${
-                              isValveOpen ? "text-emerald-400" : "text-slate-400"
+                          <p className={`m-0 text-xs font-semibold ${nivel.text}`}>{nivel.label}</p>
+                          <p className="m-0 text-xs text-slate-400 tabular-nums">
+                            <span className="text-slate-200 font-medium">{tankLitros.toLocaleString("es-PE")} L</span>{" "}
+                            de {tankCapacidad.toLocaleString("es-PE")} L
+                          </p>
+                          <p
+                            className={`m-0 text-xs font-medium flex items-center gap-1.5 ${
+                              bombaEncendida ? "text-emerald-300" : "text-slate-400"
                             }`}
                           >
-                            <Zap size={13} className={isValveOpen ? "text-emerald-400" : "text-slate-500"} />
-                            {isValveOpen ? "Abierta (Energizada)" : "Cerrada (NC)"}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-800/60">
-                          <span>Consumo medido hoy:</span>
-                          <span className="text-slate-200 font-mono font-semibold">
-                            {litrosHoy.toFixed(1)} L ({riegosHoy} riegos)
-                          </span>
-                        </div>
-
-                        <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-800/60">
-                          <span>Último riego:</span>
-                          <span className="text-slate-300">
-                            {ultimoRiego
-                              ? new Date(ultimoRiego).toLocaleDateString("es-PE", {
-                                  day: "numeric",
-                                  month: "short",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })
-                              : "Ninguno registrado"}
-                          </span>
-                        </div>
-                      </>
-                    )}
+                            <Power
+                              size={12}
+                              aria-hidden
+                              className={bombaEncendida ? "text-emerald-400 animate-pulse" : "text-slate-500"}
+                            />
+                            Bomba de riego {bombaEncendida ? "encendida" : "en reposo"}
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="m-0 text-sm font-semibold text-slate-200">Esperando lectura ultrasónica</p>
+                          <p className="m-0 text-xs text-slate-400">
+                            El nivel aparecerá cuando el sensor ultrasónico envíe su primera medición.
+                          </p>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  /* Lectura principal: red directa */
+                  <div className="flex flex-col gap-3">
+                    {isCutOff && (
+                      <div
+                        role="alert"
+                        className="flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2"
+                      >
+                        <AlertTriangle size={15} className="text-rose-300 shrink-0 mt-0.5" aria-hidden />
+                        <div>
+                          <p className="m-0 text-xs font-bold text-rose-200">¡Corte de suministro detectado!</p>
+                          <p className="m-0 text-[11px] text-rose-200/75">
+                            La válvula está abierta pero no se ha medido flujo hoy.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border ${
+                          isValveOpen
+                            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
+                            : "bg-white/[0.03] border-[var(--border2-mockup)] text-slate-500"
+                        }`}
+                      >
+                        <Zap size={20} aria-hidden />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="m-0 text-[11px] text-slate-400">Electroválvula</p>
+                        <p
+                          className={`m-0 text-base font-bold flex items-center gap-2 ${
+                            isValveOpen ? "text-emerald-300" : "text-slate-200"
+                          }`}
+                        >
+                          {isValveOpen ? "Abierta (energizada)" : "Cerrada (NC)"}
+                        </p>
+                        <p className="m-0 text-xs text-slate-400">
+                          {isCutOff
+                            ? "Sin flujo registrado"
+                            : isValveOpen
+                            ? "Riego activo · flujo normal"
+                            : "En reposo"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
-                {/* Card Action Buttons */}
-                <div className="flex items-center gap-2 pt-2 border-t border-slate-800/60">
+                {/* Consumo del día */}
+                <dl className="m-0 grid grid-cols-3 gap-3 border-t border-[var(--border-mockup)] pt-3">
+                  <Stat label={isTanque ? "Consumo hoy" : "Consumo medido hoy"} value={`${litrosHoy.toFixed(1)} L`} accent="text-sky-300" />
+                  <Stat label="Riegos hoy" value={riegosHoy} />
+                  {isTanque ? (
+                    <Stat label="Capacidad" value={`${tankCapacidad.toLocaleString("es-PE")} L`} />
+                  ) : (
+                    <Stat label="Último riego" value={ultimoRiegoTexto} />
+                  )}
+                </dl>
+
+                {/* Especificaciones de instalación */}
+                <dl className="m-0 grid grid-cols-3 gap-3 rounded-lg bg-white/[0.025] px-3 py-2.5">
+                  {isTanque ? (
+                    <>
+                      <Stat label="Altura tanque" value={tankHeight > 0 ? `${tankHeight} cm` : "--"} />
+                      <Stat label="Seguridad" value={`${tankSafety} cm`} />
+                      <Stat label="Sensor" value="Ultrasónico" />
+                    </>
+                  ) : (
+                    <>
+                      <Stat label="Suministro" value="Continua" />
+                      <Stat label="Electroválvula" value="GPIO 25" accent="text-emerald-300" />
+                      <Stat label="Sensor flujo" value="GPIO 27" accent="text-sky-300" />
+                    </>
+                  )}
+                </dl>
+
+                {/* Acciones */}
+                <div className="flex items-center gap-2 mt-auto">
                   <button
                     onClick={() => navigate("/dashboard/agricultor")}
-                    className="flex-1 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
+                    className={`flex-1 h-9 px-3 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-[var(--border2-mockup)] text-slate-200 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors ${focusRing}`}
                   >
-                    <ExternalLink size={14} className="text-slate-400" />
-                    Ver en Dashboard
+                    <ExternalLink size={14} className="text-slate-400" aria-hidden />
+                    Ver en dashboard
                   </button>
                   {linkedCrop && (
                     <button
                       onClick={() => navigate("/dashboard/agricultor/cultivos")}
-                      className="px-3 py-2 rounded-xl bg-sky-950/60 hover:bg-sky-900/60 text-sky-400 border border-sky-800/40 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
+                      className={`h-9 px-3 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/25 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors ${focusRing}`}
                       title="Ver cultivo vinculado"
                     >
-                      <Sprout size={14} />
+                      <Sprout size={14} aria-hidden />
                       Cultivo
                     </button>
                   )}
                 </div>
-              </div>
+              </article>
             );
           })}
         </div>
       )}
 
-      {/* Modal: Registrar Nueva Fuente de Agua */}
-      {isModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
-          onClick={(e) => e.target === e.currentTarget && setIsModalOpen(false)}
+      {/* Modal: Registrar nueva fuente de agua */}
+      <Dialog.Root open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <Dialog.Content
+          style={{
+            maxWidth: 460,
+            width: "min(460px, 94vw)",
+            background: "var(--surface-mockup)",
+            border: "1px solid var(--border2-mockup)",
+            borderRadius: "16px",
+            padding: "clamp(16px, 4vw, 24px)",
+            boxShadow: "0 24px 48px -12px rgba(0, 0, 0, 0.7)",
+          }}
         >
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-5 sm:p-6 text-white shadow-2xl">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-5">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center">
-                  <Droplets size={18} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg text-white">Nueva Fuente de Agua</h3>
-                  <p className="text-xs text-slate-400">Configura un tanque o suministro por red directa</p>
-                </div>
+          <div className="flex items-start justify-between gap-3 pb-4 mb-5 border-b border-[var(--border-mockup)]">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-sky-500/15 border border-sky-500/30 text-sky-400 flex items-center justify-center shrink-0">
+                <Droplets size={18} aria-hidden />
               </div>
+              <div>
+                <Dialog.Title style={{ margin: 0, fontSize: "1.0625rem", fontWeight: 700, color: "white" }}>
+                  Nueva fuente de agua
+                </Dialog.Title>
+                <Dialog.Description style={{ margin: 0, fontSize: "0.75rem", color: "var(--muted-foreground)" }}>
+                  Configura un tanque o suministro por red directa
+                </Dialog.Description>
+              </div>
+            </div>
+            <Dialog.Close>
               <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+                aria-label="Cerrar"
+                className={`p-1 rounded-md hover:bg-white/10 text-slate-400 hover:text-white transition-colors ${focusRing}`}
               >
-                <X size={18} />
+                <X size={18} aria-hidden />
               </button>
+            </Dialog.Close>
+          </div>
+
+          <form onSubmit={handleCreateFuente} className="space-y-4" noValidate>
+            <div>
+              <label htmlFor="fuente-nombre" className="block text-xs font-semibold text-slate-300 mb-1.5">
+                Nombre de la fuente
+              </label>
+              <input
+                id="fuente-nombre"
+                type="text"
+                required
+                autoFocus
+                placeholder="Ej: Tanque Principal Sector Norte"
+                value={newNombre}
+                onChange={(e) => setNewNombre(e.target.value)}
+                className={inputClass}
+              />
             </div>
 
-            <form onSubmit={handleCreateFuente} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Nombre de la Fuente *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ej: Tanque Principal Sector Norte"
-                  value={newNombre}
-                  onChange={(e) => setNewNombre(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-sky-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Tipo de Instalación *</label>
-                <select
-                  value={newTipo}
-                  onChange={(e) => setNewTipo(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-sky-500"
-                >
-                  <option value="tanque">Tanque / Reservorio (Medición con Sensor Ultrasónico)</option>
-                  <option value="conexion_directa">Conexión Directa (Medición con Flujómetro YF-S201)</option>
-                </select>
-              </div>
-
-              {newTipo === "tanque" && (
-                <>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-medium text-slate-300 mb-1">Capacidad (Litros) *</label>
+            <fieldset className="m-0 p-0 border-0">
+              <legend className="block text-xs font-semibold text-slate-300 mb-1.5">Tipo de instalación</legend>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  {
+                    value: "tanque",
+                    title: "Tanque / reservorio",
+                    desc: "Medición con sensor ultrasónico",
+                    icon: Container,
+                  },
+                  {
+                    value: "conexion_directa",
+                    title: "Conexión directa",
+                    desc: "Medición con flujómetro YF-S201",
+                    icon: Waves,
+                  },
+                ].map((opt) => {
+                  const checked = newTipo === opt.value;
+                  const Icon = opt.icon;
+                  return (
+                    <label
+                      key={opt.value}
+                      className={`relative flex flex-col gap-1 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-sky-400 ${
+                        checked
+                          ? "border-sky-500/50 bg-sky-500/10"
+                          : "border-[var(--border2-mockup)] bg-[var(--bg-mockup)] hover:bg-white/[0.03]"
+                      }`}
+                    >
                       <input
-                        type="number"
-                        min="1"
-                        required
-                        placeholder="Ej: 5000"
-                        value={newCapacidad}
-                        onChange={(e) => setNewCapacidad(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-sky-500 font-mono"
+                        type="radio"
+                        name="tipo-fuente"
+                        value={opt.value}
+                        checked={checked}
+                        onChange={(e) => setNewTipo(e.target.value)}
+                        className="sr-only"
                       />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-slate-300 mb-1">Altura Total (cm) *</label>
-                      <input
-                        type="number"
-                        min="1"
-                        required
-                        placeholder="Ej: 180"
-                        value={newAltura}
-                        onChange={(e) => setNewAltura(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-sky-500 font-mono"
-                      />
-                    </div>
-                  </div>
+                      <span className={`flex items-center gap-1.5 text-sm font-semibold ${checked ? "text-sky-200" : "text-slate-200"}`}>
+                        <Icon size={15} aria-hidden />
+                        {opt.title}
+                      </span>
+                      <span className="text-[11px] text-slate-400 leading-snug">{opt.desc}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
 
+            {newTipo === "tanque" && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">
-                      Distancia Sensor a Techo / Seguridad (cm)
+                    <label htmlFor="fuente-capacidad" className="block text-xs font-semibold text-slate-300 mb-1.5">
+                      Capacidad (litros)
                     </label>
                     <input
+                      id="fuente-capacidad"
                       type="number"
-                      min="0"
-                      placeholder="Ej: 10"
-                      value={newAlturaSeguridad}
-                      onChange={(e) => setNewAlturaSeguridad(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-sky-500 font-mono"
+                      inputMode="numeric"
+                      min="1"
+                      required
+                      placeholder="Ej: 5000"
+                      value={newCapacidad}
+                      onChange={(e) => setNewCapacidad(e.target.value)}
+                      className={inputClass}
                     />
                   </div>
-                </>
-              )}
-
-              {newTipo === "conexion_directa" && (
-                <div className="p-3 bg-sky-950/40 border border-sky-800/40 rounded-xl text-xs text-sky-200">
-                  En conexión directa, el volumen se mide por los pulsos del caudalímetro YF-S201 (GPIO 27) y el flujo se
-                  controla mediante la electroválvula (GPIO 25).
+                  <div>
+                    <label htmlFor="fuente-altura" className="block text-xs font-semibold text-slate-300 mb-1.5">
+                      Altura total (cm)
+                    </label>
+                    <input
+                      id="fuente-altura"
+                      type="number"
+                      inputMode="numeric"
+                      min="1"
+                      required
+                      placeholder="Ej: 180"
+                      value={newAltura}
+                      onChange={(e) => setNewAltura(e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
                 </div>
-              )}
 
-              <div className="flex gap-3 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isPending}
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white text-sm font-medium shadow-lg shadow-sky-900/30 transition-all flex items-center justify-center gap-2"
-                >
-                  {isPending ? "Guardando..." : "Guardar Fuente"}
-                </button>
+                <div>
+                  <label htmlFor="fuente-seguridad" className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Distancia sensor a techo / seguridad (cm)
+                  </label>
+                  <input
+                    id="fuente-seguridad"
+                    type="number"
+                    inputMode="numeric"
+                    min="0"
+                    placeholder="Ej: 10"
+                    value={newAlturaSeguridad}
+                    onChange={(e) => setNewAlturaSeguridad(e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+              </>
+            )}
+
+            {newTipo === "conexion_directa" && (
+              <div className="p-3 bg-sky-500/10 border border-sky-500/25 rounded-lg text-xs text-sky-100/90 leading-relaxed">
+                En conexión directa, el volumen se mide por los pulsos del caudalímetro YF-S201 (GPIO 27) y el flujo se
+                controla mediante la electroválvula (GPIO 25).
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+            )}
 
-      {/* Success Modal */}
-      {isSuccessModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 text-center text-white shadow-2xl">
-            <div className="w-14 h-14 rounded-2xl bg-sky-500/20 border border-sky-500/30 flex items-center justify-center mx-auto mb-4 text-sky-400">
-              <CheckCircle2 size={32} />
+            {formError && (
+              <div
+                role="alert"
+                className="flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200"
+              >
+                <AlertTriangle size={14} className="shrink-0 mt-0.5" aria-hidden />
+                {formError}
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className={`flex-1 h-10 px-4 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-slate-200 text-sm font-medium transition-colors ${focusRing}`}
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={isPending}
+                className={`flex-1 h-10 px-4 rounded-lg bg-sky-500 hover:bg-sky-400 disabled:opacity-50 disabled:cursor-not-allowed text-sky-950 text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${focusRing}`}
+              >
+                {isPending ? "Guardando..." : "Guardar fuente"}
+              </button>
             </div>
-            <h3 className="text-lg font-bold text-white mb-2">¡Fuente de Agua Registrada!</h3>
-            <p className="text-slate-400 text-sm mb-6">
-              La fuente ha sido registrada con éxito y ya está lista para vincularse a tus cultivos y sensores.
-            </p>
-            <button
-              onClick={() => setIsSuccessModalOpen(false)}
-              className="w-full px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-medium shadow-lg shadow-sky-900/30 transition-all"
-            >
-              Entendido
-            </button>
-          </div>
-        </div>
-      )}
+          </form>
+        </Dialog.Content>
+      </Dialog.Root>
     </div>
   );
 }

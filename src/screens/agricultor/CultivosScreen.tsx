@@ -2,21 +2,23 @@
 import React, { useState, useEffect, useTransition } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Sprout,
-  Plus,
-  Leaf,
-  Calendar,
-  Layers,
   Activity,
-  Droplets,
-  MapPin,
-  ExternalLink,
-  X,
-  Info,
-  CheckCircle2,
   AlertTriangle,
+  Calendar,
+  CheckCircle2,
+  CloudFog,
+  Droplets,
+  ExternalLink,
+  Info,
+  Layers,
+  Leaf,
+  MapPin,
+  Plus,
   Sliders,
+  Sprout,
   Thermometer,
+  ThermometerSun,
+  X,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { guardarUmbrales, obtenerDatosAlertaPorCultivo } from "@/actions/alertas";
@@ -575,7 +577,7 @@ export default function CultivosScreen() {
                       </p>
                     </div>
                     <span
-                      className={`px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-[11px] font-semibold border shrink-0 ${badge.bg} ${badge.text} ${badge.border}`}
+                      className={`px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[11px] font-semibold border shrink-0 ${badge.bg} ${badge.text} ${badge.border}`}
                     >
                       {crop.etapaCrecimiento}
                     </span>
@@ -584,13 +586,13 @@ export default function CultivosScreen() {
                   {/* 4 Stats Grid */}
                   <div className="grid grid-cols-2 gap-2 sm:gap-2.5 mb-3 sm:mb-4 text-[11px] sm:text-xs bg-slate-950/40 p-2.5 sm:p-3 rounded-xl border border-slate-800/50">
                     <div>
-                      <span className="text-[10px] text-slate-400 block mb-0.5">Superficie</span>
-                      <span className="font-semibold text-slate-200 font-mono">
+                      <span className="text-[11px] text-slate-400 block mb-0.5">Superficie</span>
+                      <span className="font-semibold text-slate-200 tabular-nums">
                         {crop.area !== null ? `${crop.area.toLocaleString("es-PE")} m²` : "No registrada"}
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-400 block mb-0.5">Fecha Siembra</span>
+                      <span className="text-[11px] text-slate-400 block mb-0.5">Fecha Siembra</span>
                       <span className="font-semibold text-slate-200">
                         {crop.fechaSiembra
                           ? new Date(crop.fechaSiembra).toLocaleDateString("es-PE", {
@@ -602,7 +604,7 @@ export default function CultivosScreen() {
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-400 block mb-0.5">Sensores IoT</span>
+                      <span className="text-[11px] text-slate-400 block mb-0.5">Sensores IoT</span>
                       <span className="font-semibold text-slate-200 flex items-center gap-1">
                         <Activity size={12} className="text-sky-400" />
                         {crop.sensoresCount} vinculado{crop.sensoresCount !== 1 ? "s" : ""}
@@ -610,15 +612,15 @@ export default function CultivosScreen() {
                     </div>
                     <div>
                       <div className="flex items-center gap-1 mb-0.5">
-                        <span className="text-[10px] text-slate-400">Días en campo</span>
+                        <span className="text-[11px] text-slate-400">Días en campo</span>
                         <span
-                          className="text-[10px] text-slate-500 cursor-help"
+                          className="text-[11px] text-slate-500 cursor-help"
                           title="Días transcurridos desde la fecha de siembra registrada (edad del cultivo)"
                         >
                           ⓘ
                         </span>
                       </div>
-                      <span className="font-semibold text-slate-200 font-mono">
+                      <span className="font-semibold text-slate-200 tabular-nums">
                         {daysInField !== null ? `${daysInField} días` : "Sin fecha"}
                       </span>
                     </div>
@@ -631,14 +633,14 @@ export default function CultivosScreen() {
                         <Droplets size={13} className="text-sky-400" />
                         Riegos hoy:
                       </span>
-                      <span className="text-slate-200 font-mono font-semibold">
+                      <span className="text-slate-200 tabular-nums font-semibold">
                         {crop.riegosHoy > 0
                           ? `${crop.riegosHoy} (${crop.litrosHoy.toFixed(1)} L)`
                           : "0 hoy (0.0 L)"}
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-slate-400 pt-1.5 border-t border-slate-800/60">
+                    <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1.5 border-t border-slate-800/60">
                       <span>Último riego:</span>
                       <span className="text-slate-300">
                         {crop.ultimoRiego
@@ -657,11 +659,12 @@ export default function CultivosScreen() {
                   <div className="mb-3 sm:mb-4 bg-slate-950/50 p-2.5 sm:p-3 rounded-xl border border-slate-800/60 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] sm:text-xs font-semibold text-slate-300 flex items-center gap-1">
-                        🌱 Umbrales
+                        <Sprout size={13} className="text-emerald-400" aria-hidden />
+                        Umbrales
                       </span>
                       <button
                         onClick={() => handleOpenUmbralesModal(crop)}
-                        className="text-[10px] sm:text-[11px] text-emerald-400 hover:text-emerald-300 hover:underline font-medium flex items-center gap-1"
+                        className="text-[11px] text-emerald-400 hover:text-emerald-300 hover:underline font-medium flex items-center gap-1"
                       >
                         <Sliders size={12} />
                         Configurar
@@ -670,8 +673,8 @@ export default function CultivosScreen() {
 
                     <div className="grid grid-cols-2 gap-1.5 sm:gap-2 text-[11px] sm:text-xs">
                       <div className="bg-slate-900/70 p-1.5 sm:p-2 rounded-lg border border-slate-800/60">
-                        <span className="text-[9px] sm:text-[10px] text-slate-400 block mb-0.5">💧 Hum. Suelo</span>
-                        <span className="font-mono font-semibold text-emerald-400 text-[11px] sm:text-xs">
+                        <span className="text-[11px] text-slate-400 mb-0.5 flex items-center gap-1"><Droplets size={12} className="text-emerald-400" aria-hidden />Hum. suelo</span>
+                        <span className="tabular-nums font-semibold text-emerald-400 text-[11px] sm:text-xs">
                           {crop.umbrales?.humedadSuelo
                             ? `${crop.umbrales.humedadSuelo.min}%–${crop.umbrales.humedadSuelo.max}%`
                             : "35%–75%"}
@@ -679,8 +682,8 @@ export default function CultivosScreen() {
                       </div>
 
                       <div className="bg-slate-900/70 p-1.5 sm:p-2 rounded-lg border border-slate-800/60">
-                        <span className="text-[9px] sm:text-[10px] text-slate-400 block mb-0.5">🌡️ Temp. Suelo</span>
-                        <span className="font-mono font-semibold text-amber-400 text-[11px] sm:text-xs">
+                        <span className="text-[11px] text-slate-400 mb-0.5 flex items-center gap-1"><Thermometer size={12} className="text-amber-400" aria-hidden />Temp. suelo</span>
+                        <span className="tabular-nums font-semibold text-amber-400 text-[11px] sm:text-xs">
                           {crop.umbrales?.temperaturaSuelo
                             ? `${crop.umbrales.temperaturaSuelo.min}°–${crop.umbrales.temperaturaSuelo.max}°`
                             : "18°–26°"}
@@ -688,8 +691,8 @@ export default function CultivosScreen() {
                       </div>
 
                       <div className="bg-slate-900/70 p-1.5 sm:p-2 rounded-lg border border-slate-800/60">
-                        <span className="text-[9px] sm:text-[10px] text-slate-400 block mb-0.5">🌫️ Hum. Amb.</span>
-                        <span className="font-mono font-semibold text-sky-400 text-[11px] sm:text-xs">
+                        <span className="text-[11px] text-slate-400 mb-0.5 flex items-center gap-1"><CloudFog size={12} className="text-sky-400" aria-hidden />Hum. amb.</span>
+                        <span className="tabular-nums font-semibold text-sky-400 text-[11px] sm:text-xs">
                           {crop.umbrales?.humedadAmbiente
                             ? `${crop.umbrales.humedadAmbiente.min}%–${crop.umbrales.humedadAmbiente.max}%`
                             : "40%–80%"}
@@ -697,8 +700,8 @@ export default function CultivosScreen() {
                       </div>
 
                       <div className="bg-slate-900/70 p-1.5 sm:p-2 rounded-lg border border-slate-800/60">
-                        <span className="text-[9px] sm:text-[10px] text-slate-400 block mb-0.5">☀️ Temp. Amb.</span>
-                        <span className="font-mono font-semibold text-orange-400 text-[11px] sm:text-xs">
+                        <span className="text-[11px] text-slate-400 mb-0.5 flex items-center gap-1"><ThermometerSun size={12} className="text-orange-400" aria-hidden />Temp. amb.</span>
+                        <span className="tabular-nums font-semibold text-orange-400 text-[11px] sm:text-xs">
                           {crop.umbrales?.temperaturaAmbiente
                             ? `${crop.umbrales.temperaturaAmbiente.min}°–${crop.umbrales.temperaturaAmbiente.max}°`
                             : "18°–30°"}
@@ -882,7 +885,7 @@ export default function CultivosScreen() {
                     placeholder="Ej: 500"
                     value={newArea}
                     onChange={(e) => setNewArea(e.target.value)}
-                    className="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 font-mono"
+                    className="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500"
                   />
                 </div>
               </div>
@@ -996,7 +999,7 @@ export default function CultivosScreen() {
                 </div>
                 <div className="min-w-0">
                   <h3 className="font-bold text-base sm:text-lg text-white flex items-center gap-1.5">
-                    🌱 Configuración de Umbrales
+                    Configuración de umbrales
                   </h3>
                   <p className="text-xs text-slate-400 truncate">
                     Rangos operativos para <strong className="text-emerald-400">{selectedCropForUmbrales.nombreCultivo}</strong>
@@ -1037,14 +1040,14 @@ export default function CultivosScreen() {
                 {umbralesItems.map((u) => {
                   const isTemp = u.unidad === "°C" || u.codigo?.includes("TEMP");
                   const maxLimit = isTemp ? 60 : 100;
-                  const icon =
+                  const Icon =
                     u.codigo === "HUM_SUELO"
-                      ? "💧"
+                      ? Droplets
                       : u.codigo === "TEMP_SUELO"
-                      ? "🌡️"
+                      ? Thermometer
                       : u.codigo === "HUM_AMB"
-                      ? "🌫️"
-                      : "☀️";
+                      ? CloudFog
+                      : ThermometerSun;
 
                   return (
                     <div
@@ -1053,12 +1056,12 @@ export default function CultivosScreen() {
                     >
                       <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-base shrink-0">{icon}</span>
+                          <Icon size={16} className="text-emerald-400 shrink-0" aria-hidden />
                           <span className="font-semibold text-white text-xs sm:text-sm truncate">
                             {u.nombre}
                           </span>
                         </div>
-                        <span className="font-mono text-xs font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800/60 shrink-0 whitespace-nowrap">
+                        <span className="tabular-nums text-xs font-bold text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-800/60 shrink-0 whitespace-nowrap">
                           {u.min} {u.unidad} – {u.max} {u.unidad}
                         </span>
                       </div>
@@ -1075,7 +1078,7 @@ export default function CultivosScreen() {
                             max={u.max}
                             value={u.min}
                             onChange={(e) => handleUmbralChange(u.id, "min", Number(e.target.value))}
-                            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
+                            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white tabular-nums focus:outline-none focus:border-emerald-500"
                           />
                         </div>
                         <div>
@@ -1088,14 +1091,14 @@ export default function CultivosScreen() {
                             max={maxLimit}
                             value={u.max}
                             onChange={(e) => handleUmbralChange(u.id, "max", Number(e.target.value))}
-                            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
+                            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white tabular-nums focus:outline-none focus:border-emerald-500"
                           />
                         </div>
                       </div>
 
                       {/* Sliders */}
                       <div className="space-y-1 pt-1">
-                        <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                        <div className="flex items-center gap-2 text-[11px] text-slate-400">
                           <span className="w-8 shrink-0" title="Ajuste rápido Mínimo">Mín:</span>
                           <input
                             type="range"
@@ -1106,7 +1109,7 @@ export default function CultivosScreen() {
                             className="umbral-range-slider flex-1 cursor-pointer"
                           />
                         </div>
-                        <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                        <div className="flex items-center gap-2 text-[11px] text-slate-400">
                           <span className="w-8 shrink-0" title="Ajuste rápido Máximo">Máx:</span>
                           <input
                             type="range"

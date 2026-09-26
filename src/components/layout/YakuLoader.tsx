@@ -24,7 +24,7 @@ export default function YakuLoader({
 
   if (fullScreen) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-[#020817] text-white">
+      <div className="flex h-screen w-full items-center justify-center bg-[#0c1014] text-white">
         {spinner}
       </div>
     );

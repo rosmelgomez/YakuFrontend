@@ -40,7 +40,7 @@ export default function AdminDashboardScreen() {
   if (error || !summary) {
     return (
       <Box className="page-content" px={{ initial: "2", sm: "4", md: "6" }} py={{ initial: "3", sm: "4", md: "5" }}>
-        <Card size="3" style={{ background: '#111827', borderColor: '#ef4444' }}>
+        <Card size="3" style={{ background: '#131a1f', borderColor: '#ef4444' }}>
           <Text color="red" weight="bold" size="3">
             {error || "Error al conectar con el backend de FastAPI. Asegúrese de que el servidor esté activo."}
           </Text>

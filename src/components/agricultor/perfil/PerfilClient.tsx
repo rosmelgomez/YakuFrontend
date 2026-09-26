@@ -4,7 +4,7 @@ import React, { useState, useTransition, useEffect } from 'react';
 import { Box, Card, Flex, Text, Button, TextField, Badge, Switch } from '@radix-ui/themes';
 import {
   User, Mail, Lock, Shield, CheckCircle, AlertCircle,
-  Bell, Smartphone, Laptop, Tablet, AlertTriangle, Trash2, Monitor
+  Bell, Smartphone, Laptop, Tablet, AlertTriangle, Trash2, Monitor, MapPin, Save,
 } from 'lucide-react';
 import { actualizarPerfil } from '@/actions/profile';
 import { useAuth } from '@/context/AuthContext';
@@ -524,7 +524,7 @@ export default function PerfilClient({ user }: { user: any }) {
       <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 w-full">
         {/* TARJETA DE USUARIO / RESUMEN LATERAL */}
         <div className="lg:col-span-1 xl:col-span-1 space-y-3 sm:space-y-4">
-          <Card size={{ initial: "2", sm: "3" }} style={{ background: '#0b1329', borderColor: '#1e293b', borderRadius: '16px', textAlign: 'center' }}>
+          <Card size={{ initial: "2", sm: "3" }} style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: '16px', textAlign: 'center' }}>
             <Flex direction="column" gap="3" align="center" justify="center" py={{ initial: "2", sm: "4" }}>
               <div
                 className="w-14 h-14 sm:w-20 sm:h-20 rounded-full flex items-center justify-center font-bold text-white text-lg sm:text-2xl shadow-md"
@@ -540,7 +540,7 @@ export default function PerfilClient({ user }: { user: any }) {
                 <Text size="3" weight="bold" style={{ color: 'white' }} as="div" mb="0.5">
                   {nombre} {apellido}
                 </Text>
-                <Text size="1" color="gray" style={{ fontFamily: 'monospace' }} className="break-all">
+                <Text size="1" color="gray" className="break-all">
                   {correo}
                 </Text>
               </Box>
@@ -552,13 +552,13 @@ export default function PerfilClient({ user }: { user: any }) {
               </Flex>
 
               {dni && (
-                <Text size="1" color="cyan" style={{ fontFamily: 'monospace' }}>
+                <Text size="1" color="gray" className="tabular-nums">
                   DNI: {dni}
                 </Text>
               )}
               {direccion && (
                 <Text size="1" color="gray" style={{ maxWidth: '280px', margin: '0 auto', fontSize: '0.75rem' }}>
-                  📍 {direccion}
+                  <MapPin size={12} aria-hidden style={{ display: 'inline', verticalAlign: '-2px', marginRight: 4 }} />{direccion}
                 </Text>
               )}
 
@@ -593,7 +593,7 @@ export default function PerfilClient({ user }: { user: any }) {
         <div className="lg:col-span-2 xl:col-span-3">
           {/* TAB 1: DATOS PERSONALES */}
           {activeTab === 'profile' && (
-            <Card size={{ initial: "2", sm: "3" }} style={{ background: '#0b1329', borderColor: '#1e293b', borderRadius: '16px' }}>
+            <Card size={{ initial: "2", sm: "3" }} style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: '16px' }}>
               <form onSubmit={handleSaveProfile}>
                 <Flex direction="column" gap="4">
                   <div>
@@ -608,47 +608,47 @@ export default function PerfilClient({ user }: { user: any }) {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 mt-1 sm:mt-2">
                     <div>
                       <label className="block text-xs font-medium text-slate-400 mb-1.5">Nombres</label>
-                      <TextField.Root value={nombre} onChange={(e) => setNombre(e.target.value)} style={{ background: '#1e293b', color: 'white' }}>
-                        <TextField.Slot><User size={14} color="#94a3b8" /></TextField.Slot>
+                      <TextField.Root value={nombre} onChange={(e) => setNombre(e.target.value)} style={{ background: "var(--bg-mockup)" }}>
+                        <TextField.Slot><User size={14} color="#8fa6b7" /></TextField.Slot>
                       </TextField.Root>
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-400 mb-1.5">Apellidos</label>
-                      <TextField.Root value={apellido} onChange={(e) => setApellido(e.target.value)} style={{ background: '#1e293b', color: 'white' }}>
-                        <TextField.Slot><User size={14} color="#94a3b8" /></TextField.Slot>
+                      <TextField.Root value={apellido} onChange={(e) => setApellido(e.target.value)} style={{ background: "var(--bg-mockup)" }}>
+                        <TextField.Slot><User size={14} color="#8fa6b7" /></TextField.Slot>
                       </TextField.Root>
                     </div>
 
                     <div>
                       <label className="block text-xs font-medium text-slate-400 mb-1.5">Correo Electrónico</label>
-                      <TextField.Root type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} style={{ background: '#1e293b', color: 'white' }}>
-                        <TextField.Slot><Mail size={14} color="#94a3b8" /></TextField.Slot>
+                      <TextField.Root type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} style={{ background: "var(--bg-mockup)" }}>
+                        <TextField.Slot><Mail size={14} color="#8fa6b7" /></TextField.Slot>
                       </TextField.Root>
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-400 mb-1.5">Teléfono / Celular</label>
-                      <TextField.Root value={telefono} onChange={(e) => setTelefono(e.target.value)} style={{ background: '#1e293b', color: 'white' }} placeholder="+51 987654321" />
+                      <TextField.Root value={telefono} onChange={(e) => setTelefono(e.target.value)} style={{ background: "var(--bg-mockup)" }} placeholder="+51 987654321" />
                     </div>
 
                     <div>
                       <label className="block text-xs font-medium text-slate-400 mb-1.5">DNI / Documento</label>
-                      <TextField.Root value={dni} onChange={(e) => setDni(e.target.value)} style={{ background: '#1e293b', color: 'white' }} placeholder="8 dígitos" />
+                      <TextField.Root value={dni} onChange={(e) => setDni(e.target.value)} style={{ background: "var(--bg-mockup)" }} placeholder="8 dígitos" />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-400 mb-1.5">Fecha de Nacimiento</label>
-                      <TextField.Root type="date" value={fechaNacimiento} onChange={(e) => setFechaNacimiento(e.target.value)} style={{ background: '#1e293b', color: 'white' }} />
+                      <TextField.Root type="date" value={fechaNacimiento} onChange={(e) => setFechaNacimiento(e.target.value)} style={{ background: "var(--bg-mockup)" }} />
                     </div>
 
                     <div>
                       <label className="block text-xs font-medium text-slate-400 mb-1.5">Dirección</label>
-                      <TextField.Root value={direccion} onChange={(e) => setDireccion(e.target.value)} style={{ background: '#1e293b', color: 'white' }} placeholder="Av., Calle, Distrito" />
+                      <TextField.Root value={direccion} onChange={(e) => setDireccion(e.target.value)} style={{ background: "var(--bg-mockup)" }} placeholder="Av., Calle, Distrito" />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-400 mb-1.5">Zona Horaria</label>
                       <select
                         value={zonaHoraria}
                         onChange={(e) => setZonaHoraria(e.target.value)}
-                        style={{ width: '100%', padding: '7px 12px', borderRadius: '6px', background: '#1e293b', color: 'white', border: '1px solid #334155', fontSize: '0.875rem', height: '36px' }}
+                        style={{ width: '100%', padding: '7px 12px', borderRadius: '6px', background: '#1c2631', color: 'white', border: '1px solid #2c3a47', fontSize: '0.875rem', height: '36px' }}
                       >
                         <option value="America/Lima">America/Lima (UTC-5)</option>
                         <option value="America/Bogota">America/Bogota (UTC-5)</option>
@@ -660,8 +660,8 @@ export default function PerfilClient({ user }: { user: any }) {
                   </div>
 
                   <Flex justify="end" mt="3">
-                    <Button type="submit" color="indigo" size={{ initial: "2", sm: "3" }} disabled={isPending} style={{ cursor: 'pointer', borderRadius: '8px', padding: '0 20px', fontWeight: 'bold' }}>
-                      {isPending ? 'Guardando...' : '💾 Guardar Datos'}
+                    <Button type="submit" size={{ initial: "2", sm: "3" }} disabled={isPending} style={{ cursor: 'pointer', borderRadius: '8px', padding: '0 20px', fontWeight: 'bold' }}>
+                      {!isPending && <Save size={16} aria-hidden />}{isPending ? 'Guardando...' : 'Guardar datos'}
                     </Button>
                   </Flex>
                 </Flex>
@@ -673,7 +673,7 @@ export default function PerfilClient({ user }: { user: any }) {
           {activeTab === 'notifications' && !isAdmin && (
             <Flex direction="column" gap="4">
               {/* Notificaciones del navegador: permiso real + suscripción push */}
-              <Card size={{ initial: "2", sm: "3" }} style={{ background: '#0b1329', borderColor: '#1e293b', borderRadius: '16px' }}>
+              <Card size={{ initial: "2", sm: "3" }} style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: '16px' }}>
                 <Flex justify="between" align={{ initial: 'start', sm: 'center' }} direction={{ initial: 'column', sm: 'row' }} gap="3">
                   <div>
                     <Text size={{ initial: "3", sm: "4" }} weight="bold" style={{ color: 'white' }} as="div">
@@ -689,7 +689,7 @@ export default function PerfilClient({ user }: { user: any }) {
                     </p>
                   </div>
                   {pushStatus === 'default' && isSecure && (
-                    <Button size="2" color="indigo" onClick={handleRequestPush} disabled={isSubscribing} style={{ cursor: 'pointer' }}>
+                    <Button size="2" onClick={handleRequestPush} disabled={isSubscribing} style={{ cursor: 'pointer' }}>
                       {isSubscribing ? 'Activando…' : 'Activar notificaciones'}
                     </Button>
                   )}
@@ -702,7 +702,7 @@ export default function PerfilClient({ user }: { user: any }) {
               </Card>
 
               {/* Preferencias por tipo de alerta: guardado real en configuracion_notificaciones */}
-              <Card size={{ initial: "2", sm: "3" }} style={{ background: '#0b1329', borderColor: '#1e293b', borderRadius: '16px' }}>
+              <Card size={{ initial: "2", sm: "3" }} style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: '16px' }}>
                 <div>
                   <Text size={{ initial: "3", sm: "4" }} weight="bold" style={{ color: 'white' }}>
                     Preferencias de Notificaciones
@@ -729,7 +729,6 @@ export default function PerfilClient({ user }: { user: any }) {
                           <Switch
                             checked={Boolean(config?.canal_push)}
                             onCheckedChange={() => handlePushToggle(tipo.id_tipo_alerta)}
-                            color="indigo"
                             style={{ cursor: 'pointer', flexShrink: 0, marginTop: 2 }}
                           />
                         </div>
@@ -745,12 +744,12 @@ export default function PerfilClient({ user }: { user: any }) {
           {activeTab === 'security' && (
             <Flex direction="column" gap="4">
               {/* Sesiones activas con datos REALES capturados del navegador/dispositivo */}
-              <Card size={{ initial: "2", sm: "3" }} style={{ background: '#0b1329', borderColor: '#1e293b', borderRadius: '16px' }}>
+              <Card size={{ initial: "2", sm: "3" }} style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: '16px' }}>
                 <Flex justify="between" align="center" mb="1" wrap="wrap" gap="2">
                   <Text size={{ initial: "3", sm: "4" }} weight="bold" style={{ color: 'white' }}>
                     Sesiones de Dispositivos Activas
                   </Text>
-                  <span className="text-[10px] sm:text-[11px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800/60 px-2 sm:px-2.5 py-0.5 rounded-full">
+                  <span className="text-[10px] sm:text-[11px] tabular-nums text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 px-2 sm:px-2.5 py-0.5 rounded-full">
                     Telemetría cliente real
                   </span>
                 </Flex>
@@ -785,7 +784,7 @@ export default function PerfilClient({ user }: { user: any }) {
                               )}
                             </div>
                             <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5 truncate">
-                              📍 {s.location} · {s.screen}
+                              <MapPin size={11} aria-hidden style={{ display: 'inline', verticalAlign: '-1px', marginRight: 4 }} />{s.location} · {s.screen}
                             </p>
                           </div>
                         </div>
@@ -810,7 +809,7 @@ export default function PerfilClient({ user }: { user: any }) {
               </Card>
 
               {/* Contraseña */}
-              <Card size={{ initial: "2", sm: "3" }} style={{ background: '#0b1329', borderColor: '#1e293b', borderRadius: '16px' }}>
+              <Card size={{ initial: "2", sm: "3" }} style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: '16px' }}>
                 <Flex justify="between" align="center" mb="3" wrap="wrap" gap="2">
                   <div>
                     <Text size={{ initial: "3", sm: "4" }} weight="bold" style={{ color: 'white' }}>
@@ -822,7 +821,6 @@ export default function PerfilClient({ user }: { user: any }) {
                   </div>
                   <Button
                     variant="soft"
-                    color="indigo"
                     size="2"
                     onClick={() => setShowPassForm(!showPassForm)}
                     style={{ cursor: 'pointer' }}
@@ -835,44 +833,44 @@ export default function PerfilClient({ user }: { user: any }) {
                   <form onSubmit={handleUpdatePassword} className="space-y-3 sm:space-y-4 pt-3 border-t border-slate-800 mt-3">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.8rem', color: '#9ca3af', marginBottom: '4px' }}>Contraseña actual</label>
+                        <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--muted-foreground)', marginBottom: '4px' }}>Contraseña actual</label>
                         <TextField.Root
                           type="password"
                           placeholder="••••••••"
                           value={contrasenaActual}
                           onChange={(e) => setContrasenaActual(e.target.value)}
-                          style={{ background: '#1e293b', color: 'white' }}
+                          style={{ background: "var(--bg-mockup)" }}
                         >
-                          <TextField.Slot><Lock size={14} color="#94a3b8" /></TextField.Slot>
+                          <TextField.Slot><Lock size={14} color="#8fa6b7" /></TextField.Slot>
                         </TextField.Root>
                       </div>
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.8rem', color: '#9ca3af', marginBottom: '4px' }}>Nueva contraseña</label>
+                        <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--muted-foreground)', marginBottom: '4px' }}>Nueva contraseña</label>
                         <TextField.Root
                           type="password"
                           placeholder="Mínimo 10 caracteres"
                           value={contrasena}
                           onChange={(e) => setContrasena(e.target.value)}
-                          style={{ background: '#1e293b', color: 'white' }}
+                          style={{ background: "var(--bg-mockup)" }}
                         >
-                          <TextField.Slot><Lock size={14} color="#94a3b8" /></TextField.Slot>
+                          <TextField.Slot><Lock size={14} color="#8fa6b7" /></TextField.Slot>
                         </TextField.Root>
                       </div>
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.8rem', color: '#9ca3af', marginBottom: '4px' }}>Confirmar contraseña</label>
+                        <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--muted-foreground)', marginBottom: '4px' }}>Confirmar contraseña</label>
                         <TextField.Root
                           type="password"
                           placeholder="Repita la nueva contraseña"
                           value={confirmarContrasena}
                           onChange={(e) => setConfirmarContrasena(e.target.value)}
-                          style={{ background: '#1e293b', color: 'white' }}
+                          style={{ background: "var(--bg-mockup)" }}
                         >
-                          <TextField.Slot><Lock size={14} color="#94a3b8" /></TextField.Slot>
+                          <TextField.Slot><Lock size={14} color="#8fa6b7" /></TextField.Slot>
                         </TextField.Root>
                       </div>
                     </div>
                     <Flex justify="end">
-                      <Button type="submit" color="indigo" size="2" disabled={isPending} style={{ cursor: 'pointer', fontWeight: 'bold' }}>
+                      <Button type="submit" size="2" disabled={isPending} style={{ cursor: 'pointer', fontWeight: 'bold' }}>
                         {isPending ? 'Actualizando...' : 'Actualizar contraseña'}
                       </Button>
                     </Flex>
@@ -883,7 +881,7 @@ export default function PerfilClient({ user }: { user: any }) {
               </Card>
 
               {/* Zona de riesgo */}
-              <Card size={{ initial: "2", sm: "3" }} style={{ background: '#17090d', borderColor: '#7f1d1d', borderRadius: '16px' }}>
+              <Card size={{ initial: "2", sm: "3" }} style={{ background: 'color-mix(in srgb, var(--red) 6%, var(--surface-mockup))', borderColor: 'var(--redbrd)', borderRadius: '16px' }}>
                 <Flex align="center" gap="2" mb="2">
                   <AlertTriangle size={18} className="text-red-400" />
                   <Text size="3" weight="bold" style={{ color: '#f87171' }}>

@@ -30,10 +30,10 @@ export default function HistoricoMultiLineChart({ filteredChartData }: any) {
       <ResponsiveContainer width="100%" height="100%" minWidth={0}>
         <LineChart data={filteredChartData} margin={{ top: 10, right: 10, left: -22, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border-mockup)" vertical={false} />
-          <XAxis dataKey="label" stroke="#6b7280" fontSize={11} tickMargin={8} minTickGap={25} axisLine={false} tickLine={false} />
-          <YAxis stroke="#6b7280" fontSize={11} domain={[0, 100]} axisLine={false} tickLine={false} tickFormatter={(val) => val === 90 ? '90% / °C' : val} />
+          <XAxis dataKey="label" stroke="#6b8aa0" fontSize={11} tickMargin={8} minTickGap={25} axisLine={false} tickLine={false} />
+          <YAxis stroke="#6b8aa0" fontSize={11} domain={[0, 100]} axisLine={false} tickLine={false} tickFormatter={(val) => val === 90 ? '90% / °C' : val} />
           <Tooltip content={<CustomTooltip />} />
-          <Legend iconType="plainline" wrapperStyle={{ paddingTop: '10px', fontSize: '11px', color: '#9ca3af' }} />
+          <Legend iconType="plainline" wrapperStyle={{ paddingTop: '10px', fontSize: '11px', color: '#8fa6b7' }} />
 
           <Line name="Hum. suelo (%)" type="monotone" dataKey="humedadSuelo" stroke="#22c55e" strokeWidth={2} dot={false} connectNulls />
           <Line name="Hum. ambiental (%)" type="monotone" dataKey="humedadAmbiente" stroke="#06b6d4" strokeWidth={2} dot={false} connectNulls />
