@@ -14,6 +14,7 @@ import {
   Dialog,
 } from "@radix-ui/themes";
 import { UltimoRiegoTimer, RiegoActivoTimer } from "./RiegoTimer";
+import { HorarioRiegoResumen } from "./HorarioRiegoResumen";
 import { formatearSegundos } from "../selectors";
 import type { ControlData, DispositivoItem } from "../types";
 
@@ -332,6 +333,9 @@ export function ActuadoresPanel({
           </Grid>
         </Flex>
       </Card>
+
+      {/* PROGRAMACIÓN DE HORARIOS DE RIEGO */}
+      <HorarioRiegoResumen idAsignacion={bomba?.id} />
 
       <Grid columns={{ initial: "1", lg: "2" }} gap="5">
         {/* PARÁMETROS DE TIEMPO Y COOLDOWN ML (CON FORMULARIO FLOTANTE) */}

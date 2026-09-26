@@ -48,6 +48,11 @@ export function HorarioRiegoPanel({ idAsignacion }: HorarioRiegoPanelProps) {
   const [horaFin, setHoraFin] = useState("06:10");
   const [diasSeleccionados, setDiasSeleccionados] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
   const [saving, setSaving] = useState(false);
+  const [editandoId, setEditandoId] = useState<number | null>(null);
+  const [editHoraInicio, setEditHoraInicio] = useState("06:00");
+  const [editHoraFin, setEditHoraFin] = useState("06:10");
+  const [editDias, setEditDias] = useState<number[]>([]);
+  const [guardandoEdicion, setGuardandoEdicion] = useState(false);
 
   const cargarHorarios = async () => {
     if (!idAsignacion) return;
@@ -93,6 +98,36 @@ export function HorarioRiegoPanel({ idAsignacion }: HorarioRiegoPanelProps) {
       await cargarHorarios();
     } else {
       alert(`❌ Error al actualizar: ${res.error}`);
+    }
+  };
+
+  const iniciarEdicion = (horario: any) => {
+    setEditandoId(horario.id);
+    setEditHoraInicio(String(horario.hora_inicio).slice(0, 5));
+    setEditHoraFin(String(horario.hora_fin).slice(0, 5));
+    setEditDias(horario.dias_semana || []);
+  };
+
+  const toggleEditDia = (dia: number) => {
+    setEditDias((prev) =>
+      prev.includes(dia) ? prev.filter((d) => d !== dia) : [...prev, dia].sort()
+    );
+  };
+
+  const handleGuardarEdicion = async () => {
+    if (editandoId === null) return;
+    setGuardandoEdicion(true);
+    const res = await actualizarHorarioRiego(editandoId, {
+      horaInicio: `${editHoraInicio}:00`,
+      horaFin: `${editHoraFin}:00`,
+      diasSemana: editDias,
+    });
+    setGuardandoEdicion(false);
+    if (res.success) {
+      setEditandoId(null);
+      await cargarHorarios();
+    } else {
+      alert(`❌ Error al actualizar el horario: ${res.error}`);
     }
   };
 
@@ -200,7 +235,59 @@ export function HorarioRiegoPanel({ idAsignacion }: HorarioRiegoPanelProps) {
           <Text color="gray" size="2">No hay horarios de riego configurados para este cultivo.</Text>
         ) : (
           <Flex direction="column" gap="2">
-            {horarios.map((h) => (
+            {horarios.map((h) =>
+              editandoId === h.id ? (
+              <div
+                key={h.id}
+                className="p-3 rounded-xl bg-slate-900/60 border border-indigo-500/60 flex flex-col gap-3"
+              >
+                <Flex gap="3" wrap="wrap" align="end">
+                  <Box>
+                    <Text size="1" color="gray" as="div" mb="1">Hora de inicio</Text>
+                    <TextField.Root
+                      type="time"
+                      value={editHoraInicio}
+                      onChange={(e) => setEditHoraInicio(e.target.value)}
+                      style={{ background: "var(--surface2-mockup)", border: "1px solid var(--border-mockup)", width: "140px" }}
+                    />
+                  </Box>
+                  <Box>
+                    <Text size="1" color="gray" as="div" mb="1">Hora de fin</Text>
+                    <TextField.Root
+                      type="time"
+                      value={editHoraFin}
+                      onChange={(e) => setEditHoraFin(e.target.value)}
+                      style={{ background: "var(--surface2-mockup)", border: "1px solid var(--border-mockup)", width: "140px" }}
+                    />
+                  </Box>
+                  <Badge color="indigo" variant="soft" size="1" mb="2">
+                    {editHoraInicio === editHoraFin ? "todo el día" : `${duracionMinutos(editHoraInicio, editHoraFin)} min`}
+                  </Badge>
+                </Flex>
+                <Flex gap="1.5" wrap="wrap">
+                  {DIAS.map((d) => (
+                    <Button
+                      key={d.value}
+                      size="1"
+                      variant={editDias.includes(d.value) ? "solid" : "soft"}
+                      color={editDias.includes(d.value) ? "indigo" : "gray"}
+                      onClick={() => toggleEditDia(d.value)}
+                      style={{ cursor: "pointer" }}
+                    >
+                      {d.label}
+                    </Button>
+                  ))}
+                </Flex>
+                <Flex justify="end" gap="2">
+                  <Button size="1" variant="soft" color="gray" onClick={() => setEditandoId(null)} disabled={guardandoEdicion} style={{ cursor: "pointer" }}>
+                    Cancelar
+                  </Button>
+                  <Button size="1" color="green" onClick={handleGuardarEdicion} disabled={guardandoEdicion || !editHoraInicio || !editHoraFin} style={{ cursor: "pointer" }}>
+                    {guardandoEdicion ? "Guardando..." : "Guardar"}
+                  </Button>
+                </Flex>
+              </div>
+              ) : (
               <div
                 key={h.id}
                 className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 flex items-center justify-between gap-3 flex-wrap"
@@ -231,12 +318,18 @@ export function HorarioRiegoPanel({ idAsignacion }: HorarioRiegoPanelProps) {
                 </div>
                 <Flex align="center" gap="2">
                   <Switch checked={h.activo} onCheckedChange={() => handleToggleActivo(h)} style={{ cursor: "pointer" }} />
+                  {!h.siempre_activo && (
+                    <Button size="1" variant="soft" color="indigo" onClick={() => iniciarEdicion(h)} style={{ cursor: "pointer" }}>
+                      Editar
+                    </Button>
+                  )}
                   <Button size="1" variant="soft" color="red" onClick={() => handleEliminar(h.id)} style={{ cursor: "pointer" }}>
                     Eliminar
                   </Button>
                 </Flex>
               </div>
-            ))}
+              )
+            )}
           </Flex>
         )}
       </Card>
