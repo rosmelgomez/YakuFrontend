@@ -161,7 +161,6 @@ export async function registrarDispositivo(payload: {
   topic_sub?: string;
   id_almacen?: number;
   estado?: string;
-  firmware_version?: string;
 }) {
   const res = await fetchFromFastAPI("/dispositivos", {
     method: "POST",

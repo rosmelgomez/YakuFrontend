@@ -138,7 +138,6 @@ export default function DispositivosClient({
     newDeviceMqtt,
   );
   const [newDeviceAlmacenId, setNewDeviceAlmacenId] = useState("");
-  const [newDeviceFirmware, setNewDeviceFirmware] = useState("v1.0.0");
   const [newCompTipoId, setNewCompTipoId] = useState("");
   const [newCompSerial, setNewCompSerial] = useState("");
   const [newCompAlmacenId, setNewCompAlmacenId] = useState("");
@@ -351,7 +350,6 @@ export default function DispositivosClient({
           topic_pub: newDevicePub,
           topic_sub: newDeviceSub,
           id_almacen: parseInt(newDeviceAlmacenId, 10),
-          firmware_version: newDeviceFirmware || undefined,
           estado: "disponible",
         });
         if (res.id || res.id_dispositivo) {
@@ -749,7 +747,10 @@ export default function DispositivosClient({
             </Text>
             <TextField.Root placeholder="Nombre del dispositivo" value={newDeviceNombre} onChange={(e) => setNewDeviceNombre(e.target.value)} />
             <TextField.Root placeholder="MAC" value={newDeviceMac} onChange={(e) => setNewDeviceMac(e.target.value)} />
-            <Grid columns="2" gap="3"><TextField.Root value={newDeviceMqtt} disabled /><TextField.Root value={newDeviceFirmware} onChange={(e) => setNewDeviceFirmware(e.target.value)} /></Grid>
+            <Box>
+              <Text as="label" htmlFor="device-client-id" size="2">Client ID MQTT</Text>
+              <TextField.Root id="device-client-id" value={newDeviceMqtt} disabled />
+            </Box>
             <Box>
               <Text as="label" htmlFor="device-topic-pub" size="2">Tópico MQTT de publicación</Text>
               <TextField.Root id="device-topic-pub" value={newDevicePub} readOnly placeholder="Se completa al seleccionar el tipo" />
