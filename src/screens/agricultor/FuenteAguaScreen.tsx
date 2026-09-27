@@ -545,22 +545,14 @@ export default function FuenteAguaScreen() {
                   )}
                 </dl>
 
-                {/* Especificaciones de instalación */}
-                <dl className="m-0 grid grid-cols-3 gap-3 rounded-lg bg-white/[0.025] px-3 py-2.5">
-                  {isTanque ? (
-                    <>
-                      <Stat label="Altura tanque" value={tankHeight > 0 ? `${tankHeight} cm` : "--"} />
-                      <Stat label="Seguridad" value={`${tankSafety} cm`} />
-                      <Stat label="Sensor" value="Ultrasónico" />
-                    </>
-                  ) : (
-                    <>
-                      <Stat label="Suministro" value="Continua" />
-                      <Stat label="Electroválvula" value="GPIO 25" accent="text-emerald-300" />
-                      <Stat label="Sensor flujo" value="GPIO 27" accent="text-sky-300" />
-                    </>
-                  )}
-                </dl>
+                {/* Especificaciones de instalación (los pines GPIO pertenecen al dispositivo, no a la fuente) */}
+                {isTanque && (
+                  <dl className="m-0 grid grid-cols-3 gap-3 rounded-lg bg-white/[0.025] px-3 py-2.5">
+                    <Stat label="Altura tanque" value={tankHeight > 0 ? `${tankHeight} cm` : "--"} />
+                    <Stat label="Seguridad" value={`${tankSafety} cm`} />
+                    <Stat label="Sensor" value="Ultrasónico" />
+                  </dl>
+                )}
 
                 {/* Acciones */}
                 <div className="flex items-center gap-2 mt-auto">
@@ -746,8 +738,8 @@ export default function FuenteAguaScreen() {
 
             {newTipo === "conexion_directa" && (
               <div className="p-3 bg-sky-500/10 border border-sky-500/25 rounded-lg text-xs text-sky-100/90 leading-relaxed">
-                En conexión directa, el volumen se mide por los pulsos del caudalímetro YF-S201 (GPIO 27) y el flujo se
-                controla mediante la electroválvula (GPIO 25).
+                En conexión directa, el volumen se mide con el sensor de flujo y el paso de agua se controla con la
+                electroválvula del dispositivo asignado.
               </div>
             )}
 
