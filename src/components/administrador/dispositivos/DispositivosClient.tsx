@@ -204,6 +204,17 @@ export default function DispositivosClient({
   const showAssignWaterSource = isTankDevice(selectedAssignDevice);
   const showFieldWaterSource = isTankDevice(selectedFieldDevice);
   const showEditWaterSource = isTankDevice(editAssignment?.device);
+  // "13, 14" -> [13, 14]: el primer GPIO es el principal, el resto son adicionales (p.ej. SDA/SCL del LCD).
+  const parsePins = (value: string): number[] | null => {
+    const parts = value.split(/[\s,;\/]+/).filter(Boolean);
+    const pins = parts.map((p) => Number(p));
+    if (pins.length === 0 || pins.some((p) => !Number.isInteger(p) || p < 0)) return null;
+    if (new Set(pins).size !== pins.length) return null;
+    return pins;
+  };
+  const formatPins = (assignment: any) =>
+    [assignment?.pin_gpio, ...(assignment?.pines_gpio_adicionales || [])].filter((p) => p !== null && p !== undefined).join(", ");
+
   const isMetriclessModel = (model: any) => ["actuador", "pantalla"].includes(`${model?.categoria || ""}`.toLowerCase());
   const selectedComponentIsMetricless = isMetriclessModel(selectedComponentModel);
   const editAssignmentIsMetricless = isMetriclessModel(editAssignment?.componente?.modelo);
@@ -321,7 +332,7 @@ export default function DispositivosClient({
 
   const openEditAssignmentDialog = (assignment: any, device: any) => {
     setEditAssignment({ ...assignment, device });
-    setEditPin(assignment.pin_gpio?.toString() || "");
+    setEditPin(formatPins(assignment));
     setEditMetricId(assignment.id_tipo_metrica?.toString() || "");
     setEditFuenteAguaId(assignment.id_fuente_agua?.toString() || "");
     setIsOpenEditAssignment(true);
@@ -407,9 +418,8 @@ export default function DispositivosClient({
         return;
       }
 
-      const pin = parseInt(row.pin, 10);
-      if (!Number.isInteger(pin) || pin < 0) {
-        alert("Ingrese un pin GPIO valido en todos los componentes.");
+      if (!parsePins(row.pin)) {
+        alert("Ingrese pines GPIO validos y sin repetir en todos los componentes (ej. 13 o 13, 14).");
         return;
       }
     }
@@ -424,7 +434,8 @@ export default function DispositivosClient({
             await asignarComponenteADispositivo({
               id_dispositivo: parseInt(assignDeviceId, 10),
               id_componente: parseInt(row.componentId, 10),
-              pin_gpio: parseInt(row.pin, 10),
+              pin_gpio: parsePins(row.pin)![0],
+              pines_gpio_adicionales: parsePins(row.pin)!.slice(1),
               id_tipo_metrica: rowIsMetricless ? null : row.metricIds.map((id) => parseInt(id, 10)),
               id_fuente_agua: showAssignWaterSource && assignWaterSources.some((f: any) => f.id?.toString() === row.fuenteAguaId) ? parseInt(row.fuenteAguaId, 10) : undefined,
             });
@@ -470,9 +481,9 @@ export default function DispositivosClient({
       return;
     }
 
-    const pin = parseInt(componentPin, 10);
-    if (!Number.isInteger(pin) || pin < 0) {
-      alert("Ingrese un pin GPIO valido.");
+    const pins = parsePins(componentPin);
+    if (!pins) {
+      alert("Ingrese pines GPIO validos y sin repetir (ej. 13 o 13, 14).");
       return;
     }
 
@@ -482,7 +493,8 @@ export default function DispositivosClient({
         const res = await asignarComponenteADispositivo({
           id_dispositivo: parseInt(componentDeviceId, 10),
           id_componente: parseInt(componentId, 10),
-          pin_gpio: pin,
+          pin_gpio: pins[0],
+          pines_gpio_adicionales: pins.slice(1),
           id_tipo_metrica: selectedComponentIsMetricless ? null : metricPayload.length === 1 ? metricPayload[0] : metricPayload,
           id_fuente_agua: showFieldWaterSource && availableWaterSources.some((f: any) => f.id?.toString() === componentFuenteAguaId) ? parseInt(componentFuenteAguaId, 10) : undefined,
         });
@@ -499,17 +511,18 @@ export default function DispositivosClient({
       return;
     }
 
-    const pin = parseInt(editPin, 10);
+    const pins = parsePins(editPin);
     const metricId = editAssignmentIsMetricless ? null : parseInt(editMetricId, 10);
-    if (!Number.isInteger(pin) || pin < 0 || (!editAssignmentIsMetricless && !Number.isInteger(metricId))) {
-      alert("Ingrese valores validos para GPIO y parametro.");
+    if (!pins || (!editAssignmentIsMetricless && !Number.isInteger(metricId))) {
+      alert("Ingrese valores validos para GPIO (ej. 13 o 13, 14) y parametro.");
       return;
     }
 
     startTransition(async () => {
       try {
         const res = await actualizarAsignacionComponente(editAssignment.id, {
-          pin_gpio: pin,
+          pin_gpio: pins[0],
+          pines_gpio_adicionales: pins.slice(1),
           id_tipo_metrica: metricId,
           id_fuente_agua: showEditWaterSource && editWaterSources.some((f: any) => f.id?.toString() === editFuenteAguaId) ? parseInt(editFuenteAguaId, 10) : undefined,
         });
@@ -716,7 +729,7 @@ export default function DispositivosClient({
                           {group.assignments.map((a: any) => (
                             <Flex key={a.id} justify="between" align="center" gap="2" wrap="wrap">
                               <Badge color="cyan" size="1" variant="soft">
-                                {a.tipo_metrica?.codigo || "Actuador"} - GPIO {a.pin_gpio ?? "N/A"}
+                                {a.tipo_metrica?.codigo || "Actuador"} - GPIO {formatPins(a) || "N/A"}
                               </Badge>
                               <Button size="1" color="blue" variant="soft" onClick={() => openEditAssignmentDialog(a, d)}>Editar</Button>
                             </Flex>
@@ -833,7 +846,7 @@ export default function DispositivosClient({
                               label: `${c.modelo?.nombre_modelo || "Componente"} ${c.numero_serie ? `(${c.numero_serie})` : ""}`.trim(),
                             }))}
                           />
-                          <TextField.Root placeholder="Pin GPIO" value={row.pin} onChange={(e) => updateAssignComponentRow(row.id, { pin: e.target.value })} />
+                          <TextField.Root placeholder="Pines GPIO (ej. 13 o 13, 14)" value={row.pin} onChange={(e) => updateAssignComponentRow(row.id, { pin: e.target.value })} />
                           {showAssignWaterSource && (
                             assignWaterSources.length > 0 ? (
                               <SearchableSelect
@@ -851,7 +864,7 @@ export default function DispositivosClient({
 
                         {selectedIsActuator ? (
                           <Text size="1" color="gray" as="div" mt="3">
-                            Este componente no captura parámetros. Para LCD I2C, registre SDA (GPIO13); SCL usa GPIO14 en el firmware.
+                            Este componente no captura parámetros. Para LCD I2C, registre ambos pines: SDA y SCL (firmware de flujo: 13, 14).
                           </Text>
                         ) : (
                           <Box mt="3">
@@ -908,7 +921,7 @@ export default function DispositivosClient({
               }))}
             />
             <Grid columns={{ initial: "1", sm: "2" }} gap="3">
-              <TextField.Root placeholder="Pin GPIO" value={componentPin} onChange={(e) => setComponentPin(e.target.value)} />
+              <TextField.Root placeholder="Pines GPIO (ej. 13 o 13, 14)" value={componentPin} onChange={(e) => setComponentPin(e.target.value)} />
               {showFieldWaterSource && (
                 availableWaterSources.length > 0 ? (
                   <SearchableSelect
@@ -925,7 +938,7 @@ export default function DispositivosClient({
             </Grid>
             {selectedComponentIsMetricless ? (
               <Text size="1" color="gray">
-                Este componente no captura parámetros. Para LCD I2C, registre SDA (GPIO13); SCL usa GPIO14 en el firmware.
+                Este componente no captura parámetros. Para LCD I2C, registre ambos pines: SDA y SCL (firmware de flujo: 13, 14).
               </Text>
             ) : (
               <Box>
@@ -964,10 +977,10 @@ export default function DispositivosClient({
             <Text size="2" color="gray">
               {editAssignment?.componente?.modelo?.nombre_modelo || "Componente"} en {editAssignment?.device?.nombre || "dispositivo"}
             </Text>
-            <TextField.Root placeholder="Pin GPIO" value={editPin} onChange={(e) => setEditPin(e.target.value)} />
+            <TextField.Root placeholder="Pines GPIO (ej. 13 o 13, 14)" value={editPin} onChange={(e) => setEditPin(e.target.value)} />
             {editAssignmentIsMetricless ? (
               <Text size="1" color="gray">
-                Este componente no captura parámetros. Para LCD I2C, el pin principal es SDA.
+                Este componente no captura parámetros. Para LCD I2C, registre SDA y SCL (ej. 13, 14); el primero es el principal.
               </Text>
             ) : (
               <SearchableSelect

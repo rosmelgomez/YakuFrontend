@@ -568,7 +568,7 @@ export function ActuadoresPanel({
                               </Text>
                             </Flex>
                             <Text size="1" style={{ color: "var(--muted-foreground)", fontFamily: "var(--font-mono)" }}>
-                              GPIO {s.pin}
+                              GPIO {[s.pin, ...(s.pinesAdicionales || [])].join(", ")}
                             </Text>
                           </Flex>
                         ))}

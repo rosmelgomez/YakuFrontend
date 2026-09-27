@@ -230,7 +230,7 @@ export function SensoresPanel({
                               </Flex>
                               <Text size="1" as="div" style={{ color: "var(--muted-foreground)", paddingLeft: 30, marginTop: 2 }}>
                                 {s.nombre}
-                                <span style={{ fontFamily: "var(--font-mono)", marginLeft: 6 }}>GPIO {s.pin}</span>
+                                <span style={{ fontFamily: "var(--font-mono)", marginLeft: 6 }}>GPIO {[s.pin, ...(s.pinesAdicionales || [])].join(", ")}</span>
                                 {hermanas.length > 0 && (
                                   <span> · también mide {hermanas.map((h: any) => metricaDe(h).label.toLowerCase()).join(", ")}</span>
                                 )}

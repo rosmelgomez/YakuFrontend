@@ -290,6 +290,7 @@ export async function asignarComponenteADispositivo(payload: {
   id_dispositivo: number;
   id_componente: number;
   pin_gpio: number;
+  pines_gpio_adicionales?: number[];
   id_tipo_metrica?: number | number[] | null;
   id_fuente_agua?: number;
 }) {
@@ -367,6 +368,7 @@ export async function liberarComponenteAStock(componenteId: number) {
 
 export async function actualizarAsignacionComponente(asignacionId: number, payload: {
   pin_gpio: number;
+  pines_gpio_adicionales?: number[];
   id_tipo_metrica?: number | null;
   id_fuente_agua?: number;
 }) {
