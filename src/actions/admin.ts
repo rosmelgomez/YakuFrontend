@@ -16,6 +16,30 @@ export async function listarUsuarios() {
   return res.json();
 }
 
+export async function aprobarSolicitudRegistro(idUsuario: number) {
+  const res = await fetchFromFastAPI(`/admin/usuarios/${idUsuario}/aprobar`, {
+    method: "POST"
+  });
+  if (!res.ok) {
+    throw new Error(await res.text() || "Error al aprobar la solicitud");
+  }
+  revalidatePath('/dashboard/administrador');
+  return res.json();
+}
+
+export async function rechazarSolicitudRegistro(idUsuario: number, motivo?: string) {
+  const res = await fetchFromFastAPI(`/admin/usuarios/${idUsuario}/rechazar`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ motivo: motivo?.trim() || null })
+  });
+  if (!res.ok) {
+    throw new Error(await res.text() || "Error al rechazar la solicitud");
+  }
+  revalidatePath('/dashboard/administrador');
+  return res.json();
+}
+
 export async function cambiarEstadoUsuario(idUsuario: number, estado: boolean) {
   const res = await fetchFromFastAPI(`/admin/usuarios/${idUsuario}/estado/${estado}`, {
     method: "POST"

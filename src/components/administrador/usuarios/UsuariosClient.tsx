@@ -2,13 +2,17 @@
 
 import React, { useState, useTransition } from "react";
 import { Badge, Box, Button, Card, Checkbox, Dialog, Flex, Grid, ScrollArea, Select, Table, Text, TextField } from "@radix-ui/themes";
-import { KeyRound, MapPin, Plus, Power, RefreshCw, Shield, User, Users } from "lucide-react";
-import { cambiarEstadoUsuario, cambiarRolUsuario, registrarUsuario } from "@/actions/admin";
+import { Check, Clock, KeyRound, MapPin, Plus, Power, RefreshCw, Shield, User, Users, X } from "lucide-react";
+import { aprobarSolicitudRegistro, cambiarEstadoUsuario, cambiarRolUsuario, rechazarSolicitudRegistro, registrarUsuario } from "@/actions/admin";
 import { listarCatalogoPermisos, listarPermisosUsuario, asignarPermisosUsuario } from "@/actions/permisos";
 import { IconTile } from "@/components/ui/yaku-ui";
 
 export default function UsuariosClient({ initialUsers = [], initialDevices = [], initialCrops = [] }: any) {
-  const [users, setUsers] = useState(initialUsers);
+  const [allUsers, setUsers] = useState(initialUsers);
+  const users = allUsers.filter((u: any) => u.estado_aprobacion !== "pendiente");
+  const solicitudes = allUsers.filter((u: any) => u.estado_aprobacion === "pendiente");
+  const [rechazoUser, setRechazoUser] = useState<any | null>(null);
+  const [motivoRechazo, setMotivoRechazo] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isPending, startTransition] = useTransition();
   const [isOpenRegisterUser, setIsOpenRegisterUser] = useState(false);
@@ -35,6 +39,39 @@ export default function UsuariosClient({ initialUsers = [], initialDevices = [],
         const res = await cambiarEstadoUsuario(userId, !currentEstado);
         if (res.status === "ok") {
           setUsers((prev: any[]) => prev.map((u) => (u.id === userId ? { ...u, estado: !currentEstado } : u)));
+        }
+      } catch (err: any) {
+        alert(`Error: ${err.message}`);
+      }
+    });
+  };
+
+  const handleAprobarSolicitud = (userId: number) => {
+    startTransition(async () => {
+      try {
+        const res = await aprobarSolicitudRegistro(userId);
+        if (res.status === "ok") {
+          setUsers((prev: any[]) => prev.map((u) => (u.id === userId ? { ...u, estado_aprobacion: "aprobado" } : u)));
+        }
+      } catch (err: any) {
+        alert(`Error: ${err.message}`);
+      }
+    });
+  };
+
+  const handleConfirmarRechazo = () => {
+    if (!rechazoUser) return;
+    const userId = rechazoUser.id;
+    const motivo = motivoRechazo.trim();
+    startTransition(async () => {
+      try {
+        const res = await rechazarSolicitudRegistro(userId, motivo);
+        if (res.status === "ok") {
+          setUsers((prev: any[]) =>
+            prev.map((u) => (u.id === userId ? { ...u, estado_aprobacion: "rechazado", motivo_rechazo: motivo || null } : u)),
+          );
+          setRechazoUser(null);
+          setMotivoRechazo("");
         }
       } catch (err: any) {
         alert(`Error: ${err.message}`);
@@ -163,6 +200,94 @@ export default function UsuariosClient({ initialUsers = [], initialDevices = [],
         </Flex>
       </Flex>
 
+      {solicitudes.length > 0 && (
+        <Card size={{ initial: "2", sm: "3" }} mb="4" style={{ background: "var(--surface-mockup)", borderColor: "var(--amber-7)", borderRadius: "16px" }}>
+          <Flex align="center" gap="2" mb="3">
+            <Clock size={18} color="#fbbf24" aria-hidden />
+            <Text size="3" weight="bold" as="div" style={{ color: "var(--foreground)" }}>
+              Solicitudes de registro pendientes
+            </Text>
+            <Badge color="amber" variant="soft">{solicitudes.length}</Badge>
+          </Flex>
+          <Text size="2" color="gray" as="div" mb="3">
+            Agricultores que se registraron por su cuenta. No podrán ingresar a la plataforma hasta que apruebes su solicitud.
+          </Text>
+          <ScrollArea scrollbars="horizontal" style={{ width: "100%" }}>
+            <Table.Root variant="surface" style={{ background: "transparent", minWidth: "700px" }}>
+              <Table.Header>
+                <Table.Row>
+                  <Table.ColumnHeaderCell>Solicitante</Table.ColumnHeaderCell>
+                  <Table.ColumnHeaderCell>Contacto</Table.ColumnHeaderCell>
+                  <Table.ColumnHeaderCell>Correo</Table.ColumnHeaderCell>
+                  <Table.ColumnHeaderCell>Fecha de solicitud</Table.ColumnHeaderCell>
+                  <Table.ColumnHeaderCell>Acciones</Table.ColumnHeaderCell>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
+                {solicitudes.map((u: any) => (
+                  <Table.Row key={u.id}>
+                    <Table.RowHeaderCell>
+                      <Flex direction="column" gap="1">
+                        <Text size="2" weight="bold" style={{ color: "white" }}>{u.nombre} {u.apellido || ""}</Text>
+                        {u.dni && <Text size="1" color="cyan">DNI: {u.dni}</Text>}
+                      </Flex>
+                    </Table.RowHeaderCell>
+                    <Table.Cell>
+                      <Flex direction="column" gap="1">
+                        <Text size="1" color="gray">{u.correo}</Text>
+                        <Text size="1" style={{ color: "#94a3b8" }}>{u.telefono || "Sin telefono"}</Text>
+                        {u.direccion && (
+                          <Text size="1" color="gray" style={{ maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={u.direccion}>
+                            <MapPin size={11} aria-hidden style={{ display: "inline", verticalAlign: "-1px", marginRight: 3 }} />{u.direccion}
+                          </Text>
+                        )}
+                      </Flex>
+                    </Table.Cell>
+                    <Table.Cell>
+                      <Badge color={u.verificado ? "green" : "gray"} variant="soft">{u.verificado ? "Verificado" : "Sin verificar"}</Badge>
+                    </Table.Cell>
+                    <Table.Cell>
+                      <Text size="1" style={{ color: "white" }}>
+                        {u.fecha_registro ? new Date(u.fecha_registro).toLocaleString("es-ES") : "-"}
+                      </Text>
+                    </Table.Cell>
+                    <Table.Cell>
+                      <Flex gap="2">
+                        <Button size="1" color="green" variant="soft" disabled={isPending} onClick={() => handleAprobarSolicitud(u.id)} style={{ cursor: "pointer" }}>
+                          <Check size={12} style={{ marginRight: "4px" }} /> Aprobar
+                        </Button>
+                        <Button size="1" color="red" variant="soft" disabled={isPending} onClick={() => { setRechazoUser(u); setMotivoRechazo(""); }} style={{ cursor: "pointer" }}>
+                          <X size={12} style={{ marginRight: "4px" }} /> Rechazar
+                        </Button>
+                      </Flex>
+                    </Table.Cell>
+                  </Table.Row>
+                ))}
+              </Table.Body>
+            </Table.Root>
+          </ScrollArea>
+        </Card>
+      )}
+
+      <Dialog.Root open={rechazoUser !== null} onOpenChange={(open) => { if (!open) setRechazoUser(null); }}>
+        <Dialog.Content aria-describedby={undefined} style={{ maxWidth: 460, width: "92vw", background: "var(--surface-mockup)", border: "1px solid var(--border-mockup)" }}>
+          <Dialog.Title style={{ color: "white" }}>Rechazar solicitud</Dialog.Title>
+          <Text size="2" color="gray" as="div" mb="3">
+            {rechazoUser ? `${rechazoUser.nombre} ${rechazoUser.apellido || ""}`.trim() : ""} ({rechazoUser?.correo}) no podrá ingresar a la plataforma. Se le notificará por correo.
+          </Text>
+          <Text size="1" color="gray" mb="1" as="div">Motivo (opcional, se incluye en el correo)</Text>
+          <TextField.Root placeholder="Ej.: No pudimos validar tu identidad" maxLength={500} value={motivoRechazo} onChange={(e) => setMotivoRechazo(e.target.value)} />
+          <Flex gap="3" mt="4" justify="end">
+            <Dialog.Close>
+              <Button variant="soft" color="gray" style={{ cursor: "pointer" }}>Cancelar</Button>
+            </Dialog.Close>
+            <Button color="red" disabled={isPending} onClick={handleConfirmarRechazo} style={{ cursor: "pointer" }}>
+              Rechazar solicitud
+            </Button>
+          </Flex>
+        </Dialog.Content>
+      </Dialog.Root>
+
       <Card size={{ initial: "2", sm: "3" }} style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
         <Flex
           direction={{ initial: "column", sm: "row" }}
@@ -239,7 +364,13 @@ export default function UsuariosClient({ initialUsers = [], initialDevices = [],
                         <Text size="1" color="gray">Acceso: <span style={{ color: "white" }}>{ultimoAcc}</span></Text>
                       </Flex>
                     </Table.Cell>
-                    <Table.Cell><Badge color={u.estado ? "green" : "red"} variant="soft">{u.estado ? "Activo" : "Dado de baja"}</Badge></Table.Cell>
+                    <Table.Cell>
+                      {u.estado_aprobacion === "rechazado" ? (
+                        <Badge color="red" variant="outline" title={u.motivo_rechazo || undefined}>Solicitud rechazada</Badge>
+                      ) : (
+                        <Badge color={u.estado ? "green" : "red"} variant="soft">{u.estado ? "Activo" : "Dado de baja"}</Badge>
+                      )}
+                    </Table.Cell>
                     <Table.Cell>
                       <Flex gap="2">
                         <Button size="1" color={u.estado ? "red" : "green"} variant="soft" onClick={() => handleToggleEstadoUser(u.id, u.estado)} style={{ cursor: "pointer" }}>

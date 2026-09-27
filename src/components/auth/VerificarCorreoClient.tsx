@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { Card, Box, Flex, Text, Button, TextField, Callout } from "@radix-ui/themes";
-import { CheckCircledIcon, ExclamationTriangleIcon, ReloadIcon } from "@radix-ui/react-icons";
+import { CheckCircledIcon, ClockIcon, ExclamationTriangleIcon, ReloadIcon } from "@radix-ui/react-icons";
 import { Loader2, Mail, ArrowRight, ShieldCheck } from "lucide-react";
 
 export default function VerificarCorreoClient() {
@@ -17,7 +17,7 @@ export default function VerificarCorreoClient() {
 
   const [email, setEmail] = useState(initialEmail);
   const [code, setCode] = useState(initialCode);
-  const [status, setStatus] = useState<"idle" | "verifying" | "success" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "verifying" | "success" | "pending" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [resendSuccess, setResendSuccess] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState<number>(0);
@@ -69,7 +69,10 @@ export default function VerificarCorreoClient() {
         redirect: false,
       });
 
-      if (result?.error) {
+      if (result?.error && result.error.toLowerCase().includes("pendiente de aprobaci")) {
+        // Correo verificado, pero la cuenta aún espera la aprobación del administrador
+        setStatus("pending");
+      } else if (result?.error) {
         setStatus("error");
         setErrorMessage(
           result.error === "CredentialsSignin"
@@ -136,16 +139,20 @@ export default function VerificarCorreoClient() {
               ? "Verificando código..."
               : status === "success"
               ? "¡Cuenta Verificada!"
+              : status === "pending"
+              ? "¡Correo Verificado!"
               : "Verifica tu Cuenta"}
           </Text>
           <Text size="2" color="gray" mt="1" as="div">
             {status === "success"
               ? "Tu identidad ha sido confirmada con éxito. Ingresando al panel..."
+              : status === "pending"
+              ? "Tu solicitud de registro fue enviada al administrador."
               : email
               ? `Hemos enviado un código de confirmación de 6 dígitos a:`
               : "Ingresa el código de confirmación de 6 dígitos enviado a tu correo."}
           </Text>
-          {email && status !== "success" && (
+          {email && status !== "success" && status !== "pending" && (
             <Text size="2" weight="bold" style={{ color: "#38bdf8", wordBreak: "break-all" }} mt="1" as="div">
               {email}
             </Text>
@@ -160,6 +167,18 @@ export default function VerificarCorreoClient() {
             </Callout.Icon>
             <Callout.Text>
               Redirigiendo a tu Dashboard de Riego Inteligente...
+            </Callout.Text>
+          </Callout.Root>
+        )}
+
+        {status === "pending" && (
+          <Callout.Root color="blue" style={{ width: "100%", textAlign: "left" }}>
+            <Callout.Icon>
+              <ClockIcon />
+            </Callout.Icon>
+            <Callout.Text>
+              Un administrador debe aprobar tu cuenta antes de que puedas ingresar a la plataforma.
+              Te avisaremos por correo cuando tu solicitud sea revisada.
             </Callout.Text>
           </Callout.Root>
         )}
@@ -183,7 +202,7 @@ export default function VerificarCorreoClient() {
         )}
 
         {/* FORMULARIO DE INGRESO DE CÓDIGO */}
-        {status !== "success" && (
+        {status !== "success" && status !== "pending" && (
           <Box style={{ width: "100%" }} mt="2">
             {!initialEmail && (
               <Box mb="3" style={{ textAlign: "left" }}>
