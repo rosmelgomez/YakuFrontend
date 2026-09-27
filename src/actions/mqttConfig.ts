@@ -126,3 +126,26 @@ export async function eliminarCredencialMqtt(idDispositivo: number) {
     return { success: false as const, error: error.message || "Error al eliminar la credencial MQTT" };
   }
 }
+
+export type EstadoMqtt = {
+  estado: "conectando" | "conectado" | "error" | "desconectado";
+  mensaje: string | null;
+  codigo: number | null;
+  desde: string | null;
+  host: string | null;
+  port: number | null;
+  username: string | null;
+  tls: boolean;
+};
+
+export async function obtenerEstadoMqtt() {
+  try {
+    const res = await fetchFromFastAPI("/admin/mqtt-config/estado");
+    if (!res.ok) {
+      return { success: false as const, error: await parseErrorText(res) };
+    }
+    return { success: true as const, data: (await res.json()) as EstadoMqtt };
+  } catch (error: any) {
+    return { success: false as const, error: error.message || "Error al consultar el estado MQTT" };
+  }
+}

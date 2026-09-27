@@ -1,22 +1,59 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Box, Card, Flex, Text, Button, TextField, Switch } from "@radix-ui/themes";
 import { Info, Radio } from "lucide-react";
 import { IconTile } from "@/components/ui/yaku-ui";
-import { obtenerMqttConfig, actualizarMqttConfig } from "@/actions/mqttConfig";
+import { obtenerMqttConfig, actualizarMqttConfig, obtenerEstadoMqtt, type EstadoMqtt } from "@/actions/mqttConfig";
 import MqttCredencialesDispositivos from "./MqttCredencialesDispositivos";
+import MqttEstadoConexion, { fechaUtc } from "./MqttEstadoConexion";
+
+const INTERVALO_ESTADO_MS = 10000;
+// Tras "Guardar y reconectar": cuánto esperar la respuesta del broker.
+const ESPERA_RESULTADO_MS = 15000;
+
+const esperar = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export default function MqttConfigClient() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
   const [host, setHost] = useState("");
   const [port, setPort] = useState("8883");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [usarTls, setUsarTls] = useState(true);
   const [fechaActualizacion, setFechaActualizacion] = useState<string | null>(null);
+  const [estado, setEstado] = useState<EstadoMqtt | null>(null);
+  const [estadoError, setEstadoError] = useState<string | null>(null);
+  const [consultandoEstado, setConsultandoEstado] = useState(false);
+  const passwordRef = useRef<HTMLInputElement | null>(null);
+  const montado = useRef(true);
+
+  const consultarEstado = useCallback(async (): Promise<EstadoMqtt | null> => {
+    setConsultandoEstado(true);
+    const res = await obtenerEstadoMqtt();
+    if (!montado.current) return null;
+    setConsultandoEstado(false);
+    if (res.success) {
+      setEstado(res.data);
+      setEstadoError(null);
+      return res.data;
+    }
+    setEstadoError(res.error);
+    return null;
+  }, []);
+
+  useEffect(() => {
+    montado.current = true;
+    consultarEstado();
+    const id = setInterval(consultarEstado, INTERVALO_ESTADO_MS);
+    return () => {
+      montado.current = false;
+      clearInterval(id);
+    };
+  }, [consultarEstado]);
 
   useEffect(() => {
     obtenerMqttConfig().then((res) => {
@@ -41,6 +78,7 @@ export default function MqttConfigClient() {
     }
     setSaving(true);
     setError(null);
+    setAviso(null);
     const res = await actualizarMqttConfig({
       host: host.trim(),
       port: portNum,
@@ -48,13 +86,32 @@ export default function MqttConfigClient() {
       password: password.trim(),
       usarTls,
     });
-    setSaving(false);
-    if (res.success) {
-      setPassword("");
-      setFechaActualizacion(res.data.fecha_actualizacion || null);
-      alert("✅ Configuración MQTT guardada. La conexión se reinició con los nuevos parámetros.");
-    } else {
+    if (!res.success) {
+      setSaving(false);
       setError(res.error);
+      return;
+    }
+    setPassword("");
+    setFechaActualizacion(res.data.fecha_actualizacion || null);
+
+    // La conexión es asíncrona: se espera la respuesta del broker para decirle
+    // al administrador si las credenciales funcionan.
+    let final: EstadoMqtt | null = null;
+    const limite = Date.now() + ESPERA_RESULTADO_MS;
+    while (Date.now() < limite && montado.current) {
+      final = await consultarEstado();
+      if (final && final.estado !== "conectando") break;
+      await esperar(1000);
+    }
+    if (!montado.current) return;
+    setSaving(false);
+    if (final?.estado === "conectado") {
+      setAviso("Configuración guardada: el backend se conectó al broker correctamente.");
+    } else if (final?.estado === "error") {
+      setError(`Configuración guardada, pero el broker rechazó la conexión: ${final.mensaje ?? ""}`);
+      passwordRef.current?.focus();
+    } else {
+      setError("Configuración guardada, pero el broker aún no responde. Revise el estado en unos segundos.");
     }
   };
 
@@ -138,10 +195,17 @@ export default function MqttConfigClient() {
               <Box>
                 <Text weight="bold" style={{ color: "white" }} as="div">Broker MQTT y credencial del backend</Text>
                 {fechaActualizacion && (
-                  <Text size="1" color="gray">Última actualización: {new Date(fechaActualizacion).toLocaleString()}</Text>
+                  <Text size="1" color="gray">Última actualización: {fechaUtc(fechaActualizacion)?.toLocaleString()}</Text>
                 )}
               </Box>
             </Flex>
+
+            <MqttEstadoConexion
+              estado={estado}
+              error={estadoError}
+              consultando={consultandoEstado}
+              onActualizar={consultarEstado}
+            />
 
             <Flex gap="3" wrap="wrap">
               <Box style={{ flex: "2 1 220px" }}>
@@ -176,6 +240,7 @@ export default function MqttConfigClient() {
               <Box style={{ flex: "1 1 220px" }}>
                 <Text size="1" color="gray" as="div" mb="1">Contraseña (dejar vacío para no cambiarla)</Text>
                 <TextField.Root
+                  ref={passwordRef}
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -194,10 +259,15 @@ export default function MqttConfigClient() {
                 <Text color="red" size="1">{error}</Text>
               </Box>
             )}
+            {aviso && (
+              <Box p="2" style={{ background: "var(--greenbg)", border: "1px solid var(--greenbrd)", borderRadius: "8px" }}>
+                <Text size="1" style={{ color: "var(--green)" }}>{aviso}</Text>
+              </Box>
+            )}
 
             <Flex justify="end">
               <Button onClick={handleGuardar} disabled={saving} style={{ cursor: "pointer" }}>
-                {saving ? "Guardando..." : "Guardar y reconectar"}
+                {saving ? "Guardando y probando conexión..." : "Guardar y reconectar"}
               </Button>
             </Flex>
           </Flex>
