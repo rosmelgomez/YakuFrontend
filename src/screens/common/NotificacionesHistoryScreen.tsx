@@ -145,7 +145,7 @@ export default function NotificacionesHistoryScreen() {
               <span className="text-[11px] sm:text-xs font-semibold text-slate-300">Todas</span>
               <Filter size={13} className="text-slate-400" />
             </div>
-            <div className="mt-1 sm:mt-2 font-mono font-bold text-lg sm:text-2xl text-white">
+            <div className="mt-1 sm:mt-2 tabular-nums font-bold tracking-tight text-lg sm:text-2xl text-white">
               {counts.todas}
             </div>
           </button>
@@ -168,7 +168,7 @@ export default function NotificacionesHistoryScreen() {
                   <span className="text-[11px] sm:text-xs font-semibold text-slate-300">{cfg.label}</span>
                   <Icon size={13} className={cfg.text} />
                 </div>
-                <div className={`mt-1 sm:mt-2 font-mono font-bold text-lg sm:text-2xl ${cfg.text}`}>
+                <div className={`mt-1 sm:mt-2 tabular-nums font-bold tracking-tight text-lg sm:text-2xl ${cfg.text}`}>
                   {counts[sev]}
                 </div>
               </button>

@@ -33,18 +33,19 @@ import { IconTile, Inset, Meter, Panel, SectionHeader, StatusDot, fieldClass, to
 export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }: any) {
   const { modelo, modelos, historial, umbral, predicciones } = data;
   
+  // Sin comparativa del backend no se inventan cifras: todo queda sin dato.
   const compModelos = data?.comparativa_modelos || {
     modelos: data?.modelos || [],
     total_riegos: 0,
-    litros_totales: 0.0,
-    promedio_litros_riego: 0.0,
-    promedio_litros_dia: 0.0,
-    tiempo_optimo_pct: 100.0,
-    tiempo_estres_pct: 0.0,
-    ahorro_estimado_pct: 28.5,
-    reduccion_estres_pct: 32.0,
-    dias_activos: 1,
+    litros_totales: null,
+    promedio_litros_riego: null,
+    promedio_litros_dia: null,
+    tiempo_optimo_pct: null,
+    tiempo_estres_pct: null,
+    dias_activos: null,
   };
+  const pct = (v: number | null | undefined, dec = 1) =>
+    v === null || v === undefined || Number.isNaN(Number(v)) ? null : `${Number(v).toFixed(dec)}%`;
   const modelosCompatibles = compModelos?.modelos || data?.modelos || [];
 
   const [loading, setLoading] = useState(false);
@@ -235,15 +236,18 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
     return <Text size="1" color="gray">{compacto ? 'Sin acción requerida' : '—'}</Text>;
   };
 
-  const kpis: { valor: string; label: string; t: Tone }[] = [
-    { valor: `${compModelos?.ahorro_estimado_pct ?? 28.5}%`, label: 'Ahorro de agua est. vs riego manual', t: 'green' },
-    { valor: `${compModelos?.tiempo_optimo_pct ?? 100}%`, label: 'Humedad en rango óptimo (control autónomo)', t: 'purple' },
-    { valor: `${compModelos?.promedio_litros_riego ?? 0.0} L`, label: 'Consumo promedio por evento de riego', t: 'blue' },
+  const totalRiegosIA = Number(compModelos?.total_riegos || 0);
+  const maeActivo = modelo?.mae ?? modelosCompatibles.find((m: any) => m.activo)?.mae ?? null;
+  const kpis: { valor: string | null; vacio: string; label: string; t: Tone }[] = [
+    { valor: String(totalRiegosIA), vacio: '0', label: 'Riegos ejecutados por la IA', t: 'green' },
+    { valor: pct(compModelos?.tiempo_optimo_pct), vacio: 'Sin lecturas', label: 'Humedad en rango óptimo (control autónomo)', t: 'purple' },
     {
-      valor: `${(modelo?.mae || modelosCompatibles.find((m: any) => m.activo)?.mae || 5.5).toFixed(1)}%`,
-      label: 'MAE del modelo activo en validación',
-      t: 'amber',
+      valor: totalRiegosIA > 0 && compModelos?.promedio_litros_riego != null ? `${compModelos.promedio_litros_riego} L` : null,
+      vacio: 'Sin riegos',
+      label: 'Consumo promedio por evento de riego',
+      t: 'blue',
     },
+    { valor: pct(maeActivo), vacio: 'Sin medir', label: 'Tasa de error del modelo activo en validación', t: 'amber' },
   ];
 
   return (
@@ -269,7 +273,7 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
               )}
             </div>
             <p className="m-0 mt-1 text-[11px] sm:text-xs text-slate-400 break-words tabular-nums">
-              {modelo.algoritmo} · {modelo.nombre} v{modelo.version} · 4 features + hora · MAE {modelo.mae}%
+              {modelo.algoritmo} · {modelo.nombre} v{modelo.version} · 4 features + hora · Error {pct(modelo.mae) ?? 'sin medir'}
             </p>
             <div className="flex gap-1.5 mt-2 flex-wrap items-center">
               <span className="text-[11px] text-slate-400 mr-0.5">Features:</span>
@@ -430,7 +434,7 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
                         style={{ background: 'var(--bg-mockup)', borderColor: 'var(--border2-mockup)', minWidth: 'auto', width: '100%' }}
                         options={modelos.map((m: any) => ({
                           value: m.id_modelo.toString(),
-                          label: `${m.nombre_modelo} (v${m.version} - Acc: ${m.precision_modelo?.toFixed(1)}%)`,
+                          label: `${m.nombre_modelo} (v${m.version} - Acc: ${pct(m.precision_modelo) ?? 'sin medir'})`,
                         }))}
                       />
                     </div>
@@ -675,11 +679,12 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
             <Grid columns={{ initial: '1', md: modelosCompatibles.length > 1 ? '2' : '1' }} gap="3">
               {modelosCompatibles.map((m: any) => {
                 const isActivo = m.activo || (modelo && m.id_modelo === modelo.id_modelo);
-                const accuracy = m.precision_modelo ?? (m.precision_score ? m.precision_score : 90);
-                const f1 = m.f1_score ?? 90;
-                const recall = m.recall_score ?? 90;
-                const mae = m.mae ?? Math.max(0, Number((100 - accuracy).toFixed(1)));
-                const metricas: [string, number, Tone][] = [
+                // Solo métricas medidas: si el backend no las tiene, se muestra "Sin medir".
+                const accuracy = m.precision_modelo ?? m.precision_score ?? null;
+                const f1 = m.f1_score ?? null;
+                const recall = m.recall_score ?? null;
+                const mae = m.mae ?? (accuracy !== null ? Math.max(0, Number((100 - accuracy).toFixed(1))) : null);
+                const metricas: [string, number | null, Tone][] = [
                   ['Precisión global (accuracy)', accuracy, 'green'],
                   ['F1-score (equilibrio)', f1, 'purple'],
                   ['Sensibilidad (recall)', recall, 'blue'],
@@ -731,11 +736,11 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
                         <Box key={label}>
                           <Flex justify="between" mb="1">
                             <Text size="1" color="gray">{label}</Text>
-                            <Text size="1" weight="bold" className="tabular-nums" style={{ color: tone(t).fg }}>
-                              {Number(valor).toFixed(1)}%
+                            <Text size="1" weight="bold" className="tabular-nums" style={{ color: valor === null ? 'var(--muted-foreground)' : tone(t).fg }}>
+                              {valor === null ? 'Sin medir' : `${Number(valor).toFixed(1)}%`}
                             </Text>
                           </Flex>
-                          <Meter value={Number(valor)} t={t} height={5} label={label} />
+                          <Meter value={valor === null ? 0 : Number(valor)} t={t} height={5} label={label} />
                         </Box>
                       ))}
                     </Flex>
@@ -748,8 +753,11 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
             <dl className="m-0 grid grid-cols-2 md:grid-cols-4 gap-px overflow-hidden rounded-xl border border-[var(--border-mockup)] bg-[var(--border-mockup)]">
               {kpis.map((k) => (
                 <div key={k.label} className="bg-[var(--surface-mockup)] px-4 py-3">
-                  <dd className="m-0 text-xl sm:text-2xl font-bold tabular-nums tracking-tight" style={{ color: tone(k.t).fg }}>
-                    {k.valor}
+                  <dd
+                    className={`m-0 font-bold tabular-nums tracking-tight ${k.valor === null ? 'text-base sm:text-lg' : 'text-xl sm:text-2xl'}`}
+                    style={{ color: k.valor === null ? 'var(--muted-foreground)' : tone(k.t).fg }}
+                  >
+                    {k.valor ?? k.vacio}
                   </dd>
                   <dt className="mt-1 text-[11px] leading-snug text-slate-400">{k.label}</dt>
                 </div>

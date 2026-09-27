@@ -24,7 +24,8 @@ import {
   CartesianGrid,
   Cell,
 } from "recharts";
-import { Trophy } from "lucide-react";
+import { MessageSquareText, Trophy } from "lucide-react";
+import { IconTile } from "@/components/ui/yaku-ui";
 
 interface AdminQuestionItem {
   id: number;
@@ -464,13 +465,16 @@ export default function FeedbackAdminClient({
     <div className="w-full max-w-full space-y-6 fade-in">
       {/* Cabecera y Barra de Pestañas (Ancho Completo) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
-        <div>
-          <h1 className="font-display font-bold text-base sm:text-xl md:text-2xl text-white tracking-tight">
-            Panel de Retroalimentación de Agricultores
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Mide la satisfacción del usuario, analiza la eficiencia de cada pregunta y administra el cuestionario activo.
-          </p>
+        <div className="flex items-center gap-3 min-w-0">
+          <IconTile icon={MessageSquareText} t="green" size={40} />
+          <div className="min-w-0">
+            <h1 className="font-bold text-base sm:text-xl text-white tracking-tight m-0">
+              Panel de retroalimentación de agricultores
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-400 mt-0.5 m-0">
+              Mide la satisfacción del usuario, analiza la eficiencia de cada pregunta y administra el cuestionario activo.
+            </p>
+          </div>
         </div>
 
         {/* Selector de Pestañas */}

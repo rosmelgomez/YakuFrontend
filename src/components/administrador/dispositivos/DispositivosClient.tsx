@@ -580,6 +580,12 @@ export default function DispositivosClient({
   const renderDispositivosStockCard = () => (
     <Card size={{ initial: "2", sm: "3" }} style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
       <Flex align="center" gap="3" mb="4"><IconTile icon={Cpu} t="green" /><Text size="3" weight="bold">Dispositivos en Stock</Text></Flex>
+      {devices.filter((d: any) => d.en_almacen === true && ["disponible", "reparacion"].includes(d.estado)).length === 0 && (
+        <Box p="4" style={{ border: "1px dashed var(--border2-mockup)", borderRadius: 10, textAlign: "center" }}>
+          <Text size="2" color="gray" as="div">No hay dispositivos disponibles ni en reparación en los almacenes.</Text>
+          <Text size="1" color="gray" as="div" mt="1">Registra uno nuevo con «Registrar Dispositivo».</Text>
+        </Box>
+      )}
       <Grid columns={{ initial: "1", md: showComponents ? "2" : "3" }} gap="3">
         {devices.filter((d: any) => d.en_almacen === true && ["disponible", "reparacion"].includes(d.estado)).map((d: any) => (
           <Card key={d.id} style={{ background: "var(--surface2-mockup)", borderColor: "var(--border-mockup)" }}>
@@ -604,6 +610,12 @@ export default function DispositivosClient({
   const renderComponentesStockCard = () => (
     <Card size={{ initial: "2", sm: "3" }} style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>
       <Flex align="center" gap="3" mb="4"><IconTile icon={Layers} t="green" /><Text size="3" weight="bold">Componentes en Stock</Text></Flex>
+      {components.filter((c: any) => c.en_almacen === true).length === 0 && (
+        <Box p="4" style={{ border: "1px dashed var(--border2-mockup)", borderRadius: 10, textAlign: "center" }}>
+          <Text size="2" color="gray" as="div">No hay componentes en stock en los almacenes.</Text>
+          <Text size="1" color="gray" as="div" mt="1">Registra uno nuevo con «Registrar Componente».</Text>
+        </Box>
+      )}
       <Grid columns={{ initial: "1", md: showDevices ? "2" : "3" }} gap="3">
         {components.filter((c: any) => c.en_almacen === true).map((c: any) => (
           <Card key={c.id} style={{ background: "var(--surface2-mockup)", borderColor: "var(--border-mockup)" }}>

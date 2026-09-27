@@ -571,7 +571,7 @@ export default function PerfilClient({ user }: { user: any }) {
           </Card>
 
           <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-3">
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Detalles de la cuenta</p>
+            <p className="text-sm font-semibold text-slate-200">Detalles de la cuenta</p>
             <div className="space-y-2 text-xs">
               <div className="flex justify-between items-center text-slate-300">
                 <span className="text-slate-400">Estado</span>
@@ -597,10 +597,10 @@ export default function PerfilClient({ user }: { user: any }) {
               <form onSubmit={handleSaveProfile}>
                 <Flex direction="column" gap="4">
                   <div>
-                    <Text size={{ initial: "3", sm: "4" }} weight="bold" style={{ color: 'white' }}>
-                      Datos Personales
+                    <Text size={{ initial: "3", sm: "4" }} weight="bold" as="div" style={{ color: 'white' }}>
+                      Datos personales
                     </Text>
-                    <Text size="2" color="gray">
+                    <Text size="2" color="gray" as="div">
                       Información de contacto y configuración regional del perfil.
                     </Text>
                   </div>

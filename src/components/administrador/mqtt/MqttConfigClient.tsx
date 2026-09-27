@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Box, Card, Flex, Text, Button, TextField, Switch } from "@radix-ui/themes";
 import { Info, Radio } from "lucide-react";
+import { IconTile } from "@/components/ui/yaku-ui";
 import { obtenerMqttConfig, actualizarMqttConfig } from "@/actions/mqttConfig";
 
 export default function MqttConfigClient() {
@@ -59,12 +60,15 @@ export default function MqttConfigClient() {
   return (
     <Box>
       <Flex direction="column" gap="4" mb="5">
-        <Box>
-          <Text size={{ initial: "5", sm: "6" }} weight="bold" as="div" style={{ color: "var(--foreground)" }}>Configuración MQTT</Text>
-          <Text size={{ initial: "1", sm: "2" }} color="gray">
-            Broker al que se conectan los nodos ESP32. Al guardar, la conexión del backend se reinicia en caliente.
-          </Text>
-        </Box>
+        <Flex align="center" gap="3">
+          <IconTile icon={Radio} t="green" size={40} />
+          <Box>
+            <Text size={{ initial: "5", sm: "6" }} weight="bold" as="div" style={{ color: "var(--foreground)", letterSpacing: "-0.02em" }}>Configuración MQTT</Text>
+            <Text size={{ initial: "1", sm: "2" }} color="gray">
+              Broker al que se conectan los nodos ESP32. Al guardar, la conexión del backend se reinicia en caliente.
+            </Text>
+          </Box>
+        </Flex>
       </Flex>
 
       {/* Ayuda memoria: cómo configurar el broker MQTT */}

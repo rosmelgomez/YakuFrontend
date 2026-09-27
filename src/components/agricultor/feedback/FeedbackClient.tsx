@@ -5,7 +5,8 @@ import React, { useState } from "react";
 import { Icons } from "@/components/ui/Icons";
 import { crearFeedback } from "@/actions/feedback";
 import type { FeedbackPregunta, FeedbackItem } from "@/actions/feedback";
-import { Check, Sprout } from "lucide-react";
+import { Check, MessageSquareText, Sprout } from "lucide-react";
+import { IconTile } from "@/components/ui/yaku-ui";
 
 interface FeedbackQuestionItem {
   id: number | string;
@@ -182,13 +183,16 @@ export default function FeedbackClient({
     <div className="w-full max-w-full space-y-4 sm:space-y-6 fade-in">
       {/* Navegación por pestañas (Tabs) de ancho completo */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-800 pb-3 sm:pb-4">
-        <div>
-          <h1 className="font-display font-bold text-base sm:text-xl md:text-2xl text-white tracking-tight">
-            Retroalimentación y Encuestas
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-            Comparte tu experiencia para ayudarnos a optimizar el riego y monitoreo de tus cultivos.
-          </p>
+        <div className="flex items-center gap-3 min-w-0">
+          <IconTile icon={MessageSquareText} t="green" size={40} />
+          <div className="min-w-0">
+            <h1 className="font-bold text-base sm:text-xl text-white tracking-tight m-0">
+              Retroalimentación y encuestas
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-400 mt-0.5 m-0">
+              Comparte tu experiencia para ayudarnos a optimizar el riego y monitoreo de tus cultivos.
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-900/90 p-1 sm:p-1.5 rounded-xl border border-slate-800 self-start sm:self-auto">

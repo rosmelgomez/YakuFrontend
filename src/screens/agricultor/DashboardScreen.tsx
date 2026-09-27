@@ -6,6 +6,7 @@ import { getDashboardData } from '@/services/dashboard';
 import { getCached, setCached, isCacheValid } from '@/lib/cache';
 import YakuLoader from '@/components/layout/YakuLoader';
 import DashboardClient from '@/components/agricultor/dashboard/DashboardClient';
+import { aplicarLecturasEnVivo } from '@/components/agricultor/dashboard/live';
 
 export default function DashboardScreen() {
   const { user } = useAuth();
@@ -42,14 +43,17 @@ export default function DashboardScreen() {
     };
   }, []);
 
-  // Actualización en vivo del gráfico: el colector reporta cada minuto y el backend avisa por
-  // WebSocket ("yaku:control_update", event "telemetria"). Se recarga como máximo cada 20 s
-  // (el backend cachea el dashboard 15 s) y, por si el WebSocket se cae, cada 60 s.
+  // Datos en vivo: el colector reporta cada minuto y el backend reenvía la
+  // lectura guardada (ya calibrada) por WebSocket ("yaku:control_update",
+  // event "telemetria", campo `lecturas`). Se aplica al instante sin recargar.
+  // La recarga completa queda como respaldo: si un evento llega sin lecturas,
+  // cada 60 s por si el WebSocket se cae, y al volver a la pestaña (el
+  // navegador pausa los temporizadores en segundo plano).
   useEffect(() => {
     let lastFetch = Date.now();
     let inFlight = false;
-    const refetch = () => {
-      if (inFlight || Date.now() - lastFetch < 20_000) return;
+    const refetch = (forzar = false) => {
+      if (inFlight || (!forzar && Date.now() - lastFetch < 20_000)) return;
       inFlight = true;
       lastFetch = Date.now();
       getDashboardData()
@@ -62,12 +66,33 @@ export default function DashboardScreen() {
     };
     const onControlUpdate = (event: Event) => {
       const detail = (event as CustomEvent).detail;
-      if (detail?.event === 'telemetria') refetch();
+      if (detail?.event !== 'telemetria') return;
+      const lecturas = detail.lecturas;
+      if (detail.id_cultivo && lecturas && Object.keys(lecturas).length > 0) {
+        setCultivosData((prev) => {
+          const next = aplicarLecturasEnVivo(prev, detail.id_cultivo, lecturas);
+          if (next) setCached('dashboard_data', next);
+          return next;
+        });
+        return;
+      }
+      refetch();
+    };
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refetch(true);
+    };
+    const onWsStatus = (event: Event) => {
+      // Al reconectar se pudo perder algún evento: se sincroniza de inmediato.
+      if ((event as CustomEvent).detail?.conectado) refetch(true);
     };
     window.addEventListener('yaku:control_update', onControlUpdate);
-    const timer = setInterval(refetch, 60_000);
+    window.addEventListener('yaku:ws_status', onWsStatus);
+    document.addEventListener('visibilitychange', onVisible);
+    const timer = setInterval(() => refetch(), 60_000);
     return () => {
       window.removeEventListener('yaku:control_update', onControlUpdate);
+      window.removeEventListener('yaku:ws_status', onWsStatus);
+      document.removeEventListener('visibilitychange', onVisible);
       clearInterval(timer);
     };
   }, []);
@@ -84,7 +109,7 @@ export default function DashboardScreen() {
     <Box className="page-content" px={{ initial: "2", sm: "4", md: "6" }} py={{ initial: "3", sm: "4", md: "5" }}>
       <Box mb={{ initial: "3", sm: "4" }}>
         <Heading size={{ initial: "5", sm: "6", md: "7" }} style={{ color: 'white', wordBreak: 'break-word' }} mb="1">
-          Hola, {user?.name || 'Agricultor'}! 👋
+          ¡Hola, {user?.name || 'Agricultor'}! 👋
         </Heading>
         <Text size={{ initial: "1", sm: "2" }} style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
           Aquí tienes el resumen en tiempo real de las condiciones de tus cultivos.

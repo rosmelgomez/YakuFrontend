@@ -36,6 +36,8 @@ const routeTitles: Record<string, { title: string; subtitle?: string }> = {
   '/dashboard/administrador/catalogo': { title: 'Catálogos del Sistema', subtitle: 'Especies botánicas y división territorial' },
   '/dashboard/administrador/feedback': { title: 'Preguntas de Feedback', subtitle: 'Configuración de encuestas y valoraciones' },
   '/dashboard/administrador/almacenes': { title: 'Almacenes', subtitle: 'Inventario físico y distribución de stock' },
+  '/dashboard/administrador/mantenimiento': { title: 'Auditoría', subtitle: 'Bitácora de mantenimiento, sesiones y permisos' },
+  '/dashboard/administrador/mqtt-config': { title: 'Configuración MQTT', subtitle: 'Conexión del broker para los dispositivos IoT' },
   '/dashboard/administrador/respaldo': { title: 'Respaldo de Base de Datos', subtitle: 'Exportación y copias de seguridad' },
   '/dashboard/administrador/perfil': { title: 'Mi Perfil', subtitle: 'Configuración de cuenta y niveles de seguridad' },
 };
@@ -133,13 +135,27 @@ export default function TopBar() {
 
   const isAdmin = location.pathname.startsWith('/dashboard/administrador');
 
+  // Cada página ya muestra su propio título en su cabecera. La barra superior
+  // solo lo repite cuando esa cabecera ha salido de la vista al hacer scroll,
+  // para no duplicarlo en reposo pero seguir orientando al usuario.
+  const [showTitle, setShowTitle] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setShowTitle(window.scrollY > 96);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [location.pathname]);
+
   return (
     <header className="w-full bg-[var(--background)]/85 backdrop-blur-md border-b border-[var(--border-mockup)] px-3.5 sm:px-6 py-2 sm:py-3 flex items-center justify-between shrink-0 sticky top-0 z-30">
       <div className="min-w-0 pr-2">
-        <h1 className="font-bold text-white text-sm sm:text-lg leading-tight tracking-tight truncate">{currentInfo.title}</h1>
-        {currentInfo.subtitle && (
-          <p className="text-slate-400 text-[11px] sm:text-xs mt-0.5 truncate max-w-[220px] sm:max-w-none">{currentInfo.subtitle}</p>
-        )}
+        <p
+          aria-hidden={!showTitle}
+          className="m-0 font-semibold text-white text-sm sm:text-base leading-tight tracking-tight truncate transition-[opacity,transform] duration-200 ease-out"
+          style={{ opacity: showTitle ? 1 : 0, transform: showTitle ? 'none' : 'translateY(4px)' }}
+        >
+          {currentInfo.title}
+        </p>
       </div>
 
       <div className="flex items-center gap-4">

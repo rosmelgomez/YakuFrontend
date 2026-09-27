@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import { Box, Card, Flex, Text, Badge, TextField, Button, ScrollArea } from "@radix-ui/themes";
-import { Wrench, Search } from "lucide-react";
+import { Search, Wrench } from "lucide-react";
+import { IconTile } from "@/components/ui/yaku-ui";
 import { listarLogsSistema } from "@/actions/logs";
 import { useAuth } from "@/context/AuthContext";
 
@@ -66,14 +67,17 @@ export default function MaintenanceHistoryClient() {
   return (
     <Box>
       <Flex direction="column" gap="4" mb="5">
+        <Flex align="center" gap="3">
+        <IconTile icon={Wrench} t="green" size={40} />
         <Box>
-          <Text size={{ initial: "5", sm: "6" }} weight="bold" as="div" style={{ color: "var(--foreground)" }}>Auditoría y mantenimiento</Text>
+          <Text size={{ initial: "5", sm: "6" }} weight="bold" as="div" style={{ color: "var(--foreground)", letterSpacing: "-0.02em" }}>Auditoría y mantenimiento</Text>
           <Text size={{ initial: "1", sm: "2" }} color="gray">
             {esAdminReal
               ? "Bitácora completa del sistema: mantenimiento técnico (calibraciones, desconexiones), inicios de sesión, cambios de rol/permisos y errores de red del broker MQTT."
               : "Bitácora de tu propia actividad: acciones, inicios de sesión y eventos relacionados con tu cuenta (no incluye actividad de otros usuarios)."}
           </Text>
         </Box>
+        </Flex>
       </Flex>
 
       <Card size={{ initial: "2", sm: "3" }} mb="4" style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)", borderRadius: "16px" }}>

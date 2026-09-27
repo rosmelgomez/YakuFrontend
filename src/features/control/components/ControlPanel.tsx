@@ -458,13 +458,17 @@ export function ControlPanel({
   const handleCalibrarSensor = async (
     devId: number,
     pin: number,
-    offset: number
+    offset: number,
+    idAsignacion?: number | null,
+    variable?: string | null
   ) => {
     startTransition(async () => {
-      const res = await calibrarSensor(devId, pin, offset);
+      const res = await calibrarSensor(devId, pin, offset, idAsignacion);
       if (res.success) {
         alert(
-          `✅ Calibración aplicada: las próximas lecturas del sensor en GPIO ${pin} sumarán ${offset}.`
+          `Calibración aplicada correctamente: las próximas lecturas de ${
+            variable ? variable.toLowerCase() : `el sensor en GPIO ${pin}`
+          } sumarán ${offset > 0 ? "+" : ""}${offset}.`
         );
         await refresh();
       } else {

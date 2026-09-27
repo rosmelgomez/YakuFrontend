@@ -8,7 +8,14 @@ import DashboardConsumptionChart from '@/components/charts/DashboardConsumptionC
 import DashboardHealthGauge from '@/components/charts/DashboardHealthGauge';
 import NoCropsEmptyState from '@/components/layout/NoCropsEmptyState';
 import SearchableSelect from '@/components/ui/SearchableSelect';
-import CountdownTimer from './CountdownTimer';
+import {
+  LIMITE_SENSOR_OBSOLETO_MS,
+  estadoFlujo,
+  haceTiempo,
+  ultimaLecturaMs,
+  useAhora,
+  useWsConectado,
+} from './live';
 import {
   Activity,
   AlertTriangle,
@@ -16,7 +23,6 @@ import {
   Cpu,
   Droplets,
   Gauge,
-  LayoutDashboard,
   Sprout,
   Thermometer,
   ThermometerSun,
@@ -410,17 +416,12 @@ export default function DashboardClient({
               direction={{ initial: 'column', md: 'row' }}
               justify="between"
               align={{ initial: 'stretch', md: 'end' }}
-              mb="5"
               gap="4"
               wrap="wrap"
               style={{ width: '100%' }}
             >
               <Box>
                 <Flex align="center" gap="3" mb="2" wrap="wrap">
-                  <IconTile icon={LayoutDashboard} t="green" size={40} />
-                  <Text size={{ initial: "5", sm: "6" }} weight="bold" as="div" style={{ color: 'var(--foreground)', letterSpacing: '-0.02em' }}>
-                    Dashboard
-                  </Text>
                   <SearchableSelect
                     value={selectedId}
                     onValueChange={setSelectedId}
@@ -442,31 +443,7 @@ export default function DashboardClient({
               </Box>
 
               <Flex gap="2" align="center" wrap="wrap">
-                {/* Live indicator badge */}
-                <Flex align="center" gap="2" style={{
-                  background: recolectorActivo ? 'var(--greenbg)' : 'rgba(255, 255, 255, 0.04)',
-                  color: recolectorActivo ? 'var(--green)' : 'var(--muted-foreground)',
-                  border: `1px solid ${recolectorActivo ? 'var(--greenbrd)' : 'var(--border2-mockup)'}`,
-                  padding: '6px 12px',
-                  borderRadius: '999px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                }}>
-                  <StatusDot t={recolectorActivo ? 'green' : 'gray'} pulse={recolectorActivo} />
-                  {recolectorActivo ? 'En vivo' : 'Recolector inactivo'}
-                </Flex>
-                <div style={{
-                  background: 'var(--bluebg)',
-                  color: 'var(--blue)',
-                  border: '1px solid var(--bluebrd)',
-                  padding: '6px 12px',
-                  borderRadius: '999px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  fontVariantNumeric: 'tabular-nums',
-                }}>
-                   <CountdownTimer recolectorActivo={recolectorActivo} />
-                </div>
+                <EstadoEnVivo cultivo={cultivoActivo} recolectorActivo={recolectorActivo} />
               </Flex>
             </Flex>
 
@@ -646,8 +623,71 @@ const getTimeAgo = (date: Date | null) => {
   return `hace ${Math.floor(diffHours / 24)} día(s)`;
 };
 
+// --- ESTADO REAL DEL FLUJO DE DATOS ---
+// "En vivo" solo si la última lectura es reciente y el canal en tiempo real
+// está conectado; antes bastaba con que el colector estuviera activado.
+const ESTADO_TONOS = {
+  green: { bg: 'var(--greenbg)', fg: 'var(--green)', brd: 'var(--greenbrd)' },
+  amber: { bg: 'var(--amberbg)', fg: 'var(--amber)', brd: 'var(--amberbrd)' },
+  red: { bg: 'var(--redbg)', fg: '#fca5a5', brd: 'var(--redbrd)' },
+  gray: { bg: 'rgba(255, 255, 255, 0.04)', fg: 'var(--muted-foreground)', brd: 'var(--border2-mockup)' },
+} as const;
+
+const EstadoEnVivo = ({ cultivo, recolectorActivo }: { cultivo: CultivoData; recolectorActivo: boolean }) => {
+  const ahora = useAhora(1000);
+  const wsConectado = useWsConectado();
+  const estado = estadoFlujo({ ultimaLectura: ultimaLecturaMs(cultivo), recolectorActivo, wsConectado, ahora });
+  const c = ESTADO_TONOS[estado.t];
+  return (
+    <Flex
+      align="center"
+      gap="2"
+      role="status"
+      aria-live="polite"
+      title={estado.detalle}
+      style={{
+        background: c.bg,
+        color: c.fg,
+        border: `1px solid ${c.brd}`,
+        padding: '6px 12px',
+        borderRadius: '999px',
+        fontSize: '13px',
+        fontWeight: 600,
+        fontVariantNumeric: 'tabular-nums',
+      }}
+    >
+      <StatusDot t={estado.t} pulse={estado.pulso} />
+      <span>{estado.texto}</span>
+      {estado.t === 'green' && (
+        <span style={{ fontWeight: 500, opacity: 0.8 }}>· {estado.detalle.replace('Última lectura ', '')}</span>
+      )}
+    </Flex>
+  );
+};
+
+const HaceTiempo = ({ fecha }: { fecha: Date | string | null | undefined }) => {
+  const ahora = useAhora(1000);
+  const t = fecha ? new Date(fecha).getTime() : NaN;
+  if (!Number.isFinite(t)) return null;
+  return <>{haceTiempo(ahora - t)}</>;
+};
+
 // --- SUB-COMPONENTE: TARJETA DE SENSOR ---
 const SensorCard = ({ sensor, type }: { sensor: SensorData; type: 'soil_moisture' | 'env_humidity' | 'env_temp' | 'soil_temp' }) => {
+  // Destello breve cuando llega una lectura nueva (cambia la fecha), sin
+  // animar la primera carga. Reloj lento solo para detectar sensor obsoleto.
+  const fechaMs = sensor?.fecha ? new Date(sensor.fecha).getTime() : null;
+  const fechaPrevia = useRef<number | null>(fechaMs);
+  const [destello, setDestello] = useState(0);
+  useEffect(() => {
+    if (fechaMs !== null && fechaPrevia.current !== null && fechaMs > fechaPrevia.current) {
+      setDestello((n) => n + 1);
+    }
+    fechaPrevia.current = fechaMs;
+  }, [fechaMs]);
+  const ahoraLento = useAhora(15_000);
+  const obsoleto = fechaMs !== null && ahoraLento - fechaMs > LIMITE_SENSOR_OBSOLETO_MS;
+
   if (!sensor) return (
     <Card size="2" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderStyle: 'dashed', borderRadius: '14px' }}>
       <Flex align="center" gap="2">
@@ -699,20 +739,30 @@ const SensorCard = ({ sensor, type }: { sensor: SensorData; type: 'soil_moisture
   const MetricIcon = theme.icon;
 
   return (
-    <Card size="2" style={{ background: 'var(--surface-mockup)', border: `1px solid ${fuera ? cardBorder : 'var(--border-mockup)'}`, borderRadius: '14px' }}>
+    <Card
+      key={destello}
+      size="2"
+      className={destello > 0 ? 'live-flash' : undefined}
+      style={{
+        background: 'var(--surface-mockup)',
+        border: `1px solid ${fuera && !obsoleto ? cardBorder : 'var(--border-mockup)'}`,
+        borderRadius: '14px',
+        opacity: obsoleto ? 0.6 : 1,
+        transition: 'opacity 300ms ease',
+      }}
+    >
       <Flex direction="column" gap="3">
-        <Flex justify="between" align="center" gap="2">
+        <Flex align="center" gap="2">
           <Flex align="center" gap="2" style={{ minWidth: 0 }}>
             <span aria-hidden style={{ width: 28, height: 28, borderRadius: 8, background: theme.bg, border: `1px solid ${theme.border}`, color: theme.color, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <MetricIcon size={15} />
             </span>
             <Text size="2" weight="medium" style={{ color: 'var(--foreground)' }} truncate>{metricaNombre}</Text>
           </Flex>
-          <Badge color={fuera ? "red" : "green"} variant="soft">{fuera ? "Fuera de rango" : "Óptimo"}</Badge>
         </Flex>
 
         <Box>
-          <Flex align="baseline" gap="1">
+          <Flex align="baseline" gap="1" wrap="wrap">
             <Text size={{ initial: "7", md: "8" }} weight="bold" className="tabular-nums" style={{ color: valueColor, letterSpacing: '-0.03em', lineHeight: 1 }}>{sensor.valor.toFixed(1)}</Text>
             <Text size={{ initial: "3", sm: "4" }} style={{ color: valueColor }} weight="medium">{metricaUnidad}</Text>
           </Flex>
@@ -721,13 +771,24 @@ const SensorCard = ({ sensor, type }: { sensor: SensorData; type: 'soil_moisture
         <Box mt="2">
           <Flex justify="between" align="center" mb="2" gap="2">
             <Text size="1" color="gray" className="tabular-nums">Objetivo: {formatObjetivo()}</Text>
-            <Text size="1" color="gray" style={{ fontFamily: 'var(--font-mono)' }} truncate>{sensor.modelo}</Text>
+            <Badge color={fuera ? "red" : "green"} variant="soft" size="1">{fuera ? "Fuera de rango" : "Óptimo"}</Badge>
           </Flex>
           {sensor.porcentaje !== null && (
             <div style={{ height: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '2px', overflow: 'hidden' }}>
               <div style={{ height: '100%', width: `${Math.min(Math.max(sensor.porcentaje, 0), 100)}%`, background: valueColor, borderRadius: '2px' }} />
             </div>
           )}
+          <Flex justify="between" align="center" gap="2" mt="2">
+            <Text size="1" truncate style={{ color: 'var(--muted-foreground)', minWidth: 0 }} title={sensor.modelo}>{sensor.modelo}</Text>
+            <Text
+              size="1"
+              className="tabular-nums"
+              style={{ color: obsoleto ? 'var(--amber)' : 'var(--muted-foreground)', flexShrink: 0 }}
+              title={sensor.fecha ? new Date(sensor.fecha).toLocaleString('es-PE') : undefined}
+            >
+              {obsoleto ? 'Sin datos ' : ''}<HaceTiempo fecha={sensor.fecha} />
+            </Text>
+          </Flex>
         </Box>
       </Flex>
     </Card>

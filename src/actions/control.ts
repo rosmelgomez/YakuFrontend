@@ -84,9 +84,17 @@ export async function toggleCapturaDatos(userId: number, dispositivoId: number, 
   }
 }
 
-export async function calibrarSensor(dispositivoId: number, pinGpio: number, offset: number) {
+export async function calibrarSensor(
+  dispositivoId: number,
+  pinGpio: number,
+  offset: number,
+  idAsignacion?: number | null
+) {
   try {
-    const res = await fetchFromFastAPI(`/dispositivos/calibrar/${dispositivoId}/${pinGpio}/${offset}`, {
+    // id_asignacion identifica la variable exacta: un mismo pin (p. ej. DHT22)
+    // puede medir humedad y temperatura, cada una con su propio offset.
+    const query = idAsignacion ? `?id_asignacion=${idAsignacion}` : "";
+    const res = await fetchFromFastAPI(`/dispositivos/calibrar/${dispositivoId}/${pinGpio}/${offset}${query}`, {
       method: "POST"
     });
     if (!res.ok) {

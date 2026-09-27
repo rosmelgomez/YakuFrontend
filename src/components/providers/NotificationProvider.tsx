@@ -239,6 +239,13 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     let reconnectAttempts = 0;
     let stopped = false;
 
+    // El dashboard muestra "Reconectando…" si el canal de tiempo real se cae.
+    const emitirEstado = (conectado: boolean) => {
+      if (typeof window === 'undefined') return;
+      (window as any).__yakuWsConectado = conectado;
+      window.dispatchEvent(new CustomEvent('yaku:ws_status', { detail: { conectado } }));
+    };
+
     const resolveWebSocketUrl = () => {
       // Mismo origen que la página (proxeado por Vite en dev / el reverse
       // proxy en prod): el navegador no debe abrir un WS directo a
@@ -270,6 +277,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
         socket.onopen = () => {
           reconnectAttempts = 0;
+          emitirEstado(true);
         };
 
         socket.onmessage = (event) => {
@@ -305,6 +313,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         };
 
         socket.onclose = () => {
+          if (!stopped) emitirEstado(false);
           scheduleReconnect();
         };
 
@@ -312,6 +321,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           socket?.close();
         };
       } catch {
+        emitirEstado(false);
         scheduleReconnect();
       }
     };

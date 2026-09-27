@@ -18,8 +18,10 @@ import {
 import { IconTile } from "@/components/ui/yaku-ui";
 import {
   Activity,
+  Ban,
   Brain,
   BrainCircuit,
+  CheckCircle2,
   Cpu,
   Database,
   Droplets,
@@ -27,6 +29,8 @@ import {
   Layers,
   LayoutDashboard,
   Leaf,
+  MinusCircle,
+  XCircle,
   Search,
   Settings2,
   Sprout,
@@ -72,6 +76,10 @@ const DEVICE_STATE_LABELS: Record<string, string> = {
 };
 
 const PLANT_COLORS = ['#10b981', '#22c55e', '#84cc16', '#14b8a6', '#06b6d4', '#0ea5e9', '#8b5cf6'];
+
+// El backend envía 'regar' / 'no_regar'; se acepta también 'riego' por compatibilidad.
+const esRecomendacionRiego = (rec: string | null | undefined) =>
+  ['regar', 'riego'].includes((rec || '').toLowerCase());
 
 function ChartHeader({ icon, title, subtitle }: { icon: React.ReactNode; title: string; subtitle: string }) {
   return (
@@ -247,7 +255,7 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
 
   // Dynamic ML statistics based on filtered predictions
   const totalPreds = filteredPreds.length;
-  const riegoPredsCount = filteredPreds.filter(p => p.recomendacion.toLowerCase() === 'riego').length;
+  const riegoPredsCount = filteredPreds.filter(p => esRecomendacionRiego(p.recomendacion)).length;
   const noRiegoPredsCount = totalPreds - riegoPredsCount;
 
   const executionRate = totalPreds > 0 
@@ -720,17 +728,28 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
                           </Table.Cell>
                           <Table.Cell style={{ fontSize: '12px' }}>{p.modelo_nombre}</Table.Cell>
                           <Table.Cell>
-                            <Badge color={p.recomendacion.toLowerCase() === 'riego' ? 'blue' : 'gray'} variant="solid">
-                              {p.recomendacion.toUpperCase()}
+                            <Badge color={esRecomendacionRiego(p.recomendacion) ? 'purple' : 'gray'} variant="soft">
+                              {esRecomendacionRiego(p.recomendacion) ? <Droplets size={11} aria-hidden /> : <Ban size={11} aria-hidden />}
+                              {esRecomendacionRiego(p.recomendacion) ? 'Regar' : 'No regar'}
                             </Badge>
                           </Table.Cell>
                           <Table.Cell>
                             <Text weight="bold" style={{ color: 'white' }}>{Math.round(p.probabilidad * 100)}%</Text>
                           </Table.Cell>
                           <Table.Cell>
-                            <Badge color={p.accion_ejecutada ? 'green' : 'red'} variant="soft">
-                              {p.accion_ejecutada ? 'EJECUTADO' : 'OMITIDO / EVALUANDO'}
-                            </Badge>
+                            {p.accion_ejecutada ? (
+                              <Badge color="green" variant="soft">
+                                <CheckCircle2 size={11} aria-hidden /> Ejecutado
+                              </Badge>
+                            ) : esRecomendacionRiego(p.recomendacion) ? (
+                              <Badge color="red" variant="soft">
+                                <XCircle size={11} aria-hidden /> Riego no ejecutado
+                              </Badge>
+                            ) : (
+                              <Badge color="gray" variant="soft">
+                                <MinusCircle size={11} aria-hidden /> Sin acción requerida
+                              </Badge>
+                            )}
                           </Table.Cell>
                         </Table.Row>
                       ))

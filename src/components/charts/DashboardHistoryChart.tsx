@@ -55,7 +55,7 @@ export default function DashboardHistoryChart({ chartData, config, umbralVisual,
   return (
     <div style={{ width: '100%', minWidth: '1px', position: 'relative' }}>
       {ultimo !== null && (
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', flexWrap: 'wrap', marginBottom: '8px', fontFamily: 'monospace' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', flexWrap: 'wrap', marginBottom: '8px', fontVariantNumeric: 'tabular-nums' }}>
           <span style={{ fontSize: '1.6rem', fontWeight: 700, color: 'white' }}>
             {ultimo.toFixed(1)}{unidad}
           </span>
