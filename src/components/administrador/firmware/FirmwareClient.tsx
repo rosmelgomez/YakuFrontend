@@ -85,7 +85,17 @@ type Provisioning = {
   asignaciones: Record<string, number>;
   captura_segundos: number;
   cooldown_riego_minutos: number;
-  mqtt: Record<string, unknown>;
+  mqtt: {
+    host: string;
+    port: number;
+    client_id: string;
+    // Credencial propia del dispositivo, registrada en Configuración MQTT.
+    username: string;
+    password: string;
+    topic_pub?: string;
+    topic_sub?: string;
+    tls: boolean;
+  };
 };
 
 type UploadSegment = { file: File; address: string };
@@ -139,8 +149,6 @@ export default function FirmwareClient({
   const [ssid, setSsid] = useState("");
   const [wifiPassword, setWifiPassword] = useState("");
   const [showWifiPassword, setShowWifiPassword] = useState(false);
-  const [mqttUser, setMqttUser] = useState("");
-  const [mqttPassword, setMqttPassword] = useState("");
   const [showMqttPassword, setShowMqttPassword] = useState(false);
   const [uploadSegments, setUploadSegments] = useState<UploadSegment[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -393,8 +401,8 @@ export default function FirmwareClient({
         mqtt: {
           host: provisioning.mqtt.host,
           port: provisioning.mqtt.port,
-          username: mqttUser,
-          password: mqttPassword,
+          username: provisioning.mqtt.username,
+          password: provisioning.mqtt.password,
           topic_pub: provisioning.mqtt.topic_pub,
           topic_sub: provisioning.mqtt.topic_sub,
           tls: provisioning.mqtt.tls,
@@ -402,7 +410,6 @@ export default function FirmwareClient({
       });
       setStatus("ESP32 confirmó el guardado de la configuración. Comprueba la conexión WiFi en el monitor.");
       setWifiPassword("");
-      setMqttPassword("");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudo enviar la configuracion");
     } finally {
@@ -579,11 +586,28 @@ export default function FirmwareClient({
                     </button>
                   </span>
                 </label>
-                <label className={styles.field}><span className={styles.label}>Usuario MQTT</span><input className={styles.input} value={mqttUser} onChange={(e) => setMqttUser(e.target.value)} /></label>
+                {/* Credencial del dispositivo: viene del provisionamiento (Configuración MQTT) y no se edita aquí. */}
+                <label className={styles.field}>
+                  <span className={styles.label}>Usuario MQTT</span>
+                  <input
+                    className={`${styles.input} ${styles.readOnlyInput}`}
+                    value={provisioning?.mqtt.username ?? ""}
+                    placeholder="Se completa al elegir el dispositivo"
+                    readOnly
+                    aria-readonly="true"
+                  />
+                </label>
                 <label className={styles.field}>
                   <span className={styles.label}>Clave MQTT</span>
                   <span className={styles.secretField}>
-                    <input type={showMqttPassword ? "text" : "password"} className={`${styles.input} ${styles.secretInput}`} value={mqttPassword} onChange={(e) => setMqttPassword(e.target.value)} />
+                    <input
+                      type={showMqttPassword ? "text" : "password"}
+                      className={`${styles.input} ${styles.secretInput} ${styles.readOnlyInput}`}
+                      value={provisioning?.mqtt.password ?? ""}
+                      placeholder="Se completa al elegir el dispositivo"
+                      readOnly
+                      aria-readonly="true"
+                    />
                     <button
                       type="button"
                       className={styles.secretToggle}
@@ -597,7 +621,7 @@ export default function FirmwareClient({
                 </label>
               </div>
               <div className={styles.actions}>
-                <button className={styles.button} onClick={sendProvisioning} disabled={busy || !provisioning || !ssid || !wifiPassword || !mqttUser || !mqttPassword}><Cable size={16} /> Enviar configuracion</button>
+                <button className={styles.button} onClick={sendProvisioning} disabled={busy || !provisioning || !ssid || !wifiPassword || !provisioning.mqtt.username || !provisioning.mqtt.password}><Cable size={16} /> Enviar configuracion</button>
               </div>
             </div>
           </section>

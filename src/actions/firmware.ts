@@ -5,7 +5,18 @@ import { fetchFromFastAPI } from "@/lib/bff";
 import { installationResult } from "@/lib/firmware/installation-result";
 
 async function jsonOrThrow(res: Response, fallback: string) {
-  if (!res.ok) throw new Error((await res.text()) || fallback);
+  if (!res.ok) {
+    const text = await res.text();
+    let message = text;
+    try {
+      // FastAPI responde {"detail": "..."}: mostrar solo el mensaje.
+      const detail = JSON.parse(text)?.detail;
+      if (typeof detail === "string") message = detail;
+    } catch {
+      // No es JSON: se usa el texto tal cual.
+    }
+    throw new Error(message || fallback);
+  }
   return res.json();
 }
 

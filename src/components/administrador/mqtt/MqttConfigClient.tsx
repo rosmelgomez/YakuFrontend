@@ -5,6 +5,7 @@ import { Box, Card, Flex, Text, Button, TextField, Switch } from "@radix-ui/them
 import { Info, Radio } from "lucide-react";
 import { IconTile } from "@/components/ui/yaku-ui";
 import { obtenerMqttConfig, actualizarMqttConfig } from "@/actions/mqttConfig";
+import MqttCredencialesDispositivos from "./MqttCredencialesDispositivos";
 
 export default function MqttConfigClient() {
   const [loading, setLoading] = useState(true);
@@ -101,9 +102,10 @@ export default function MqttConfigClient() {
               <strong style={{ color: "#c7d2fe" }}>Puerto:</strong> normalmente <span style={{ fontFamily: "monospace" }}>8883</span> si usa TLS (recomendado), o <span style={{ fontFamily: "monospace" }}>1883</span> sin cifrado.
             </Text>
             <Text size="1" color="gray" style={{ display: "block", marginTop: "4px", lineHeight: "1.5" }}>
-              <strong style={{ color: "#c7d2fe" }}>Usuario / Contraseña:</strong> las credenciales
-              del broker. Si deja la contraseña vacía al guardar, se conserva la que ya estaba
-              guardada (no se borra).
+              <strong style={{ color: "#c7d2fe" }}>Usuario / Contraseña:</strong> la credencial con
+              la que se conecta el <em>backend</em> (cada ESP32 usa la suya, en "Credenciales de
+              dispositivos" más abajo). Se guarda cifrada. Si deja la contraseña vacía al guardar,
+              se conserva la que ya estaba guardada (no se borra).
             </Text>
             <Text size="1" color="gray" style={{ display: "block", marginTop: "4px", lineHeight: "1.5" }}>
               <strong style={{ color: "#c7d2fe" }}>TLS:</strong> manténgalo activado salvo que su
@@ -134,7 +136,7 @@ export default function MqttConfigClient() {
                 <Radio className="w-5 h-5 text-emerald-400" />
               </div>
               <Box>
-                <Text weight="bold" style={{ color: "white" }} as="div">Broker MQTT</Text>
+                <Text weight="bold" style={{ color: "white" }} as="div">Broker MQTT y credencial del backend</Text>
                 {fechaActualizacion && (
                   <Text size="1" color="gray">Última actualización: {new Date(fechaActualizacion).toLocaleString()}</Text>
                 )}
@@ -164,7 +166,7 @@ export default function MqttConfigClient() {
 
             <Flex gap="3" wrap="wrap">
               <Box style={{ flex: "1 1 220px" }}>
-                <Text size="1" color="gray" as="div" mb="1">Usuario</Text>
+                <Text size="1" color="gray" as="div" mb="1">Usuario del backend</Text>
                 <TextField.Root
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
@@ -201,6 +203,8 @@ export default function MqttConfigClient() {
           </Flex>
         )}
       </Card>
+
+      <MqttCredencialesDispositivos />
     </Box>
   );
 }

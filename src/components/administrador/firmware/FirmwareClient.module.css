@@ -16,6 +16,9 @@
 .label { color: #8da2af; font-size: 14px; font-weight: 600; margin-bottom: 2px; }
 .input, .select { width: 100%; min-width: 0; min-height: 44px; font-size: 15px; color: #dceaf1; background: #0c1115; border: 1px solid rgba(255,255,255,.13); border-radius: 6px; padding: 0 12px; }
 .input:focus, .select:focus { outline: 2px solid rgba(56,189,248,.35); border-color: #38bdf8; }
+/* Valores que vienen del servidor (p. ej. credencial MQTT): visibles pero no editables. */
+.readOnlyInput { color: #9fb3bf; background: #11181d; border-style: dashed; cursor: default; }
+.readOnlyInput:focus { outline: none; border-color: rgba(255,255,255,.13); }
 .secretField { position: relative; display: block; min-width: 0; }
 .secretInput { padding-right: 42px; }
 .secretToggle { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; color: #8da2af; background: transparent; border: 0; border-radius: 4px; cursor: pointer; }
