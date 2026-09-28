@@ -316,6 +316,11 @@ export default function DashboardClient({
     endDate: canUseMonthYear ? endDateFilter : '',
   };
   const availableYears = getDashboardYears(cultivoActivo);
+  // En modo Calendario los botones de rango estan deshabilitados: los graficos deben usar todo el
+  // historial cargado (7 dias) y dejar que el rango de fechas recorte; si no, seguia aplicando el
+  // corte de 6h/24h y cualquier fecha anterior quedaba vacia.
+  const chartSensorRange: HistoryRange = isRelativeMode ? sensorRange : '7d';
+  const chartConsumoRange: HistoryRange = isRelativeMode ? consumoRange : '7d';
 
   // Helper for filtering sensors based on calendar filters
   const getFilteredSensor = (
@@ -556,7 +561,7 @@ export default function DashboardClient({
                   historial={cultivoActivo.historialSensores} 
                   sensores={cultivoActivo.sensores} 
                   isClientMounted={isClientMounted}
-                  timeRange={sensorRange}
+                  timeRange={chartSensorRange}
                   calendarFilters={calendarFilters}
                   cultivoTimezone={cultivoActivo.zonaHoraria}
                 />
@@ -580,7 +585,7 @@ export default function DashboardClient({
                     eventos={cultivoActivo.historialConsumo || []}
                     limite={cultivoActivo.limiteConsumo}
                     isClientMounted={isClientMounted}
-                    timeRange={consumoRange}
+                    timeRange={chartConsumoRange}
                     calendarFilters={calendarFilters}
                     cultivoTimezone={cultivoActivo.zonaHoraria}
                   />

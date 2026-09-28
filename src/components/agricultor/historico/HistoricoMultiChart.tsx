@@ -26,6 +26,19 @@ const WEEKDAY_OPTIONS = [
   { value: '0', label: 'Domingo' },
 ];
 
+// Rangos del modo "Reciente" (value = dias que se piden al backend; 0 = 6 horas).
+const RELATIVE_OPTIONS = [
+  { label: '6h', value: 0 },
+  { label: '24h', value: 1 },
+  { label: '7d', value: 7 },
+  { label: '30d', value: 30 },
+];
+
+const formatDateLabel = (value: string) => {
+  const [y, m, d] = value.split('-');
+  return `${d}/${m}/${y}`;
+};
+
 const MONTH_OPTIONS = [
   { value: 'all', label: 'Todos los meses' },
   { value: '0', label: 'Enero' },
@@ -72,6 +85,15 @@ const [filterMode, setFilterMode] = useState<FilterMode>('relative');
   const canUseMonthYear = dateRangeEnabled;
   const availableYears: string[] = [];
 
+  const relativeLabel = rango === 0 ? '6 horas' : rango === 1 ? '24 horas' : `${rango} días`;
+  const calendarLabel = startDateFilter && endDateFilter
+      ? `del ${formatDateLabel(startDateFilter)} al ${formatDateLabel(endDateFilter)}`
+      : startDateFilter
+        ? `desde el ${formatDateLabel(startDateFilter)}`
+        : endDateFilter
+          ? `hasta el ${formatDateLabel(endDateFilter)}`
+          : 'del último año';
+
   const matchesDateRange = (date: Date) => {
     if (isNaN(date.getTime())) return false;
     if (!dateRangeEnabled) return true;
@@ -86,10 +108,12 @@ const [filterMode, setFilterMode] = useState<FilterMode>('relative');
     return true;
   };
 
-  // Filter chart data
+  // Filter chart data. El backend manda los buckets diarios como 'YYYY-MM-DD': new Date() los
+  // leeria como medianoche UTC (el dia anterior en Lima) y el filtro se correria un dia.
   const filteredChartData = useMemo(() => {
     return chartData.filter(item => {
-      const date = new Date(item.fecha || item.label + 'T00:00:00');
+      const raw = item.fecha || item.label;
+      const date = new Date(/^\d{4}-\d{2}-\d{2}$/.test(raw) ? `${raw}T00:00:00` : raw.replace(' ', 'T'));
       return matchesDateRange(date);
     });
   }, [chartData, startDateFilter, endDateFilter, dateRangeEnabled]);
@@ -173,7 +197,7 @@ const [filterMode, setFilterMode] = useState<FilterMode>('relative');
     setFilterMode(mode);
     setStartDateFilter('');
     setEndDateFilter('');
-    if (mode === 'relative' && ![0, 1, 7].includes(rango)) {
+    if (mode === 'relative' && !RELATIVE_OPTIONS.some((option) => option.value === rango)) {
       fetchNewData(idCultivo, 7);
       return;
     }
@@ -245,11 +269,7 @@ const [filterMode, setFilterMode] = useState<FilterMode>('relative');
         </Flex>
 
         <Flex gap="2" style={{ background: 'var(--bg-mockup)', padding: '3px', borderRadius: '8px', border: '1px solid var(--border2-mockup)' }}>
-          {[
-            { label: '6h', value: 0 },
-            { label: '24h', value: 1 },
-            { label: '7d', value: 7 }
-          ].map((option) => (
+          {RELATIVE_OPTIONS.map((option) => (
             <Button
               key={option.value}
               size="1"
@@ -314,7 +334,7 @@ const [filterMode, setFilterMode] = useState<FilterMode>('relative');
               Historial de parámetros
             </Text>
             <Text size="2" color="gray" as="div">
-              Mostrando datos de las {rango === 0 ? 'últimas 6 horas' : rango === 1 ? 'últimas 24 horas' : `últimos ${rango} días`}
+              Mostrando datos {isRelativeMode ? (rango <= 1 ? `de las últimas ${relativeLabel}` : `de los últimos ${relativeLabel}`) : calendarLabel}
             </Text>
             </Box>
           </Flex>
@@ -333,7 +353,7 @@ const [filterMode, setFilterMode] = useState<FilterMode>('relative');
             <Flex align="center" gap="3" mb="4">
               <IconTile icon={Sigma} t="blue" />
               <Text size="3" weight="bold" as="div" style={{ color: 'var(--foreground)' }}>
-                Estadísticas del período <Text size="2" color="gray" weight="regular">· {rango === 0 ? '6 horas' : rango === 1 ? '24 horas' : `${rango} días`}</Text>
+                Estadísticas del período <Text size="2" color="gray" weight="regular">· {isRelativeMode ? relativeLabel : calendarLabel}</Text>
               </Text>
             </Flex>
             <ScrollArea scrollbars="horizontal" style={{ width: '100%' }}>
