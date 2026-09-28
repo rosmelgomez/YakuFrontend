@@ -47,7 +47,10 @@ type HistorialData = {
   temperaturaAmbiente: HistoricoPunto[];
 };
 
-type HistoryRange = '6h' | '24h' | '7d';
+type HistoryRange = '6h' | '24h' | '7d' | '30d';
+const HISTORY_RANGES: HistoryRange[] = ['6h', '24h', '7d', '30d'];
+// Rangos que se dibujan por día (etiquetas con fecha en vez de solo hora).
+const isMultiDayRange = (range: HistoryRange) => range === '7d' || range === '30d';
 type CalendarFilter = 'all' | string;
 type CalendarFilters = { weekday: CalendarFilter; month: CalendarFilter; year: CalendarFilter; startDate?: string; endDate?: string };
 type FilterMode = 'relative' | 'calendar';
@@ -92,6 +95,7 @@ type CultivoData = {
   fuenteAgua?: { id?: number; nombre?: string; tipo?: string } | null;
   esConexionDirecta?: boolean;
   consumoSemanal: ConsumoData[];
+  consumoMensual?: ConsumoData[];
   historialConsumo?: HistoricoPunto[];
   limiteConsumo: number | null;
   resumenDia: ResumenDiaData;
@@ -121,14 +125,16 @@ const HISTORY_RANGE_LIMIT_MS: Record<HistoryRange, number> = {
   '6h': 6 * 60 * 60 * 1000,
   '24h': 24 * 60 * 60 * 1000,
   '7d': 7 * 24 * 60 * 60 * 1000,
+  '30d': 30 * 24 * 60 * 60 * 1000,
 };
 
-// Para 7d se promedian las lecturas en intervalos de 10 min (unas 1000 en vez de ~10 000);
-// en 6h y 24h se dibujan todas las lecturas reales, una por minuto.
+// Para 7d se promedian las lecturas en intervalos de 10 min (unas 1000 en vez de ~10 000) y
+// para 30d por hora (~720); en 6h y 24h se dibujan todas las lecturas reales, una por minuto.
 const HISTORY_RANGE_BUCKET_MS: Record<HistoryRange, number> = {
   '6h': 0,
   '24h': 0,
   '7d': 10 * 60 * 1000,
+  '30d': 60 * 60 * 1000,
 };
 
 // Silencio entre dos lecturas a partir del cual la línea se corta (sensor sin reportar), en vez
@@ -136,7 +142,10 @@ const HISTORY_RANGE_BUCKET_MS: Record<HistoryRange, number> = {
 const HISTORY_RANGE_GAP_MS: Record<HistoryRange, number> = {
   '6h': 5 * 60 * 1000,
   '24h': 5 * 60 * 1000,
-  '7d': 30 * 60 * 1000,
+  // Pasadas las ultimas 24 h el backend manda el historial agregado por hora: el corte debe
+  // superar esa separacion o la linea se partiria entre cada punto horario.
+  '7d': 90 * 60 * 1000,
+  '30d': 3 * 60 * 60 * 1000,
 };
 
 // Silencio a partir del cual se avisa que el sensor dejó de reportar (independiente del
@@ -178,7 +187,7 @@ const buildSensorSeries = (
   const series: SensorSeriesPoint[] = [];
   const toPoint = (ts: number, valor: number | null): SensorSeriesPoint => {
     const dateObj = new Date(ts);
-    const xLabel = dateObj.toLocaleString('es-PE', range === '7d'
+    const xLabel = dateObj.toLocaleString('es-PE', isMultiDayRange(range)
       ? { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone }
       : { hour: '2-digit', minute: '2-digit', timeZone });
     const redondeado = valor === null ? null : Math.round(valor * 10) / 10;
@@ -211,7 +220,7 @@ const buildRealEventSeries = (
     .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime())
     .map(d => {
       const dateObj = new Date(d.fecha);
-      const xLabel = range === '7d'
+      const xLabel = isMultiDayRange(range)
         ? dateObj.toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', timeZone }) + ' ' + dateObj.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone })
         : dateObj.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone });
       return { ...d, xLabel, valorReal: d.valor };
@@ -225,11 +234,7 @@ const resolveEffectiveRange = (
   requestedRange: HistoryRange,
   timeZone: string
 ): HistoryRange => {
-  const ranges: HistoryRange[] = requestedRange === '6h'
-    ? ['6h', '24h', '7d']
-    : requestedRange === '24h'
-      ? ['24h', '7d']
-      : ['7d'];
+  const ranges = HISTORY_RANGES.slice(HISTORY_RANGES.indexOf(requestedRange));
   return ranges.find((range) => buildSensorSeries(data, range, timeZone).length > 0) || requestedRange;
 };
 
@@ -293,7 +298,7 @@ export default function DashboardClient({
 
   useEffect(() => {
     if (filterMode === 'calendar') return;
-    if (sensorRange !== '7d' && consumoRange !== '7d') {
+    if (!isMultiDayRange(sensorRange) && !isMultiDayRange(consumoRange)) {
       setWeekdayFilter('all');
     }
     setMonthFilter('all');
@@ -306,7 +311,7 @@ export default function DashboardClient({
   const cultivoActivo = hasCrops ? (localCultivos.find((c) => c.idCultivo.toString() === selectedId) || localCultivos[0]) : null;
   const recolectorActivo = hasActiveCollector(cultivoActivo);
   const isRelativeMode = filterMode === 'relative';
-  const canUseWeekday = !isRelativeMode || sensorRange === '7d' || consumoRange === '7d';
+  const canUseWeekday = !isRelativeMode || isMultiDayRange(sensorRange) || isMultiDayRange(consumoRange);
   const canUseMonthYear = !isRelativeMode;
   const calendarFilters: CalendarFilters = {
     weekday: canUseWeekday ? weekdayFilter : 'all',
@@ -317,10 +322,10 @@ export default function DashboardClient({
   };
   const availableYears = getDashboardYears(cultivoActivo);
   // En modo Calendario los botones de rango estan deshabilitados: los graficos deben usar todo el
-  // historial cargado (7 dias) y dejar que el rango de fechas recorte; si no, seguia aplicando el
+  // historial cargado (30 dias) y dejar que el rango de fechas recorte; si no, seguia aplicando el
   // corte de 6h/24h y cualquier fecha anterior quedaba vacia.
-  const chartSensorRange: HistoryRange = isRelativeMode ? sensorRange : '7d';
-  const chartConsumoRange: HistoryRange = isRelativeMode ? consumoRange : '7d';
+  const chartSensorRange: HistoryRange = isRelativeMode ? sensorRange : '30d';
+  const chartConsumoRange: HistoryRange = isRelativeMode ? consumoRange : '30d';
 
   // Helper for filtering sensors based on calendar filters
   const getFilteredSensor = (
@@ -468,7 +473,7 @@ export default function DashboardClient({
               <Flex gap="2" align="center">
                 <Text size="1" color="gray">Sensores:</Text>
                 <Flex gap="2" style={{ background: 'var(--bg-mockup)', padding: '3px', borderRadius: '8px', border: '1px solid var(--border2-mockup)' }}>
-                  {(['6h', '24h', '7d'] as HistoryRange[]).map((range) => (
+                  {HISTORY_RANGES.map((range) => (
                     <Button
                       key={range}
                       size="1"
@@ -487,7 +492,7 @@ export default function DashboardClient({
               <Flex gap="2" align="center">
                 <Text size="1" color="gray">Consumo:</Text>
                 <Flex gap="2" style={{ background: 'var(--bg-mockup)', padding: '3px', borderRadius: '8px', border: '1px solid var(--border2-mockup)' }}>
-                  {(['6h', '24h', '7d'] as HistoryRange[]).map((range) => (
+                  {HISTORY_RANGES.map((range) => (
                     <Button
                       key={range}
                       size="1"
@@ -541,8 +546,8 @@ export default function DashboardClient({
               )}
               <Text size="1" color="gray" style={{ marginLeft: 'auto' }}>
                 {filterMode === 'relative'
-                  ? ((sensorRange === '7d' || consumoRange === '7d') ? 'En 7d solo se habilita dia de semana.' : 'Calendario deshabilitado en rangos cortos.')
-                  : 'Mes, anio y dia habilitados para historico.'}
+                  ? 'Rangos rapidos activos.'
+                  : 'Selecciona fecha de inicio y fin (ultimos 30 dias).'}
               </Text>
             </Flex>
 
@@ -582,6 +587,7 @@ export default function DashboardClient({
                 {cultivoActivo.consumoSemanal && (
                   <ConsumoChartCard
                     data={cultivoActivo.consumoSemanal}
+                    dataMensual={cultivoActivo.consumoMensual || []}
                     eventos={cultivoActivo.historialConsumo || []}
                     limite={cultivoActivo.limiteConsumo}
                     isClientMounted={isClientMounted}
@@ -862,7 +868,9 @@ const HistoricoSensoresCard = ({
               <Select.Item value="temperaturaAmbiente">Temperatura ambiente</Select.Item>
             </Select.Content>
           </Select.Root>
-          <Text size="2" color="gray">últimas {effectiveRange}</Text>
+          <Text size="2" color="gray">
+            {calendarFilters.startDate || calendarFilters.endDate ? 'rango seleccionado' : `últimas ${effectiveRange}`}
+          </Text>
         </Flex>
       </Flex>
 
@@ -1033,6 +1041,7 @@ const TanqueCard = ({ tanque }: { tanque: TanqueData }) => {
 // --- SUB-COMPONENTE: GRÁFICO DE CONSUMO ---
 const ConsumoChartCard = ({
   data,
+  dataMensual = [],
   eventos,
   limite,
   isClientMounted,
@@ -1041,6 +1050,7 @@ const ConsumoChartCard = ({
   cultivoTimezone,
 }: {
   data: ConsumoData[];
+  dataMensual?: ConsumoData[];
   eventos?: HistoricoPunto[];
   limite: number | null;
   isClientMounted: boolean;
@@ -1050,11 +1060,13 @@ const ConsumoChartCard = ({
 }) => {
   const chartTimeZone = cultivoTimezone || DEFAULT_DASHBOARD_TIME_ZONE;
   const requestedRange: HistoryRange = timeRange || '7d';
-  const calendarFilteredData = data.filter((item) => {
-    if (!item.fecha) return true;
-    const date = new Date(item.fecha);
-    return dateMatchesCalendarFilters(date, calendarFilters);
-  });
+  const matchesCalendar = (item: ConsumoData) =>
+    !item.fecha || dateMatchesCalendarFilters(new Date(item.fecha), calendarFilters);
+  // Totales diarios: 7 dias (consumoSemanal) o 30 dias (consumoMensual).
+  const dailyByRange: Partial<Record<HistoryRange, ConsumoData[]>> = {
+    '7d': data.filter(matchesCalendar),
+    '30d': dataMensual.filter(matchesCalendar),
+  };
 
   // Eventos reales de riego (fecha + litros de cada riego individual). El total diario de
   // `data` (consumoSemanal) solo sirve para la vista de 7 días; para 6h/24h se listan estos
@@ -1065,15 +1077,15 @@ const ConsumoChartCard = ({
     dateMatchesCalendarFilters(new Date(item.fecha), calendarFilters)
   );
 
-  const ranges: HistoryRange[] = requestedRange === '6h' ? ['6h', '24h', '7d'] : requestedRange === '24h' ? ['24h', '7d'] : ['7d'];
+  const ranges = HISTORY_RANGES.slice(HISTORY_RANGES.indexOf(requestedRange));
   const effectiveRange = ranges.find((range) => (
-    range === '7d'
-      ? calendarFilteredData.length > 0
+    isMultiDayRange(range)
+      ? (dailyByRange[range] || []).length > 0
       : buildRealEventSeries(calendarFilteredEventos, range, chartTimeZone).length > 0
   )) || requestedRange;
 
-  const chartData = effectiveRange === '7d'
-    ? calendarFilteredData.map(d => {
+  const chartData = isMultiDayRange(effectiveRange)
+    ? (dailyByRange[effectiveRange] || []).map(d => {
         const dateObj = d.fecha ? new Date(d.fecha) : new Date();
         const xLabel = d.label === 'Hoy' ? 'Hoy' : (d.label || dateObj.toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', timeZone: chartTimeZone }));
         return { ...d, xLabel, valorReal: d.valor };
@@ -1085,7 +1097,7 @@ const ConsumoChartCard = ({
     color: '#38bdf8', // sky-400
   };
 
-  const rangeLabel = effectiveRange === '7d' ? 'últimos 7 días' : effectiveRange === '24h' ? 'últimas 24h' : 'últimas 6h';
+  const rangeLabel = effectiveRange === '30d' ? 'últimos 30 días' : effectiveRange === '7d' ? 'últimos 7 días' : effectiveRange === '24h' ? 'últimas 24h' : 'últimas 6h';
 
   return (
     <Card size="3" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '14px', height: '100%' }}>

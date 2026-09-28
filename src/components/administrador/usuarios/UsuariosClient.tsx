@@ -201,7 +201,7 @@ export default function UsuariosClient({ initialUsers = [], initialDevices = [],
       </Flex>
 
       {solicitudes.length > 0 && (
-        <Card size={{ initial: "2", sm: "3" }} mb="4" style={{ background: "var(--surface-mockup)", borderColor: "var(--amber-7)", borderRadius: "16px" }}>
+        <Card id="solicitudes" size={{ initial: "2", sm: "3" }} mb="4" style={{ background: "var(--surface-mockup)", borderColor: "var(--amber-7)", borderRadius: "16px", scrollMarginTop: "80px" }}>
           <Flex align="center" gap="2" mb="3">
             <Clock size={18} color="#fbbf24" aria-hidden />
             <Text size="3" weight="bold" as="div" style={{ color: "var(--foreground)" }}>

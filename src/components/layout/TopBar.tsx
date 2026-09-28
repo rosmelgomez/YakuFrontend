@@ -163,9 +163,8 @@ export default function TopBar() {
           {todayStr}
         </time>
 
-        {/* CONTENEDOR DEL BOTÓN Y PANEL FLOTANTE DE NOTIFICACIONES (SOLO PARA AGRICULTOR) */}
-        {!isAdmin && (
-          <div className="relative" ref={notifRef}>
+        {/* CONTENEDOR DEL BOTÓN Y PANEL FLOTANTE DE NOTIFICACIONES */}
+        <div className="relative" ref={notifRef}>
           <button
             type="button"
             onClick={() => setIsOpen(!isOpen)}
@@ -245,7 +244,9 @@ export default function TopBar() {
                     </div>
                     <p className="text-white text-sm font-medium">Sin notificaciones</p>
                     <p className="text-slate-400 text-xs mt-1 max-w-[230px]">
-                      Todo marcha en orden. Aquí verás los avisos de riego, telemetría y alertas automáticas.
+                      {isAdmin
+                        ? 'Aquí verás los avisos de administración, como nuevas solicitudes de registro.'
+                        : 'Todo marcha en orden. Aquí verás los avisos de riego, telemetría y alertas automáticas.'}
                     </p>
                   </div>
                 ) : (
@@ -301,6 +302,7 @@ export default function TopBar() {
 
               {/* PIE DE LA SECCIÓN FLOTANTE */}
               <div className="px-4 py-2.5 border-t border-[var(--border-mockup)] flex items-center justify-between text-xs">
+                {isAdmin ? <span /> : (
                 <button
                   type="button"
                   onClick={() => {
@@ -312,6 +314,7 @@ export default function TopBar() {
                   <span>Ver historial completo</span>
                   <ArrowRight size={13} />
                 </button>
+                )}
                 {notifications.length > 0 && (
                   <button
                     type="button"
@@ -326,7 +329,6 @@ export default function TopBar() {
             </div>
           )}
         </div>
-      )}
       </div>
     </header>
   );

@@ -4,7 +4,7 @@
 import React, { useEffect, useRef, useState, useTransition } from 'react';
 import { Box, Text, Flex, Button, Badge, ScrollArea, Grid } from '@radix-ui/themes';
 import MLPredictionChart from '@/components/charts/MLPredictionChart';
-import { solicitarPrediccionML, reentrenarModeloML, seleccionarModeloML } from '@/actions/ml';
+import { solicitarPrediccionML, reentrenarModeloML } from '@/actions/ml';
 import { useRouter } from 'next/navigation';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 import {
@@ -94,24 +94,11 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
   const [simLoading, setSimLoading] = useState(false);
   const [simResult, setSimResult] = useState<any>(null);
   const [simError, setSimError] = useState<string | null>(null);
-  // Modelo elegido SOLO para la simulacion manual: no activa el modelo de
-  // verdad para el cultivo (eso lo hace el boton "Activar" de la
-  // comparativa). Empieza en el modelo actualmente activo.
+  // Modelo elegido SOLO para la simulacion manual: no cambia el modelo activo
+  // del cultivo. Empieza en el modelo actualmente activo.
   const [simModelId, setSimModelId] = useState<string>(
     () => modelos?.find((m: any) => m.activo)?.id_modelo?.toString() || ""
   );
-
-  const handleSelectModel = async (modelIdStr: string) => {
-    setLoading(true);
-    const modelId = parseInt(modelIdStr, 10);
-    const res = await seleccionarModeloML(modelId, idCultivo);
-    setLoading(false);
-    if (res.success) {
-      router.refresh();
-    } else {
-      alert(`❌ Error al seleccionar modelo: ${res.error}`);
-    }
-  };
 
   const handleSimulate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -713,21 +700,10 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
                           Versión {m.version} · {m.descripcion || 'Modelo clasificador'}
                         </Text>
                       </Box>
-                      {isActivo ? (
+                      {isActivo && (
                         <Badge color="purple" variant="soft" size="1" className="shrink-0">
                           <Zap size={11} aria-hidden /> Activo
                         </Badge>
-                      ) : (
-                        <Button
-                          size="1"
-                          variant="outline"
-                          color="purple"
-                          disabled={loading}
-                          onClick={() => handleSelectModel(m.id_modelo.toString())}
-                          className="shrink-0"
-                        >
-                          Activar
-                        </Button>
                       )}
                     </Flex>
 

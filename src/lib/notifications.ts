@@ -1,5 +1,9 @@
 // src/lib/notifications.ts
 
+// Destino al hacer clic en avisos de riego (inicio, fin, incidencias): pestaña de
+// actuadores de Control de Riego. Debe coincidir con LINK_ACTUADORES del backend.
+export const LINK_ACTUADORES = '/dashboard/agricultor/control?tab=actuadores';
+
 export interface AppNotification {
   id: string;
   titulo: string;
@@ -20,7 +24,7 @@ export const DEFAULT_AGRICULTOR_NOTIFICATIONS: AppNotification[] = [
     severidad: 'info',
     timestamp: Date.now() - 1000 * 60 * 12, // Hace 12m
     leida: false,
-    link: '/dashboard/agricultor/control',
+    link: LINK_ACTUADORES,
     origen: 'Sistema de Riego',
     rolDestino: 'agricultor',
   },
@@ -31,7 +35,7 @@ export const DEFAULT_AGRICULTOR_NOTIFICATIONS: AppNotification[] = [
     severidad: 'critica',
     timestamp: Date.now() - 1000 * 60 * 45, // Hace 45m
     leida: false,
-    link: '/dashboard/agricultor/control',
+    link: LINK_ACTUADORES,
     origen: 'Sensor de Flujo',
     rolDestino: 'agricultor',
   },
@@ -42,7 +46,7 @@ export const DEFAULT_AGRICULTOR_NOTIFICATIONS: AppNotification[] = [
     severidad: 'exito',
     timestamp: Date.now() - 1000 * 60 * 130, // Hace ~2h
     leida: true,
-    link: '/dashboard/agricultor/control',
+    link: LINK_ACTUADORES,
     origen: 'Control Inteligente',
     rolDestino: 'agricultor',
   },

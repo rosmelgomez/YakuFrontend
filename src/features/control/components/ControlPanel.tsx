@@ -70,6 +70,14 @@ export function ControlPanel({
     [setSearchParams]
   );
 
+  // Una notificación puede traer ?tab=actuadores estando ya en esta página: el
+  // estado inicial no se vuelve a leer, así que hay que seguir el cambio de URL.
+  useEffect(() => {
+    if (tabFromUrl && VALID_TABS.includes(tabFromUrl)) {
+      setActiveTabState(tabFromUrl);
+    }
+  }, [tabFromUrl]);
+
   // Hook para gestión de polling GET inteligente y visibilidad de pestaña
   const {
     controlData,

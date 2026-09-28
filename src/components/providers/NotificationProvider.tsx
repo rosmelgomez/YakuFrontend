@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import FloatingToast from '@/components/ui/FloatingToast';
 import { useAuth } from '@/context/AuthContext';
-import { AppNotification } from '@/lib/notifications';
+import { AppNotification, LINK_ACTUADORES } from '@/lib/notifications';
 import { apiClient } from '@/services/apiClient';
 import {
   getNotificaciones,
@@ -51,35 +51,30 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
   // El backend es la única fuente de verdad: así el estado leído/eliminado
-  // queda igual en todos los dispositivos de la misma cuenta.
+  // queda igual en todos los dispositivos de la misma cuenta. El administrador
+  // también tiene las suyas (p. ej. nuevas solicitudes de registro).
   const fetchNotificaciones = useCallback(async () => {
-    if (isAdmin) {
-      setNotifications([]);
-      return;
-    }
+    if (!user) return;
     try {
       setNotifications(await getNotificaciones());
     } catch {}
-  }, [isAdmin]);
+  }, [user]);
 
   useEffect(() => {
     fetchNotificaciones();
   }, [fetchNotificaciones]);
 
   const markAsRead = (id: string) => {
-    if (isAdmin) return;
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, leida: true } : n)));
     marcarNotificacionLeida(id).catch(() => {});
   };
 
   const markAllAsRead = () => {
-    if (isAdmin) return;
     setNotifications((prev) => prev.map((n) => ({ ...n, leida: true })));
     marcarTodasLeidas().catch(() => {});
   };
 
   const clearNotifications = () => {
-    if (isAdmin) return;
     setNotifications([]);
     limpiarNotificaciones().catch(() => {});
   };
@@ -100,7 +95,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     setNotifications((prev) => [newNotif, ...prev.filter((n) => n.id !== newNotif.id)].slice(0, 30));
   }, [isAdmin]);
 
-  const unreadCount = isAdmin ? 0 : notifications.filter((n) => !n.leida).length;
+  const unreadCount = notifications.filter((n) => !n.leida).length;
 
   // Escuchar eventos internos para el agricultor
   useEffect(() => {
@@ -126,6 +121,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         titulo: item.titulo,
         mensaje: item.mensaje,
         severidad: item.severidad,
+        link: item.link,
       });
     };
 
@@ -182,7 +178,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           titulo: 'Riego iniciado en Parcela',
           mensaje: `Se ha iniciado el ciclo de riego en ${parcela}. Electroválvula abierta y caudal nominal activo.`,
           severidad: 'info' as const,
-          link: '/dashboard/agricultor/control',
+          link: LINK_ACTUADORES,
           origen: 'Sistema de Riego',
           rolDestino: 'agricultor' as const,
         };
@@ -195,7 +191,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             ? `Incidencia en ${parcela}: ${motivo}. Ciclo pausado por precaución.`
             : `Alerta en ${parcela}: Presión insuficiente o ausencia de flujo detectada.`,
           severidad: 'critica' as const,
-          link: '/dashboard/agricultor/control',
+          link: LINK_ACTUADORES,
           origen: 'Sensor de Flujo',
           rolDestino: 'agricultor' as const,
         };
@@ -206,7 +202,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           titulo: 'Riego completado con éxito',
           mensaje: `El ciclo de riego en ${parcela} ha concluido satisfactoriamente. Se suministraron ${volumen} L de agua.`,
           severidad: 'exito' as const,
-          link: '/dashboard/agricultor/control',
+          link: LINK_ACTUADORES,
           origen: 'Control Inteligente',
           rolDestino: 'agricultor' as const,
         };
@@ -289,10 +285,22 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
               }
             }
             if (payload.tipo === 'notificaciones_sync') {
-              if (!isAdmin) void fetchNotificaciones();
+              void fetchNotificaciones();
               return;
             }
-            if (!isAdmin && (payload.severidad || payload.titulo)) {
+            // La conexión del administrador recibe también los eventos de todos los
+            // agricultores: solo se muestran los avisos dirigidos a su rol.
+            const paraAdmin = payload.rol_destino === 'administrador';
+            if (isAdmin !== paraAdmin) return;
+            if (paraAdmin) {
+              setActiveAlert(payload as Alerta);
+              if (autoHideTimeout) clearTimeout(autoHideTimeout);
+              autoHideTimeout = setTimeout(() => setActiveAlert(null), 6000);
+              // Se recargan desde el backend para usar los ids reales de sus alertas.
+              void fetchNotificaciones();
+              return;
+            }
+            if (payload.severidad || payload.titulo) {
               const alerta = payload as Alerta;
               setActiveAlert(alerta);
               if (autoHideTimeout) clearTimeout(autoHideTimeout);
@@ -362,7 +370,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       }}
     >
       {children}
-      {!isAdmin && activeAlert && <FloatingToast alerta={activeAlert} onClose={() => setActiveAlert(null)} />}
+      {activeAlert && <FloatingToast alerta={activeAlert} onClose={() => setActiveAlert(null)} />}
     </NotificationContext.Provider>
   );
 }

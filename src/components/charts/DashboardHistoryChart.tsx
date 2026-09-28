@@ -42,9 +42,11 @@ export default function DashboardHistoryChart({ chartData, config, umbralVisual,
   const maximo = valores.length > 0 ? Math.max(...valores) : null;
 
   const formatTick = (ts: number) =>
-    new Date(ts).toLocaleString('es-PE', range === '7d'
-      ? { weekday: 'short', day: 'numeric', timeZone }
-      : { hour: '2-digit', minute: '2-digit', timeZone });
+    new Date(ts).toLocaleString('es-PE', range === '30d'
+      ? { day: 'numeric', month: 'short', timeZone }
+      : range === '7d'
+        ? { weekday: 'short', day: 'numeric', timeZone }
+        : { hour: '2-digit', minute: '2-digit', timeZone });
   const formatTooltipLabel = (ts: number) =>
     new Date(ts).toLocaleString('es-PE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone });
 

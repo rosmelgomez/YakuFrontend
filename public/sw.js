@@ -35,11 +35,19 @@ self.addEventListener('notificationclick', function(event) {
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(windowClients) {
-      // Si ya hay una ventana abierta de Yaku, enfocarla
+      const destino = new URL(urlToOpen, self.location.origin).href;
+      // Si ya hay una ventana de Yaku en esa página, enfocarla
       for (let i = 0; i < windowClients.length; i++) {
         const client = windowClients[i];
-        if (client.url.includes(urlToOpen) && 'focus' in client) {
+        if (client.url === destino && 'focus' in client) {
           return client.focus();
+        }
+      }
+      // Si hay una ventana de Yaku en otra página, llevarla a la que corresponde
+      for (let i = 0; i < windowClients.length; i++) {
+        const client = windowClients[i];
+        if (client.url.startsWith(self.location.origin) && 'navigate' in client) {
+          return client.navigate(destino).then(function(c) { return (c || client).focus(); });
         }
       }
       // Si no, abrir una pestaña nueva
