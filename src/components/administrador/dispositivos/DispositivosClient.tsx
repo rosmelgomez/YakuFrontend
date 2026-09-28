@@ -280,18 +280,6 @@ export default function DispositivosClient({
     });
   };
 
-  const toggleAssignComponentMetric = (rowId: string, metricId: string, checked: boolean) => {
-    setAssignComponents((prev) =>
-      prev.map((row) => {
-        if (row.id !== rowId) return row;
-        const metricIds = checked
-          ? row.metricIds.includes(metricId) ? row.metricIds : [...row.metricIds, metricId]
-          : row.metricIds.filter((id) => id !== metricId);
-        return { ...row, metricIds };
-      })
-    );
-  };
-
   const openAssignComponentDialog = (device: any) => {
     setComponentDeviceId(device.id.toString());
     setComponentId("");
@@ -304,13 +292,6 @@ export default function DispositivosClient({
   const handleComponentSelection = (value: string) => {
     setComponentId(value);
     setComponentMetricIds(inferMetricIdsForComponent(value));
-  };
-
-  const toggleComponentMetric = (metricId: string, checked: boolean) => {
-    setComponentMetricIds((prev) => {
-      if (checked) return prev.includes(metricId) ? prev : [...prev, metricId];
-      return prev.filter((id) => id !== metricId);
-    });
   };
 
   const groupComponentAssignments = (assignments: any[]) => {
@@ -876,15 +857,17 @@ export default function DispositivosClient({
                                   <Flex key={m.id} align="center" gap="2" style={{ minHeight: 32 }}>
                                     <Checkbox
                                       checked={row.metricIds.includes(metricId)}
-                                      onCheckedChange={(checked) => toggleAssignComponentMetric(row.id, metricId, checked === true)}
+                                      disabled
                                     />
                                     <Text size="2" style={{ color: "white" }}>{m.nombre} ({m.codigo})</Text>
                                   </Flex>
                                 );
                               })}
                             </Grid>
-                            {selectedModel && (
-                              <Text size="1" color="gray" as="div" mt="2">Puede marcar varios parametros si el componente entrega mas de una lectura en el mismo pin.</Text>
+                            {row.componentId && row.metricIds.length === 0 ? (
+                              <Text size="1" color="amber" as="div" mt="2">El modelo de este componente no tiene parametro de captura configurado. Configurelo en Componentes.</Text>
+                            ) : (
+                              <Text size="1" color="gray" as="div" mt="2">Se asignan automaticamente segun el modelo del componente.</Text>
                             )}
                           </Box>
                         )}
@@ -950,15 +933,17 @@ export default function DispositivosClient({
                       <Flex key={m.id} align="center" gap="2" style={{ minHeight: 32 }}>
                         <Checkbox
                           checked={componentMetricIds.includes(metricId)}
-                          onCheckedChange={(checked) => toggleComponentMetric(metricId, checked === true)}
+                          disabled
                         />
                         <Text size="2" style={{ color: "white" }}>{m.nombre} ({m.codigo})</Text>
                       </Flex>
                     );
                   })}
                 </Grid>
-                {selectedComponentModel && (
-                  <Text size="1" color="gray" as="div" mt="2">Puede marcar varios parametros si el componente entrega mas de una lectura en el mismo pin.</Text>
+                {componentId && componentMetricIds.length === 0 ? (
+                  <Text size="1" color="amber" as="div" mt="2">El modelo de este componente no tiene parametro de captura configurado. Configurelo en Componentes.</Text>
+                ) : (
+                  <Text size="1" color="gray" as="div" mt="2">Se asignan automaticamente segun el modelo del componente.</Text>
                 )}
               </Box>
             )}
@@ -983,13 +968,18 @@ export default function DispositivosClient({
                 Este componente no captura parámetros. Para LCD I2C, registre SDA y SCL (ej. 13, 14); el primero es el principal.
               </Text>
             ) : (
-              <SearchableSelect
-                value={editMetricId}
-                onValueChange={setEditMetricId}
-                placeholder="Parametro de captura"
-                searchPlaceholder="Buscar parametro..."
-                options={localMetricas.map((m: any) => ({ value: m.id.toString(), label: `${m.nombre} (${m.codigo})` }))}
-              />
+              // El parametro lo define el modelo del componente: se muestra pero no se edita.
+              <Box>
+                <TextField.Root
+                  value={(() => {
+                    const m = localMetricas.find((x: any) => x.id?.toString() === editMetricId);
+                    return m ? `${m.nombre} (${m.codigo})` : "Sin parametro";
+                  })()}
+                  disabled
+                  aria-label="Parametro de captura"
+                />
+                <Text size="1" color="gray" as="div" mt="1">El parametro de captura es automatico segun el modelo del componente.</Text>
+              </Box>
             )}
             {showEditWaterSource && (
               editWaterSources.length > 0 ? (
