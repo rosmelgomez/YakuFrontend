@@ -102,8 +102,11 @@ export class EspFlasher {
     const completed = new Array(fileArray.length).fill(0);
     await this.loader.writeFlash({
       fileArray,
-      flashMode: "dio",
-      flashFreq: "40m",
+      // "keep": el bootloader compilado ya trae modo/frecuencia correctos (DIO 80 MHz).
+      // Forzar "40m" reescribia su cabecera sin recalcular el SHA-256 anexado y el
+      // ROM avisaba "SHA-256 comparison failed ... Attempting to boot anyway" en cada arranque.
+      flashMode: "keep",
+      flashFreq: "keep",
       flashSize: "keep",
       // Una instalacion administrada debe comenzar sin credenciales ni
       // asignaciones NVS heredadas de otro agricultor o cultivo.
