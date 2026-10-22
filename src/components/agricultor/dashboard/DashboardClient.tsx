@@ -1217,9 +1217,9 @@ const ResumenDiaCard = ({
 
       <Box>
         <Row label={hasFilter ? "Riegos prom. diario" : "Riegos hoy"} value={hasFilter ? "--" : `${resumen.riegosHoy} evento${resumen.riegosHoy !== 1 ? 's' : ''}`} />
-        <Row label="Total de riegos" value={resumen.riegosTotal !== undefined ? `${resumen.riegosTotal} evento${resumen.riegosTotal !== 1 ? 's' : ''}` : '--'} />
-        <Row label="Total de litros" value={resumen.litrosTotal !== undefined ? `${resumen.litrosTotal} L` : '--'} />
-        <Row label={hasFilter ? "Consumo prom. diario" : "Litros consumidos"} value={`${resumen.litrosHoy} L`} />
+        <Row label={hasFilter ? "Consumo prom. diario" : "Litros consumidos hoy"} value={`${resumen.litrosHoy} L`} />
+        <Row label="Total de riegos" value={resumen.riegosTotal !== undefined ? `${resumen.riegosTotal} evento${resumen.riegosTotal !== 1 ? 's' : ''}` : '--'} color="var(--purple)" />
+        <Row label="Total de litros" value={resumen.litrosTotal !== undefined ? `${resumen.litrosTotal} L` : '--'} color="var(--purple)" />
         <Row label="Último riego" value={getTimeAgo(resumen.ultimoRiego)} color="var(--blue)" isLast />
       </Box>
     </Card>
