@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Box, Text, Flex, Grid, Select, Card, Badge, Progress, Switch, Separator, Button, Dialog, TextField, ScrollArea } from '@radix-ui/themes';
+import { Box, Text, Flex, Grid, Select, Card, Badge, Progress, Switch, Separator, Button, Dialog, TextField, ScrollArea, Popover, IconButton } from '@radix-ui/themes';
 import DashboardHistoryChart from '@/components/charts/DashboardHistoryChart';
 import DashboardConsumptionChart from '@/components/charts/DashboardConsumptionChart';
 import DashboardHealthGauge from '@/components/charts/DashboardHealthGauge';
@@ -23,6 +23,7 @@ import {
   Cpu,
   Droplets,
   Gauge,
+  Info,
   Sprout,
   Thermometer,
   ThermometerSun,
@@ -37,7 +38,7 @@ type TanqueData = { idTelemetria: string | null; nombre: string; litrosActuales:
 type SensorData = { modelo: string; metrica: string; unidad: string; valor: number; porcentaje: number | null; ema: number | null; fecha: Date; umbral: { min: number | null; max: number | null } | null; } | null;
 type DispositivoData = { id: number; nombre: string; estado: string | null; funcionamientoActivo?: boolean; tipoId?: number; tipoNombre?: string; };
 type ConsumoData = { fecha?: string; label: string; valor: number; };
-type ResumenDiaData = { riegosHoy: number; litrosHoy: number; ultimoRiego: Date | null; humedadSueloProm: number | null; humedadAmbiental: number | null; };
+type ResumenDiaData = { riegosHoy: number; riegosTotal?: number; litrosTotal?: number; litrosHoy: number; ultimoRiego: Date | null; };
 
 type HistoricoPunto = { fecha: string; valor: number; };
 type HistorialData = {
@@ -350,20 +351,10 @@ export default function DashboardClient({
 
   // Helper for filtering resume data based on calendar filters
   const getFilteredResumen = (): ResumenDiaData => {
-    if (!cultivoActivo) return { riegosHoy: 0, litrosHoy: 0, ultimoRiego: null, humedadSueloProm: null, humedadAmbiental: null };
+    if (!cultivoActivo) return { riegosHoy: 0, litrosHoy: 0, ultimoRiego: null };
     const resumen = cultivoActivo.resumenDia;
     const hasFilter = calendarFilters.weekday !== 'all' || calendarFilters.month !== 'all' || calendarFilters.year !== 'all';
     if (!hasFilter) return resumen;
-
-    const hsFiltered = cultivoActivo.historialSensores.humedadSuelo.filter((p) =>
-      dateMatchesCalendarFilters(new Date(p.fecha), calendarFilters)
-    );
-    const avgHS = hsFiltered.length > 0 ? hsFiltered.reduce((acc, p) => acc + p.valor, 0) / hsFiltered.length : null;
-
-    const haFiltered = cultivoActivo.historialSensores.humedadAmbiente.filter((p) =>
-      dateMatchesCalendarFilters(new Date(p.fecha), calendarFilters)
-    );
-    const avgHA = haFiltered.length > 0 ? haFiltered.reduce((acc, p) => acc + p.valor, 0) / haFiltered.length : null;
 
     const consumoFiltered = cultivoActivo.consumoSemanal.filter((c) =>
       c.fecha && dateMatchesCalendarFilters(new Date(c.fecha), calendarFilters)
@@ -374,10 +365,10 @@ export default function DashboardClient({
 
     return {
       riegosHoy: 0,
+      riegosTotal: resumen.riegosTotal,
+      litrosTotal: resumen.litrosTotal,
       litrosHoy: Math.round(avgLitros * 10) / 10,
       ultimoRiego: ultimoRiegoMatches ? resumen.ultimoRiego : null,
-      humedadSueloProm: avgHS,
-      humedadAmbiental: avgHA
     };
   };
 
@@ -1166,6 +1157,37 @@ const ResumenDiaCard = ({
       <Flex align="center" gap="3" mb="3">
         <IconTile icon={Gauge} t="green" />
         <Text size="3" weight="bold" style={{ color: 'var(--foreground)' }} as="div">Resumen del día</Text>
+        <Popover.Root>
+          <Popover.Trigger>
+            <IconButton size="1" variant="ghost" color="gray" aria-label="¿Qué significa la salud del cultivo?" style={{ marginLeft: 'auto' }}>
+              <Info size={16} />
+            </IconButton>
+          </Popover.Trigger>
+          <Popover.Content size="2" maxWidth="300px">
+            <Text size="2" weight="bold" as="div" mb="1">¿Qué significa la salud?</Text>
+            <Text size="1" color="gray" as="p" mb="2">
+              Es el porcentaje de sensores de tu cultivo (humedad y temperatura del suelo y del ambiente)
+              que ahora están dentro del rango ideal configurado para tu planta.
+            </Text>
+            <Text size="1" color="gray" as="p" mb="2">
+              Ejemplo: si 3 de 4 sensores están en rango, la salud es 75%.
+            </Text>
+            <Flex direction="column" gap="1">
+              {[
+                { color: '#22c55e', label: 'Excelente', rango: '90 – 100%' },
+                { color: '#2dd4bf', label: 'Estable', rango: '70 – 89%' },
+                { color: '#f59e0b', label: 'Advertencia', rango: '50 – 69%' },
+                { color: '#ef4444', label: 'Crítico', rango: 'menos de 50%' },
+              ].map((n) => (
+                <Flex key={n.label} align="center" gap="2">
+                  <span aria-hidden style={{ width: 8, height: 8, borderRadius: '50%', background: n.color, flexShrink: 0 }} />
+                  <Text size="1" weight="medium" style={{ color: n.color }}>{n.label}</Text>
+                  <Text size="1" color="gray" className="tabular-nums" style={{ marginLeft: 'auto' }}>{n.rango}</Text>
+                </Flex>
+              ))}
+            </Flex>
+          </Popover.Content>
+        </Popover.Root>
       </Flex>
 
       <Flex direction="column" align="center" mb="2" style={{ position: 'relative', width: '100%', minWidth: 0, height: '110px' }}>
@@ -1195,10 +1217,10 @@ const ResumenDiaCard = ({
 
       <Box>
         <Row label={hasFilter ? "Riegos prom. diario" : "Riegos hoy"} value={hasFilter ? "--" : `${resumen.riegosHoy} evento${resumen.riegosHoy !== 1 ? 's' : ''}`} />
+        <Row label="Total de riegos" value={resumen.riegosTotal !== undefined ? `${resumen.riegosTotal} evento${resumen.riegosTotal !== 1 ? 's' : ''}` : '--'} />
+        <Row label="Total de litros" value={resumen.litrosTotal !== undefined ? `${resumen.litrosTotal} L` : '--'} />
         <Row label={hasFilter ? "Consumo prom. diario" : "Litros consumidos"} value={`${resumen.litrosHoy} L`} />
-        <Row label="Último riego" value={getTimeAgo(resumen.ultimoRiego)} color="var(--blue)" />
-        <Row label="Hum. suelo prom." value={resumen.humedadSueloProm !== null ? `${resumen.humedadSueloProm.toFixed(1)}%` : '--'} color="var(--green)" />
-        <Row label="Hum. ambiental" value={resumen.humedadAmbiental !== null ? `${resumen.humedadAmbiental.toFixed(1)}%` : '--'} color="var(--green)" isLast />
+        <Row label="Último riego" value={getTimeAgo(resumen.ultimoRiego)} color="var(--blue)" isLast />
       </Box>
     </Card>
   );

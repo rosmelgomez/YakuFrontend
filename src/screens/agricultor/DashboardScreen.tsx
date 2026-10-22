@@ -109,7 +109,7 @@ export default function DashboardScreen() {
     <Box className="page-content" px={{ initial: "2", sm: "4", md: "6" }} py={{ initial: "3", sm: "4", md: "5" }}>
       <Box mb={{ initial: "3", sm: "4" }}>
         <Heading size={{ initial: "5", sm: "6", md: "7" }} style={{ color: 'white', wordBreak: 'break-word' }} mb="1">
-          ¡Hola, {user?.name || 'Agricultor'}! 👋
+          ¡Hola, {user?.name || 'Agricultor'}!
         </Heading>
         <Text size={{ initial: "1", sm: "2" }} style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
           Aquí tienes el resumen en tiempo real de las condiciones de tus cultivos.
