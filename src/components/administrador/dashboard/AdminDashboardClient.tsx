@@ -650,7 +650,7 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
                 <XAxis dataKey="mes" stroke="#8fa6b7" fontSize={10} />
                 <YAxis stroke="#8fa6b7" fontSize={10} allowDecimals={false} />
                 <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={{ fontWeight: 'bold', color: '#60a5fa' }} formatter={(value: any) => [value, 'Nuevos agricultores']} />
-                <Area type="monotone" dataKey="agricultores" stroke="#3b82f6" strokeWidth={2} fill="url(#adminRegistrosGradient)" dot={{ r: 3, fill: '#3b82f6' }} activeDot={{ r: 5 }} />
+                <Area type="monotone" dataKey="agricultores" stroke="#3b82f6" strokeWidth={2} fill="url(#adminRegistrosGradient)" dot={{ r: 3, fill: '#3b82f6' }} activeDot={{ r: 5 }} connectNulls />
               </AreaChart>
             </ResponsiveContainer>
           </Box>

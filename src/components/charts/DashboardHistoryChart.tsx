@@ -23,14 +23,21 @@ export default function DashboardHistoryChart({ chartData, config, umbralVisual,
     if (valores.length === 0) return [0, 100] as [number, number];
     const min = Math.min(...valores);
     const max = Math.max(...valores);
-    // Margen proporcional a la variación, con un mínimo para que una serie casi constante no
-    // amplifique ruido de décimas como si fueran grandes saltos.
-    const pad = Math.max((max - min) * 0.2, config?.isPercentage ? 1 : 0.5);
+    // Margen proporcional a la variación y un alto mínimo del eje (20 puntos en %, 4° en temperatura),
+    // centrado en los datos: una serie casi constante se ve como una línea casi recta en vez de
+    // estirar diferencias de décimas a todo el alto del gráfico.
+    const pad = (max - min) * 0.2;
+    const altoMinimo = config?.isPercentage ? 20 : 4;
     let lo = min - pad;
     let hi = max + pad;
+    if (hi - lo < altoMinimo) {
+      const centro = (min + max) / 2;
+      lo = centro - altoMinimo / 2;
+      hi = centro + altoMinimo / 2;
+    }
     if (config?.isPercentage) {
-      lo = Math.max(0, lo);
-      hi = Math.min(100, hi);
+      if (lo < 0) { hi = Math.min(100, hi - lo); lo = 0; }
+      if (hi > 100) { lo = Math.max(0, lo - (hi - 100)); hi = 100; }
     }
     return [Math.floor(lo), Math.ceil(hi)] as [number, number];
   }, [valores, config?.isPercentage]);
@@ -129,6 +136,7 @@ export default function DashboardHistoryChart({ chartData, config, umbralVisual,
               dot={data.length === 1 ? { r: 4, fill: color } : false}
               activeDot={{ r: 5, fill: color, stroke: '#131a1f', strokeWidth: 2 }}
               isAnimationActive={false}
+              connectNulls
             />
           </AreaChart>
         </ResponsiveContainer>

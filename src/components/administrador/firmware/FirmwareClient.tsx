@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import {
   actualizarInstalacionFirmware,
+  actualizarIntervaloMedicion,
   descontinuarVersionFirmware,
   iniciarInstalacionFirmware,
   obtenerProvisionamientoFirmware,
@@ -101,6 +102,21 @@ type Provisioning = {
 type UploadSegment = { file: File; address: string };
 type Tab = "install" | "versions" | "history";
 
+// Opciones del intervalo entre mediciones (segundos). La WMO y la OMS trabajan con
+// registros de 1 a 15 min para temperatura y humedad; el backend acepta 10 s - 60 min.
+// El administrador lo escribe en minutos enteros; el backend acepta 10 s - 60 min.
+const CAPTURE_MINUTES_MIN = 1;
+const CAPTURE_MINUTES_MAX = 60;
+const CAPTURE_MINUTES_DEFAULT = 1;
+// Primera version del firmware de sensores que confirma el intervalo guardado.
+const CAPTURE_CONFIRM_MIN_FIRMWARE = "1.0.6";
+
+const formatInterval = (seconds: number) => {
+  if (seconds < 60) return `${seconds} s`;
+  const minutes = seconds / 60;
+  return Number.isInteger(minutes) ? `${minutes} min` : `${minutes.toFixed(1)} min`;
+};
+
 const defaultAddress = (name: string) => {
   const lower = name.toLowerCase();
   if (lower.includes("partition")) return "0x8000";
@@ -148,6 +164,8 @@ export default function FirmwareClient({
   const [serialCommand, setSerialCommand] = useState("");
   const [ssid, setSsid] = useState("");
   const [wifiPassword, setWifiPassword] = useState("");
+  // Texto del input (minutos): se guarda como string para permitir borrar y reescribir.
+  const [captureMinutes, setCaptureMinutes] = useState(String(CAPTURE_MINUTES_DEFAULT));
   const [showWifiPassword, setShowWifiPassword] = useState(false);
   const [showMqttPassword, setShowMqttPassword] = useState(false);
   const [uploadSegments, setUploadSegments] = useState<UploadSegment[]>([]);
@@ -194,6 +212,11 @@ export default function FirmwareClient({
     [devices, deviceId],
   );
   const selectedDeviceFirmwareType = firmwareTypeForDevice(selectedDevice);
+  const captureMinutesValue = Number(captureMinutes);
+  const captureMinutesValid = captureMinutes.trim() !== ""
+    && Number.isInteger(captureMinutesValue)
+    && captureMinutesValue >= CAPTURE_MINUTES_MIN
+    && captureMinutesValue <= CAPTURE_MINUTES_MAX;
   const publishedVersions = useMemo(
     () => initialVersions.filter((item) => (
       item.publicado
@@ -271,10 +294,13 @@ export default function FirmwareClient({
   async function selectDevice(value: string) {
     setDeviceId(value);
     setProvisioning(null);
+    setCaptureMinutes(String(CAPTURE_MINUTES_DEFAULT));
     setError("");
     if (!value) return;
     try {
-      setProvisioning(await obtenerProvisionamientoFirmware(Number(value)));
+      const data: Provisioning = await obtenerProvisionamientoFirmware(Number(value));
+      setProvisioning(data);
+      setCaptureMinutes(String(Math.max(CAPTURE_MINUTES_MIN, Math.round((data.captura_segundos ?? 60) / 60))));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "El dispositivo no esta listo para aprovisionar");
     }
@@ -388,14 +414,27 @@ export default function FirmwareClient({
     if (!provisioning || !flasherRef.current) return;
     setBusy(true);
     setError("");
+    const isSensorDevice = selectedDeviceFirmwareType === "sensores";
+    if (isSensorDevice && !captureMinutesValid) {
+      setError(`El intervalo de medicion debe ser un numero entero entre ${CAPTURE_MINUTES_MIN} y ${CAPTURE_MINUTES_MAX} minutos.`);
+      setBusy(false);
+      return;
+    }
+    const capturaSegundos = isSensorDevice ? captureMinutesValue * 60 : provisioning.captura_segundos;
     try {
-      await flasherRef.current.sendProvisioning({
+      // Primero se guarda en el backend: su config MQTT retenida lleva captura_segundos
+      // y, si siguiera con el valor anterior, lo pisaria al conectarse el equipo.
+      if (isSensorDevice && capturaSegundos !== provisioning.captura_segundos) {
+        await actualizarIntervaloMedicion(Number(deviceId), capturaSegundos);
+        setProvisioning({ ...provisioning, captura_segundos: capturaSegundos });
+      }
+      const ack = await flasherRef.current.sendProvisioning({
         schema_version: 1,
         device_uid: provisioning.device_uid,
         tipo_fuente: provisioning.tipo_fuente,
         metodo_medicion: provisioning.metodo_medicion,
         asignaciones: provisioning.asignaciones,
-        captura_segundos: provisioning.captura_segundos,
+        captura_segundos: capturaSegundos,
         cooldown_riego_minutos: provisioning.cooldown_riego_minutos,
         wifi: { ssid, password: wifiPassword },
         mqtt: {
@@ -408,8 +447,21 @@ export default function FirmwareClient({
           tls: provisioning.mqtt.tls,
         },
       });
-      setStatus("ESP32 confirmó el guardado de la configuración. Comprueba la conexión WiFi en el monitor.");
       setWifiPassword("");
+      if (!isSensorDevice) {
+        setStatus("ESP32 confirmó el guardado de la configuración. Comprueba la conexión WiFi en el monitor.");
+      } else if (ack.capturaSegundos === null) {
+        // Firmware < 1.0.6: guardo el WiFi pero no confirma el intervalo (< 1.0.5 ni lo aplica).
+        setError(
+          `El ESP32 guardó el WiFi, pero su firmware no confirmó el intervalo de medición. Instala el firmware de sensores v${CAPTURE_CONFIRM_MIN_FIRMWARE} o superior y vuelve a enviar la configuración.`,
+        );
+      } else if (ack.capturaSegundos !== capturaSegundos) {
+        setError(
+          `El ESP32 guardó un intervalo distinto al solicitado: cada ${formatInterval(ack.capturaSegundos)} en lugar de cada ${formatInterval(capturaSegundos)}.`,
+        );
+      } else {
+        setStatus(`ESP32 confirmó el guardado de la configuración y la medición cada ${formatInterval(ack.capturaSegundos)}. Comprueba la conexión WiFi en el monitor.`);
+      }
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudo enviar la configuracion");
     } finally {
@@ -586,6 +638,31 @@ export default function FirmwareClient({
                     </button>
                   </span>
                 </label>
+                {/* Solo el colector de sensores mide por intervalo; el ESP32 lo guarda en NVS
+                    junto con el WiFi (firmware de sensores v1.0.6 o superior). */}
+                {selectedDeviceFirmwareType === "sensores" && (
+                  <label className={styles.field}>
+                    <span className={styles.label}>Intervalo de medicion (minutos)</span>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={CAPTURE_MINUTES_MIN}
+                      max={CAPTURE_MINUTES_MAX}
+                      step={1}
+                      className={styles.input}
+                      value={captureMinutes}
+                      onChange={(event) => setCaptureMinutes(event.target.value)}
+                      disabled={!provisioning}
+                      aria-invalid={!captureMinutesValid}
+                      title={`Entre ${CAPTURE_MINUTES_MIN} y ${CAPTURE_MINUTES_MAX} minutos`}
+                    />
+                    {!captureMinutesValid && (
+                      <span className={styles.label} style={{ color: "#f87171" }}>
+                        Ingresa un numero entero entre {CAPTURE_MINUTES_MIN} y {CAPTURE_MINUTES_MAX}.
+                      </span>
+                    )}
+                  </label>
+                )}
                 {/* Broker: el mismo del backend (Configuración MQTT). Un equipo apuntando a otro
                     broker no podría hablar con el backend, por eso no se edita aquí. */}
                 <label className={styles.field}>
@@ -644,7 +721,7 @@ export default function FirmwareClient({
                 </label>
               </div>
               <div className={styles.actions}>
-                <button className={styles.button} onClick={sendProvisioning} disabled={busy || !provisioning || !ssid || !wifiPassword || !provisioning.mqtt.host || !provisioning.mqtt.port || !provisioning.mqtt.username || !provisioning.mqtt.password}><Cable size={16} /> Enviar configuracion</button>
+                <button className={styles.button} onClick={sendProvisioning} disabled={busy || !provisioning || (selectedDeviceFirmwareType === "sensores" && !captureMinutesValid) || !ssid || !wifiPassword || !provisioning.mqtt.host || !provisioning.mqtt.port || !provisioning.mqtt.username || !provisioning.mqtt.password}><Cable size={16} /> Enviar configuracion</button>
               </div>
             </div>
           </section>
@@ -660,6 +737,11 @@ export default function FirmwareClient({
                   <dt>Identidad</dt><dd>{provisioning?.device_uid || "Pendiente"}</dd>
                   <dt>Agricultor</dt><dd>{provisioning?.agricultor || "Pendiente"}</dd>
                   <dt>Cultivo</dt><dd>{provisioning?.cultivo || "Pendiente"}</dd>
+                  {/* Muestra lo que se enviara: 1 min por defecto y cambia al escribir en el
+                      campo (se oculta en equipos de riego, que no miden por intervalo). */}
+                  {(!selectedDevice || selectedDeviceFirmwareType === "sensores") && (
+                    <><dt>Medicion</dt><dd>{captureMinutesValid ? `Cada ${formatInterval(captureMinutesValue * 60)}` : "Intervalo no valido"}</dd></>
+                  )}
                 </dl>
                 {provisioning && <div className={styles.metricList}>{Object.entries(provisioning.asignaciones).map(([code, id]) => <span className={styles.metric} key={code}>{code}: {id}</span>)}</div>}
               </div>

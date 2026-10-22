@@ -137,26 +137,11 @@ const HISTORY_RANGE_BUCKET_MS: Record<HistoryRange, number> = {
   '30d': 60 * 60 * 1000,
 };
 
-// Silencio entre dos lecturas a partir del cual la línea se corta (sensor sin reportar), en vez
-// de unir con una recta un hueco de horas como si hubiera medido todo ese tiempo.
-const HISTORY_RANGE_GAP_MS: Record<HistoryRange, number> = {
-  '6h': 5 * 60 * 1000,
-  '24h': 5 * 60 * 1000,
-  // Pasadas las ultimas 24 h el backend manda el historial agregado por hora: el corte debe
-  // superar esa separacion o la linea se partiria entre cada punto horario.
-  '7d': 90 * 60 * 1000,
-  '30d': 3 * 60 * 60 * 1000,
-};
-
-// Silencio a partir del cual se avisa que el sensor dejó de reportar (independiente del
-// intervalo del gráfico: con puntos por minuto, 2 intervalos serían solo 2 min).
-const STALE_READING_MS = 5 * 60 * 1000;
-
 type SensorSeriesPoint = HistoricoPunto & { ts: number; xLabel: string; valorReal: number | null };
 
 // Serie continua tipo "bolsa": cada lectura real en su instante (no valores interpolados), para
-// que la línea suba y baje con lo que midió el sensor. Si el sensor deja de reportar, se inserta
-// un punto nulo que corta la línea en ese hueco.
+// que la línea suba y baje con lo que midió el sensor. Los huecos sin lecturas se unen con una
+// recta para que la línea sea continua.
 const buildSensorSeries = (
   data: HistoricoPunto[],
   range: HistoryRange,
@@ -183,8 +168,6 @@ const buildSensorSeries = (
     points = Array.from(grouped.values()).map((g) => ({ ts: Math.round(g.sumTs / g.n), valor: g.sum / g.n }));
   }
 
-  const gapMs = HISTORY_RANGE_GAP_MS[range];
-  const series: SensorSeriesPoint[] = [];
   const toPoint = (ts: number, valor: number | null): SensorSeriesPoint => {
     const dateObj = new Date(ts);
     const xLabel = dateObj.toLocaleString('es-PE', isMultiDayRange(range)
@@ -193,13 +176,7 @@ const buildSensorSeries = (
     const redondeado = valor === null ? null : Math.round(valor * 10) / 10;
     return { fecha: dateObj.toISOString(), valor: redondeado ?? 0, ts, xLabel, valorReal: redondeado };
   };
-  points.forEach((p, i) => {
-    if (i > 0 && p.ts - points[i - 1].ts > gapMs) {
-      series.push(toPoint(points[i - 1].ts + 1, null));
-    }
-    series.push(toPoint(p.ts, p.valor));
-  });
-  return series;
+  return points.map((p) => toPoint(p.ts, p.valor));
 };
 
 // A diferencia de buildSensorSeries (para lecturas continuas como humedad/temperatura),
@@ -845,15 +822,6 @@ const HistoricoSensoresCard = ({
   const chartData = buildSensorSeries(calendarFilteredData, effectiveRange, chartTimeZone);
   const umbralVisual = sensorInfo?.umbral ? sensorInfo.umbral[config.umbralRef] : null;
 
-  // Si la última lectura real quedó bastante antes de ahora, se avisa: el gráfico ya no
-  // extiende una línea plana falsa hasta el presente, así que sin este aviso parecería
-  // que simplemente "no hay más puntos" en vez de que el sensor dejó de reportar.
-  const lastPointMs = chartData.length > 0 ? new Date(chartData[chartData.length - 1].fecha).getTime() : null;
-  const isStale = lastPointMs !== null && (Date.now() - lastPointMs) > STALE_READING_MS;
-  const lastPointLabel = lastPointMs !== null
-    ? new Date(lastPointMs).toLocaleString('es-PE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: chartTimeZone })
-    : null;
-
   return (
     <Card size="3" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '14px', height: '100%' }}>
       <Flex justify="between" align="center" mb="4" wrap="wrap" gap="3">
@@ -879,13 +847,6 @@ const HistoricoSensoresCard = ({
       {effectiveRange !== timeRange && (
         <Text size="1" color="gray" mb="1" as="div">
           Sin datos en {timeRange}; mostrando {effectiveRange}.
-        </Text>
-      )}
-
-      {isStale && lastPointLabel && (
-        <Text size="1" color="amber" mb="3" as="div" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <AlertTriangle size={13} aria-hidden />
-          Sin lecturas recientes: la última fue el {lastPointLabel}.
         </Text>
       )}
 

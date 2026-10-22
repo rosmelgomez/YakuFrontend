@@ -66,6 +66,19 @@ export async function actualizarInstalacionFirmware(
   return result;
 }
 
+export async function actualizarIntervaloMedicion(deviceId: number, capturaSegundos: number) {
+  const result = await jsonOrThrow(
+    await fetchFromFastAPI(`/firmware/devices/${deviceId}/capture-interval`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ captura_segundos: capturaSegundos }),
+    }),
+    "No se pudo actualizar el intervalo de medicion",
+  );
+  revalidatePath("/dashboard/administrador/firmware");
+  return result as { id_dispositivo: number; captura_segundos: number };
+}
+
 export async function descontinuarVersionFirmware(versionId: number) {
   const result = await jsonOrThrow(
     await fetchFromFastAPI(`/firmware/versions/${versionId}/discontinue`, {

@@ -95,7 +95,7 @@ export default function SensoresScreen() {
                 <XAxis dataKey="time" stroke="#94a3b8" />
                 <YAxis stroke="#94a3b8" />
                 <Tooltip contentStyle={{ backgroundColor: "#121920", borderColor: "#2c3a47", color: "#fff" }} />
-                <Line type="monotone" dataKey="humidity" stroke="#10b981" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="humidity" stroke="#10b981" strokeWidth={2} dot={false} connectNulls />
               </LineChart>
             </ResponsiveContainer>
           </div>
