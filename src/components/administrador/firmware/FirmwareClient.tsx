@@ -14,7 +14,7 @@ import {
 } from "@/actions/firmware";
 import { EspFlasher, FirmwareSegment } from "@/lib/firmware/esp-flasher";
 import { fetchFromFastAPI } from "@/lib/api/client";
-import { firmwareTypeForDevice } from "@/lib/firmware/compatibility";
+import { FIRMWARE_CHIPS, chipFamily, firmwareTypeForDevice } from "@/lib/firmware/compatibility";
 import { emitirNotificacion } from "@/lib/notifications";
 import styles from "./FirmwareClient.module.css";
 
@@ -151,6 +151,8 @@ export default function FirmwareClient({
   const [cropId, setCropId] = useState("");
   const [deviceId, setDeviceId] = useState("");
   const [chip, setChip] = useState("");
+  // Microcontrolador para el que se elige el firmware; al conectar se toma el detectado.
+  const [targetChip, setTargetChip] = useState("");
   const [usbInfo, setUsbInfo] = useState("");
   const [provisioning, setProvisioning] = useState<Provisioning | null>(null);
   const [progress, setProgress] = useState(0);
@@ -222,10 +224,13 @@ export default function FirmwareClient({
       item.publicado
       && !item.descontinuado
       && Boolean(selectedDeviceFirmwareType) && item.tipo_dispositivo === selectedDeviceFirmwareType
+      && (!targetChip || item.chip === targetChip)
     )),
-    [initialVersions, selectedDeviceFirmwareType],
+    [initialVersions, selectedDeviceFirmwareType, targetChip],
   );
-  const chipCompatible = !chip || !selectedVersion || chip.toUpperCase().includes(selectedVersion.chip.toUpperCase());
+  const detectedChipFamily = chipFamily(chip);
+  const chipCompatible = !chip || !selectedVersion || detectedChipFamily === selectedVersion.chip;
+  const targetChipMismatch = Boolean(chip && targetChip && detectedChipFamily !== targetChip);
   const selectedVersionMissingFiles = selectedVersion?.archivos_faltantes ?? [];
 
   const appendTerminal = (line: string) => {
@@ -333,6 +338,8 @@ export default function FirmwareClient({
       flasherRef.current = flasher;
       const detected = await flasher.connect();
       setChip(detected.chip);
+      const family = chipFamily(detected.chip);
+      if ((FIRMWARE_CHIPS as readonly string[]).includes(family)) setTargetChip(family);
       setUsbInfo(
         [detected.usbVendorId && `VID ${detected.usbVendorId.toString(16).toUpperCase()}`,
           detected.usbProductId && `PID ${detected.usbProductId.toString(16).toUpperCase()}`]
@@ -592,6 +599,13 @@ export default function FirmwareClient({
                   </select>
                 </label>
                 <label className={styles.field}>
+                  <span className={styles.label}>Microcontrolador</span>
+                  <select className={styles.select} value={targetChip} onChange={(event) => setTargetChip(event.target.value)}>
+                    <option value="">Todos</option>
+                    {FIRMWARE_CHIPS.map((item) => <option key={item} value={item}>{item}</option>)}
+                  </select>
+                </label>
+                <label className={styles.field}>
                   <span className={styles.label}>Version aprobada</span>
                   <select className={styles.select} value={versionId} onChange={(event) => setVersionId(event.target.value)}>
                     <option value="">{publishedVersions.length ? "Seleccionar firmware" : "No hay firmware publicado"}</option>
@@ -611,6 +625,7 @@ export default function FirmwareClient({
                 </button>
               </div>
               {chip && !chipCompatible && <div className={`${styles.status} ${styles.statusError}`} style={{ marginTop: 14 }}>El chip {chip} no es compatible con {selectedVersion?.chip}.</div>}
+              {targetChipMismatch && chipCompatible && <div className={`${styles.status} ${styles.statusError}`} style={{ marginTop: 14 }}>Seleccionaste {targetChip}, pero el dispositivo conectado es {chip}.</div>}
               {selectedVersionMissingFiles.length > 0 && (
                 <div className={`${styles.status} ${styles.statusError}`} style={{ marginTop: 14 }}>
                   Faltan archivos en el backend: {selectedVersionMissingFiles.join(", ")}
