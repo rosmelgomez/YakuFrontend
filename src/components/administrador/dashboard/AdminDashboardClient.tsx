@@ -1,7 +1,7 @@
 // src/components/administrador/dashboard/AdminDashboardClient.tsx
 "use client";
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Box, 
   Card, 
@@ -21,6 +21,7 @@ import {
   Ban,
   Brain,
   BrainCircuit,
+  CalendarDays,
   CheckCircle2,
   Cpu,
   Database,
@@ -30,6 +31,7 @@ import {
   LayoutDashboard,
   Leaf,
   MinusCircle,
+  RotateCcw,
   XCircle,
   Search,
   Settings2,
@@ -101,7 +103,23 @@ function EmptyChart({ message }: { message: string }) {
   );
 }
 
+export interface AdminDateRange {
+  fechaInicio: string;
+  fechaFin: string;
+}
+
+// 'YYYY-MM-DD' -> 'DD/MM/YYYY' sin pasar por Date (evita corrimientos por zona horaria).
+const formatIsoDay = (iso?: string | null) => {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+};
+
 interface AdminDashboardClientProps {
+  isCustomRange?: boolean;
+  onRangeChange?: (range: AdminDateRange | null) => void;
+  refreshing?: boolean;
+  rangeError?: string | null;
   data: {
     metricas: {
       total_usuarios: number;
@@ -181,10 +199,19 @@ interface AdminDashboardClientProps {
       total: number;
     }>;
     zona_horaria?: string;
+    fecha_inicio?: string;
+    fecha_fin?: string;
+    ultima_fecha_datos?: string | null;
   };
 }
 
-export default function AdminDashboardClient({ data }: AdminDashboardClientProps) {
+export default function AdminDashboardClient({
+  data,
+  isCustomRange = false,
+  onRangeChange,
+  refreshing = false,
+  rangeError = null,
+}: AdminDashboardClientProps) {
   const {
     metricas,
     predicciones,
@@ -198,7 +225,32 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
     dispositivos_conectados = 0,
     cultivos_por_planta = [],
     zona_horaria = 'America/Lima',
+    fecha_inicio = '',
+    fecha_fin = '',
+    ultima_fecha_datos = null,
   } = data;
+
+  // Filtro de calendario: borrador local que se envía al backend cuando el rango es válido.
+  const [draftInicio, setDraftInicio] = useState(fecha_inicio);
+  const [draftFin, setDraftFin] = useState(fecha_fin);
+  useEffect(() => {
+    setDraftInicio(fecha_inicio);
+    setDraftFin(fecha_fin);
+  }, [fecha_inicio, fecha_fin]);
+
+  const draftInvalido = Boolean(draftInicio && draftFin && draftInicio > draftFin);
+  const handleRangeInput = (inicio: string, fin: string) => {
+    setDraftInicio(inicio);
+    setDraftFin(fin);
+    if (inicio && fin && inicio <= fin && (inicio !== fecha_inicio || fin !== fecha_fin)) {
+      onRangeChange?.({ fechaInicio: inicio, fechaFin: fin });
+    }
+  };
+
+  const diasRango = consumo_semanal.length || 7;
+  const rangoTexto = fecha_inicio && fecha_fin
+    ? `${formatIsoDay(fecha_inicio)} – ${formatIsoDay(fecha_fin)}`
+    : `últimos ${diasRango} días`;
 
   const litrosSemana = consumo_semanal.reduce((acc, d) => acc + (d.litros || 0), 0);
   const riegosSemana = consumo_semanal.reduce((acc, d) => acc + (d.riegos || 0), 0);
@@ -336,7 +388,56 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
               ]}
             />
           </Flex>
+
+          {/* Calendar range filter */}
+          <Flex direction="column" gap="1" style={{ flex: 1.3 }}>
+            <Flex align="center" gap="1" mb="1">
+              <CalendarDays size={12} color="var(--gray-10)" />
+              <Text size="1" color="gray">Rango de fechas</Text>
+            </Flex>
+            <Flex gap="2" align="center" wrap="wrap">
+              <TextField.Root
+                type="date"
+                aria-label="Fecha de inicio"
+                value={draftInicio}
+                max={draftFin || undefined}
+                onChange={(e) => handleRangeInput(e.target.value, draftFin)}
+                style={{ background: 'var(--bg-mockup)', flex: 1, minWidth: 130 }}
+              />
+              <TextField.Root
+                type="date"
+                aria-label="Fecha de fin"
+                value={draftFin}
+                min={draftInicio || undefined}
+                onChange={(e) => handleRangeInput(draftInicio, e.target.value)}
+                style={{ background: 'var(--bg-mockup)', flex: 1, minWidth: 130 }}
+              />
+              {isCustomRange && (
+                <Button
+                  size="2"
+                  variant="soft"
+                  color="gray"
+                  onClick={() => onRangeChange?.(null)}
+                  title="Volver a los últimos datos registrados"
+                  style={{ cursor: 'pointer' }}
+                >
+                  <RotateCcw size={14} /> Últimos datos
+                </Button>
+              )}
+            </Flex>
+          </Flex>
         </Flex>
+        <Text size="1" color={draftInvalido || rangeError ? 'red' : 'gray'} as="div" mt="2">
+          {draftInvalido
+            ? 'La fecha de inicio no puede ser posterior a la fecha de fin.'
+            : rangeError
+              ? rangeError
+              : refreshing
+                ? 'Actualizando datos…'
+                : isCustomRange
+                  ? `Mostrando ${rangoTexto}.`
+                  : `Mostrando los últimos datos registrados (${rangoTexto})${ultima_fecha_datos ? `; último riego el ${formatIsoDay(ultima_fecha_datos)}` : ''}.`}
+        </Text>
       </Card>
 
       {/* METRIC CARDS */}
@@ -386,14 +487,14 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
           </Flex>
         </Card>
 
-        {/* Agua 7 días */}
+        {/* Agua en el rango */}
         <Card size="1" style={CARD_STYLE}>
           <Flex align="center" gap="2.5">
             <Box style={{ background: 'rgba(14, 165, 233, 0.1)', padding: '8px', borderRadius: '10px' }}>
               <Droplets size={20} color="#0ea5e9" />
             </Box>
             <Box>
-              <Text size="1" color="gray" weight="medium">Agua (7 días)</Text>
+              <Text size="1" color="gray" weight="medium">Agua ({diasRango} {diasRango === 1 ? 'día' : 'días'})</Text>
               <Flex gap="1.5" align="baseline">
                 <Text size={{ initial: "4", sm: "5" }} weight="bold" style={{ color: 'white' }}>
                   {litrosSemana.toLocaleString('es-PE', { maximumFractionDigits: 1 })} L
@@ -407,14 +508,14 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
 
       {/* CHARTS CONTAINER */}
       <Grid columns={{ initial: '1', lg: '3' }} gap={{ initial: "3", sm: "4" }}>
-        {/* Consumo Semanal */}
+        {/* Consumo diario en el rango */}
         <Card size={{ initial: "2", sm: "3" }} className="col-span-1 lg:col-span-2" style={{ background: "var(--surface-mockup)", borderColor: "var(--border-mockup)" }}>
           <Flex direction="column" gap="2" mb="3">
             <Flex align="center" gap="2">
               <Activity size={18} color="#3b82f6" />
-              <Text size={{ initial: "2", sm: "3" }} weight="bold" style={{ color: 'white' }}>Monitoreo Semanal de Riego (Global)</Text>
+              <Text size={{ initial: "2", sm: "3" }} weight="bold" style={{ color: 'white' }}>Monitoreo Diario de Riego (Global)</Text>
             </Flex>
-            <Text size="1" color="gray">Consumo total de agua en litros y número de riegos ejecutados por los agricultores.</Text>
+            <Text size="1" color="gray">Consumo total de agua en litros y número de riegos ejecutados por los agricultores ({rangoTexto}).</Text>
           </Flex>
 
           <Box style={{ width: '100%', minWidth: 0, height: '260px' }}>
@@ -547,7 +648,7 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
           <ChartHeader
             icon={<Trophy size={18} color="#f59e0b" />}
             title="Mayor Consumo de Agua"
-            subtitle="Agricultores con más litros utilizados en los últimos 7 días."
+            subtitle={`Agricultores con más litros utilizados (${rangoTexto}).`}
           />
           <Box style={{ height: '230px', width: '100%', minWidth: 0 }}>
             {top_consumo.length > 0 ? (
@@ -566,7 +667,7 @@ export default function AdminDashboardClient({ data }: AdminDashboardClientProps
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <EmptyChart message="Sin consumo registrado esta semana." />
+              <EmptyChart message="Sin consumo registrado en este rango." />
             )}
           </Box>
         </Card>

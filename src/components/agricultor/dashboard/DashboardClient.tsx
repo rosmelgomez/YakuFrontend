@@ -24,6 +24,7 @@ import {
   Droplets,
   Gauge,
   Info,
+  RotateCcw,
   Sprout,
   Thermometer,
   ThermometerSun,
@@ -100,6 +101,8 @@ type CultivoData = {
   historialConsumo?: HistoricoPunto[];
   limiteConsumo: number | null;
   resumenDia: ResumenDiaData;
+  ultimaFechaDatos?: string | null;
+  rango?: CalendarRange | null;
 };
 
 const isCollectorDevice = (device: DispositivoData) => {
@@ -119,6 +122,58 @@ const dateMatchesCalendarFilters = (date: Date, filters: CalendarFilters) => {
   if (filters.startDate && date < new Date(`${filters.startDate}T00:00:00`)) return false;
   if (filters.endDate && date > new Date(`${filters.endDate}T23:59:59`)) return false;
   return true;
+};
+
+// --- Rango de calendario (los datos del rango se piden a la BD, como en el panel admin) ---
+export type CalendarRange = { fechaInicio: string; fechaFin: string };
+type CalendarWindow = { startMs: number; endMs: number; fechaInicio: string; fechaFin: string };
+const DAY_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_CALENDAR_DAYS = 7;
+
+// Desfase (ms) de la zona horaria respecto a UTC en un instante dado.
+const timeZoneOffsetMs = (ts: number, timeZone: string) => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  }).formatToParts(new Date(ts));
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  return Date.UTC(get('year'), get('month') - 1, get('day'), get('hour'), get('minute'), get('second')) - (ts - (ts % 1000));
+};
+
+// Inicio (00:00) del día 'YYYY-MM-DD' en la zona horaria del cultivo.
+const zonedDayStartMs = (isoDay: string, timeZone: string) => {
+  const guess = Date.parse(`${isoDay}T00:00:00Z`);
+  return guess - timeZoneOffsetMs(guess, timeZone);
+};
+
+const buildCalendarWindow = (fechaInicio: string, fechaFin: string, timeZone: string): CalendarWindow => ({
+  startMs: zonedDayStartMs(fechaInicio, timeZone),
+  endMs: zonedDayStartMs(fechaFin, timeZone) + DAY_MS,
+  fechaInicio,
+  fechaFin,
+});
+
+const shiftIsoDay = (isoDay: string, days: number) =>
+  new Date(Date.parse(`${isoDay}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10);
+
+const todayIsoDay = (timeZone: string) =>
+  new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+
+// 'YYYY-MM-DD' -> 'DD/MM/YYYY' sin pasar por Date (evita corrimientos por zona horaria).
+const formatIsoDay = (iso?: string | null) => {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+};
+
+const windowDays = (window: CalendarWindow) => Math.max(1, Math.round((window.endMs - window.startMs) / DAY_MS));
+
+// Rango equivalente para el formato de etiquetas y el agrupado de puntos según la duración.
+const rangeForWindow = (window: CalendarWindow): HistoryRange => {
+  const days = windowDays(window);
+  if (days <= 1) return '24h';
+  if (days <= 7) return '7d';
+  return '30d';
 };
 
 // Ventana total de datos a considerar por cada rango del selector de tiempo
@@ -146,18 +201,21 @@ type SensorSeriesPoint = HistoricoPunto & { ts: number; xLabel: string; valorRea
 const buildSensorSeries = (
   data: HistoricoPunto[],
   range: HistoryRange,
-  timeZone: string
+  timeZone: string,
+  window?: CalendarWindow
 ): SensorSeriesPoint[] => {
   if (data.length === 0) return [];
-  const cutoff = Date.now() - HISTORY_RANGE_LIMIT_MS[range];
+  const cutoff = window ? window.startMs : Date.now() - HISTORY_RANGE_LIMIT_MS[range];
+  const upper = window ? window.endMs : Infinity;
 
   let points = data
     .map((d) => ({ ts: new Date(d.fecha).getTime(), valor: d.valor }))
-    .filter((d) => Number.isFinite(d.ts) && d.ts >= cutoff && Number.isFinite(d.valor))
+    .filter((d) => Number.isFinite(d.ts) && d.ts >= cutoff && d.ts < upper && Number.isFinite(d.valor))
     .sort((a, b) => a.ts - b.ts);
   if (points.length === 0) return [];
 
-  const bucketMs = HISTORY_RANGE_BUCKET_MS[range];
+  // Rangos de calendario largos (> 60 días) se agrupan por día para no saturar el gráfico.
+  const bucketMs = window && windowDays(window) > 60 ? DAY_MS : HISTORY_RANGE_BUCKET_MS[range];
   if (bucketMs > 0) {
     const grouped = new Map<number, { sumTs: number; sum: number; n: number }>();
     for (const p of points) {
@@ -187,14 +245,19 @@ const buildSensorSeries = (
 const buildRealEventSeries = (
   data: HistoricoPunto[],
   range: HistoryRange,
-  timeZone: string
+  timeZone: string,
+  window?: CalendarWindow
 ): (HistoricoPunto & { xLabel: string; valorReal: number })[] => {
   if (data.length === 0) return [];
   const now = new Date().getTime();
-  const cutoff = now - HISTORY_RANGE_LIMIT_MS[range];
+  const cutoff = window ? window.startMs : now - HISTORY_RANGE_LIMIT_MS[range];
+  const upper = window ? window.endMs : Infinity;
 
   return data
-    .filter(d => new Date(d.fecha).getTime() >= cutoff)
+    .filter(d => {
+      const ts = new Date(d.fecha).getTime();
+      return ts >= cutoff && ts < upper;
+    })
     .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime())
     .map(d => {
       const dateObj = new Date(d.fecha);
@@ -231,16 +294,24 @@ const getDashboardYears = (cultivo: CultivoData | null) => {
   return years.length > 0 ? years : [new Date().getFullYear().toString()];
 };
 
-export default function DashboardClient({ 
+export default function DashboardClient({
   cultivos,
   catalogPlantas = [],
   fuentesAgua = [],
-  regiones = []
-}: { 
+  regiones = [],
+  cultivosRango = null,
+  onCalendarRangeChange,
+  rangeLoading = false,
+  rangeError = null,
+}: {
   cultivos: CultivoData[];
   catalogPlantas?: any[];
   fuentesAgua?: any[];
   regiones?: any[];
+  cultivosRango?: CultivoData[] | null;
+  onCalendarRangeChange?: (range: CalendarRange | null) => void;
+  rangeLoading?: boolean;
+  rangeError?: string | null;
 }) {
   const router = useRouter();
   const [localCultivos, setLocalCultivos] = useState<CultivoData[]>(cultivos);
@@ -283,25 +354,59 @@ export default function DashboardClient({
     setYearFilter('all');
     setStartDateFilter('');
     setEndDateFilter('');
+    onCalendarRangeChange?.(null);
   }, [sensorRange, consumoRange, filterMode]);
 
   const hasCrops = localCultivos.length > 0;
   const cultivoActivo = hasCrops ? (localCultivos.find((c) => c.idCultivo.toString() === selectedId) || localCultivos[0]) : null;
   const recolectorActivo = hasActiveCollector(cultivoActivo);
   const isRelativeMode = filterMode === 'relative';
+  const cultivoTimeZone = cultivoActivo?.zonaHoraria || DEFAULT_DASHBOARD_TIME_ZONE;
+
+  // Envía el rango al backend solo cuando es válido (inicio <= fin).
+  const applyCalendarRange = (inicio: string, fin: string) => {
+    setStartDateFilter(inicio);
+    setEndDateFilter(fin);
+    if (inicio && fin && inicio <= fin) {
+      onCalendarRangeChange?.({ fechaInicio: inicio, fechaFin: fin });
+    }
+  };
+
+  // Al entrar en Calendario el rango por defecto son los 7 días que terminan en el último dato
+  // registrado del cultivo (como el panel admin), no en "hoy".
+  const enterCalendarMode = () => {
+    setFilterMode('calendar');
+    if (startDateFilter && endDateFilter) return;
+    const fin = cultivoActivo?.ultimaFechaDatos || todayIsoDay(cultivoTimeZone);
+    applyCalendarRange(shiftIsoDay(fin, -(DEFAULT_CALENDAR_DAYS - 1)), fin);
+  };
+
+  const calendarWindow: CalendarWindow | null =
+    !isRelativeMode && startDateFilter && endDateFilter && startDateFilter <= endDateFilter
+      ? buildCalendarWindow(startDateFilter, endDateFilter, cultivoTimeZone)
+      : null;
+  const calendarDraftInvalid = !isRelativeMode && Boolean(startDateFilter && endDateFilter && startDateFilter > endDateFilter);
+
+  // En Calendario los gráficos usan los datos que devolvió la BD para ese rango.
+  const cultivoRango = calendarWindow
+    ? (cultivosRango || []).find((c) =>
+        c.idCultivo === cultivoActivo?.idCultivo &&
+        c.rango?.fechaInicio === calendarWindow.fechaInicio &&
+        c.rango?.fechaFin === calendarWindow.fechaFin
+      ) || null
+    : null;
+  const cultivoGraficos = cultivoRango || cultivoActivo;
+  const waitingRangeData = Boolean(calendarWindow && !cultivoRango);
+
   const canUseWeekday = !isRelativeMode || isMultiDayRange(sensorRange) || isMultiDayRange(consumoRange);
   const canUseMonthYear = !isRelativeMode;
+  // El rango de fechas ya no se recorta aquí: lo aplica calendarWindow sobre los datos del rango.
   const calendarFilters: CalendarFilters = {
     weekday: canUseWeekday ? weekdayFilter : 'all',
     month: canUseMonthYear ? monthFilter : 'all',
     year: canUseMonthYear ? yearFilter : 'all',
-    startDate: canUseMonthYear ? startDateFilter : '',
-    endDate: canUseMonthYear ? endDateFilter : '',
   };
   const availableYears = getDashboardYears(cultivoActivo);
-  // En modo Calendario los botones de rango estan deshabilitados: los graficos deben usar todo el
-  // historial cargado (30 dias) y dejar que el rango de fechas recorte; si no, seguia aplicando el
-  // corte de 6h/24h y cualquier fecha anterior quedaba vacia.
   const chartSensorRange: HistoryRange = isRelativeMode ? sensorRange : '30d';
   const chartConsumoRange: HistoryRange = isRelativeMode ? consumoRange : '30d';
 
@@ -312,11 +417,13 @@ export default function DashboardClient({
     type: 'soil_moisture' | 'env_humidity' | 'env_temp' | 'soil_temp'
   ): SensorData => {
     if (!sensor) return null;
-    const hasFilter = calendarFilters.weekday !== 'all' || calendarFilters.month !== 'all' || calendarFilters.year !== 'all';
+    const hasFilter = Boolean(calendarWindow) || calendarFilters.weekday !== 'all' || calendarFilters.month !== 'all' || calendarFilters.year !== 'all';
     if (!hasFilter) return sensor;
 
     const filteredPoints = history.filter((p) => {
       const date = new Date(p.fecha);
+      const ts = date.getTime();
+      if (calendarWindow && (ts < calendarWindow.startMs || ts >= calendarWindow.endMs)) return false;
       return dateMatchesCalendarFilters(date, calendarFilters);
     });
 
@@ -353,6 +460,23 @@ export default function DashboardClient({
   const getFilteredResumen = (): ResumenDiaData => {
     if (!cultivoActivo) return { riegosHoy: 0, litrosHoy: 0, ultimoRiego: null };
     const resumen = cultivoActivo.resumenDia;
+    if (calendarWindow) {
+      // Promedios diarios del rango, calculados con los riegos reales que devolvió la BD.
+      const dias = windowDays(calendarWindow);
+      const eventos = (cultivoGraficos?.historialConsumo || []).filter((e) => {
+        const ts = new Date(e.fecha).getTime();
+        return ts >= calendarWindow.startMs && ts < calendarWindow.endMs;
+      });
+      const litros = eventos.reduce((acc, e) => acc + (e.valor || 0), 0);
+      const ultimo = eventos.length > 0 ? new Date(eventos[eventos.length - 1].fecha) : null;
+      return {
+        riegosHoy: Math.round((eventos.length / dias) * 10) / 10,
+        riegosTotal: resumen.riegosTotal,
+        litrosTotal: resumen.litrosTotal,
+        litrosHoy: Math.round((litros / dias) * 10) / 10,
+        ultimoRiego: ultimo,
+      };
+    }
     const hasFilter = calendarFilters.weekday !== 'all' || calendarFilters.month !== 'all' || calendarFilters.year !== 'all';
     if (!hasFilter) return resumen;
 
@@ -373,7 +497,14 @@ export default function DashboardClient({
   };
 
   const filteredResumen = getFilteredResumen();
-  const hasActiveFilter = calendarFilters.weekday !== 'all' || calendarFilters.month !== 'all' || calendarFilters.year !== 'all' || Boolean(calendarFilters.startDate || calendarFilters.endDate);
+  const hasActiveFilter = calendarFilters.weekday !== 'all' || calendarFilters.month !== 'all' || calendarFilters.year !== 'all' || Boolean(calendarWindow);
+  const rangoTexto = calendarWindow ? `${formatIsoDay(calendarWindow.fechaInicio)} – ${formatIsoDay(calendarWindow.fechaFin)}` : '';
+  const sensorCards = cultivoActivo ? {
+    humedadSuelo: getFilteredSensor(cultivoActivo.sensores.humedadSuelo, cultivoGraficos!.historialSensores.humedadSuelo, 'soil_moisture'),
+    humedadAmbiente: getFilteredSensor(cultivoActivo.sensores.humedadAmbiente, cultivoGraficos!.historialSensores.humedadAmbiente, 'env_humidity'),
+    temperaturaAmbiente: getFilteredSensor(cultivoActivo.sensores.temperaturaAmbiente, cultivoGraficos!.historialSensores.temperaturaAmbiente, 'env_temp'),
+    temperaturaSuelo: getFilteredSensor(cultivoActivo.sensores.temperaturaSuelo, cultivoGraficos!.historialSensores.temperaturaSuelo, 'soil_temp'),
+  } : null;
 
   // --- RENDER PRINCIPAL ---
   return (
@@ -433,7 +564,7 @@ export default function DashboardClient({
                 <Button size="1" variant={filterMode === 'relative' ? 'solid' : 'ghost'} color="green" onClick={() => setFilterMode('relative')} style={{ cursor: 'pointer' }}>
                   Reciente
                 </Button>
-                <Button size="1" variant={filterMode === 'calendar' ? 'solid' : 'ghost'} color="green" onClick={() => setFilterMode('calendar')} style={{ cursor: 'pointer' }}>
+                <Button size="1" variant={filterMode === 'calendar' ? 'solid' : 'ghost'} color="green" onClick={enterCalendarMode} style={{ cursor: 'pointer' }}>
                   Calendario
                 </Button>
               </Flex>
@@ -504,38 +635,58 @@ export default function DashboardClient({
                 </Select.Content>
               </Select.Root>}
 
-              <TextField.Root type="date" value={startDateFilter} onChange={(e) => setStartDateFilter(e.target.value)} disabled={!canUseMonthYear} style={{ background: 'var(--bg-mockup)', opacity: canUseMonthYear ? 1 : 0.55 }} />
-              <TextField.Root type="date" value={endDateFilter} onChange={(e) => setEndDateFilter(e.target.value)} disabled={!canUseMonthYear} style={{ background: 'var(--bg-mockup)', opacity: canUseMonthYear ? 1 : 0.55 }} />
+              <TextField.Root type="date" aria-label="Fecha de inicio" value={startDateFilter} max={endDateFilter || undefined} onChange={(e) => applyCalendarRange(e.target.value, endDateFilter)} disabled={!canUseMonthYear} style={{ background: 'var(--bg-mockup)', opacity: canUseMonthYear ? 1 : 0.55 }} />
+              <TextField.Root type="date" aria-label="Fecha de fin" value={endDateFilter} min={startDateFilter || undefined} onChange={(e) => applyCalendarRange(startDateFilter, e.target.value)} disabled={!canUseMonthYear} style={{ background: 'var(--bg-mockup)', opacity: canUseMonthYear ? 1 : 0.55 }} />
 
-              {hasActiveFilter && (
-                <Button size="1" color="red" variant="soft" onClick={() => { setWeekdayFilter('all'); setMonthFilter('all'); setYearFilter('all'); setStartDateFilter(''); setEndDateFilter(''); }} style={{ cursor: 'pointer', marginLeft: 'auto' }}>
-                  Limpiar filtros
+              {!isRelativeMode && (
+                <Button
+                  size="1"
+                  color="gray"
+                  variant="soft"
+                  onClick={() => {
+                    setWeekdayFilter('all'); setMonthFilter('all'); setYearFilter('all');
+                    const fin = cultivoActivo.ultimaFechaDatos || todayIsoDay(cultivoTimeZone);
+                    applyCalendarRange(shiftIsoDay(fin, -(DEFAULT_CALENDAR_DAYS - 1)), fin);
+                  }}
+                  title="Volver a los últimos datos registrados"
+                  style={{ cursor: 'pointer' }}
+                >
+                  <RotateCcw size={12} /> Últimos datos
                 </Button>
               )}
-              <Text size="1" color="gray" style={{ marginLeft: 'auto' }}>
-                {filterMode === 'relative'
+              <Text size="1" color={calendarDraftInvalid || (!isRelativeMode && rangeError) ? 'red' : 'gray'} style={{ marginLeft: 'auto' }}>
+                {isRelativeMode
                   ? 'Rangos rapidos activos.'
-                  : 'Selecciona fecha de inicio y fin (ultimos 30 dias).'}
+                  : calendarDraftInvalid
+                    ? 'La fecha de inicio no puede ser posterior a la fecha de fin.'
+                    : rangeError
+                      ? rangeError
+                      : rangeLoading || waitingRangeData
+                        ? 'Cargando datos del rango…'
+                        : calendarWindow
+                          ? `Mostrando ${rangoTexto}${cultivoActivo.ultimaFechaDatos ? ` · último dato el ${formatIsoDay(cultivoActivo.ultimaFechaDatos)}` : ''}.`
+                          : 'Selecciona fecha de inicio y fin.'}
               </Text>
             </Flex>
 
             {/* ROW 1: Cuadrícula de Sensores Principales */}
             <Grid columns={{ initial: '1', sm: '2', lg: '4' }} gap="4" style={{ width: '100%' }}>
-              <SensorCard sensor={getFilteredSensor(cultivoActivo.sensores.humedadSuelo, cultivoActivo.historialSensores.humedadSuelo, 'soil_moisture')} type="soil_moisture" />
-              <SensorCard sensor={getFilteredSensor(cultivoActivo.sensores.humedadAmbiente, cultivoActivo.historialSensores.humedadAmbiente, 'env_humidity')} type="env_humidity" />
-              <SensorCard sensor={getFilteredSensor(cultivoActivo.sensores.temperaturaAmbiente, cultivoActivo.historialSensores.temperaturaAmbiente, 'env_temp')} type="env_temp" />
-              <SensorCard sensor={getFilteredSensor(cultivoActivo.sensores.temperaturaSuelo, cultivoActivo.historialSensores.temperaturaSuelo, 'soil_temp')} type="soil_temp" />
+              <SensorCard sensor={sensorCards!.humedadSuelo} type="soil_moisture" />
+              <SensorCard sensor={sensorCards!.humedadAmbiente} type="env_humidity" />
+              <SensorCard sensor={sensorCards!.temperaturaAmbiente} type="env_temp" />
+              <SensorCard sensor={sensorCards!.temperaturaSuelo} type="soil_temp" />
             </Grid>
 
             {/* ROW 2: Gráfico Histórico (2/3) + Estado y Tanque (1/3) */}
-            <Flex direction={{ initial: 'column', lg: 'row' }} gap="4" style={{ width: '100%' }}>
+            <Flex direction={{ initial: 'column', lg: 'row' }} gap="4" style={{ width: '100%', opacity: waitingRangeData ? 0.55 : 1, transition: 'opacity 0.2s' }}>
               <Box style={{ flex: 2, minWidth: 0 }}>
-                <HistoricoSensoresCard 
-                  historial={cultivoActivo.historialSensores} 
-                  sensores={cultivoActivo.sensores} 
+                <HistoricoSensoresCard
+                  historial={cultivoGraficos!.historialSensores}
+                  sensores={cultivoActivo.sensores}
                   isClientMounted={isClientMounted}
                   timeRange={chartSensorRange}
                   calendarFilters={calendarFilters}
+                  calendarWindow={calendarWindow}
                   cultivoTimezone={cultivoActivo.zonaHoraria}
                 />
               </Box>
@@ -550,32 +701,29 @@ export default function DashboardClient({
             </Flex>
 
             {/* ROW 3: Gráfico Consumo Semanal (2/3) + Resumen Diario (1/3) */}
-            <Flex direction={{ initial: 'column', lg: 'row' }} gap="4" style={{ width: '100%' }}>
+            <Flex direction={{ initial: 'column', lg: 'row' }} gap="4" style={{ width: '100%', opacity: waitingRangeData ? 0.55 : 1, transition: 'opacity 0.2s' }}>
               <Box style={{ flex: 2, minWidth: 0 }}>
-                {cultivoActivo.consumoSemanal && (
+                {cultivoGraficos!.consumoSemanal && (
                   <ConsumoChartCard
-                    data={cultivoActivo.consumoSemanal}
-                    dataMensual={cultivoActivo.consumoMensual || []}
-                    eventos={cultivoActivo.historialConsumo || []}
+                    data={cultivoGraficos!.consumoSemanal}
+                    dataMensual={cultivoGraficos!.consumoMensual || []}
+                    eventos={cultivoGraficos!.historialConsumo || []}
                     limite={cultivoActivo.limiteConsumo}
                     isClientMounted={isClientMounted}
                     timeRange={chartConsumoRange}
                     calendarFilters={calendarFilters}
+                    calendarWindow={calendarWindow}
                     cultivoTimezone={cultivoActivo.zonaHoraria}
                   />
                 )}
               </Box>
               <Box style={{ flex: 1, minWidth: 0 }}>
-                <ResumenDiaCard 
-                  resumen={filteredResumen} 
-                  sensores={{
-                    humedadSuelo: getFilteredSensor(cultivoActivo.sensores.humedadSuelo, cultivoActivo.historialSensores.humedadSuelo, 'soil_moisture'),
-                    humedadAmbiente: getFilteredSensor(cultivoActivo.sensores.humedadAmbiente, cultivoActivo.historialSensores.humedadAmbiente, 'env_humidity'),
-                    temperaturaAmbiente: getFilteredSensor(cultivoActivo.sensores.temperaturaAmbiente, cultivoActivo.historialSensores.temperaturaAmbiente, 'env_temp'),
-                    temperaturaSuelo: getFilteredSensor(cultivoActivo.sensores.temperaturaSuelo, cultivoActivo.historialSensores.temperaturaSuelo, 'soil_temp')
-                  }} 
-                  isClientMounted={isClientMounted} 
+                <ResumenDiaCard
+                  resumen={filteredResumen}
+                  sensores={sensorCards}
+                  isClientMounted={isClientMounted}
                   hasFilter={hasActiveFilter}
+                  rangoTexto={rangoTexto}
                 />
               </Box>
             </Flex>
@@ -781,13 +929,15 @@ const HistoricoSensoresCard = ({
   isClientMounted, 
   timeRange,
   calendarFilters,
+  calendarWindow = null,
   cultivoTimezone,
-}: { 
-  historial: HistorialData; 
-  sensores: any; 
-  isClientMounted: boolean; 
+}: {
+  historial: HistorialData;
+  sensores: any;
+  isClientMounted: boolean;
   timeRange: HistoryRange;
   calendarFilters: CalendarFilters;
+  calendarWindow?: CalendarWindow | null;
   cultivoTimezone?: string;
 }) => {
   const [activeMetric, setActiveMetric] = useState<'humedadSuelo' | 'humedadAmbiente' | 'temperaturaSuelo' | 'temperaturaAmbiente'>('humedadSuelo');
@@ -809,8 +959,11 @@ const HistoricoSensoresCard = ({
     return dateMatchesCalendarFilters(date, calendarFilters);
   });
 
-  const effectiveRange = resolveEffectiveRange(calendarFilteredData, timeRange, chartTimeZone);
-  const chartData = buildSensorSeries(calendarFilteredData, effectiveRange, chartTimeZone);
+  // Con rango de calendario se grafica exactamente ese rango (sin caer a otro rango con datos).
+  const effectiveRange = calendarWindow
+    ? rangeForWindow(calendarWindow)
+    : resolveEffectiveRange(calendarFilteredData, timeRange, chartTimeZone);
+  const chartData = buildSensorSeries(calendarFilteredData, effectiveRange, chartTimeZone, calendarWindow || undefined);
   const umbralVisual = sensorInfo?.umbral ? sensorInfo.umbral[config.umbralRef] : null;
 
   return (
@@ -828,14 +981,14 @@ const HistoricoSensoresCard = ({
             </Select.Content>
           </Select.Root>
           <Text size="2" color="gray">
-            {calendarFilters.startDate || calendarFilters.endDate ? 'rango seleccionado' : `últimas ${effectiveRange}`}
+            {calendarWindow ? `${formatIsoDay(calendarWindow.fechaInicio)} – ${formatIsoDay(calendarWindow.fechaFin)}` : `últimas ${effectiveRange}`}
           </Text>
         </Flex>
       </Flex>
 
       {/* Filtros movidos al nivel de página principal */}
 
-      {effectiveRange !== timeRange && (
+      {!calendarWindow && effectiveRange !== timeRange && (
         <Text size="1" color="gray" mb="1" as="div">
           Sin datos en {timeRange}; mostrando {effectiveRange}.
         </Text>
@@ -999,6 +1152,7 @@ const ConsumoChartCard = ({
   isClientMounted,
   timeRange,
   calendarFilters,
+  calendarWindow = null,
   cultivoTimezone,
 }: {
   data: ConsumoData[];
@@ -1008,6 +1162,7 @@ const ConsumoChartCard = ({
   isClientMounted: boolean;
   timeRange?: HistoryRange;
   calendarFilters: CalendarFilters;
+  calendarWindow?: CalendarWindow | null;
   cultivoTimezone?: string;
 }) => {
   const chartTimeZone = cultivoTimezone || DEFAULT_DASHBOARD_TIME_ZONE;
@@ -1030,26 +1185,39 @@ const ConsumoChartCard = ({
   );
 
   const ranges = HISTORY_RANGES.slice(HISTORY_RANGES.indexOf(requestedRange));
-  const effectiveRange = ranges.find((range) => (
-    isMultiDayRange(range)
-      ? (dailyByRange[range] || []).length > 0
-      : buildRealEventSeries(calendarFilteredEventos, range, chartTimeZone).length > 0
-  )) || requestedRange;
+  // Con rango de calendario: un día se ve por riego individual; varios días, como total diario de
+  // cada fecha del rango (dataMensual trae un punto por día del rango desde la BD).
+  const effectiveRange: HistoryRange = calendarWindow
+    ? (windowDays(calendarWindow) <= 1 ? '24h' : '30d')
+    : ranges.find((range) => (
+        isMultiDayRange(range)
+          ? (dailyByRange[range] || []).length > 0
+          : buildRealEventSeries(calendarFilteredEventos, range, chartTimeZone).length > 0
+      )) || requestedRange;
+
+  const dailyData = calendarWindow
+    ? dataMensual.filter((d) => {
+        const ts = d.fecha ? new Date(d.fecha).getTime() : NaN;
+        return ts >= calendarWindow.startMs && ts < calendarWindow.endMs && matchesCalendar(d);
+      })
+    : dailyByRange[effectiveRange] || [];
 
   const chartData = isMultiDayRange(effectiveRange)
-    ? (dailyByRange[effectiveRange] || []).map(d => {
+    ? dailyData.map(d => {
         const dateObj = d.fecha ? new Date(d.fecha) : new Date();
         const xLabel = d.label === 'Hoy' ? 'Hoy' : (d.label || dateObj.toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', timeZone: chartTimeZone }));
         return { ...d, xLabel, valorReal: d.valor };
       })
-    : buildRealEventSeries(calendarFilteredEventos, effectiveRange, chartTimeZone);
+    : buildRealEventSeries(calendarFilteredEventos, effectiveRange, chartTimeZone, calendarWindow || undefined);
 
   const config = {
     title: 'Consumo de agua',
     color: '#38bdf8', // sky-400
   };
 
-  const rangeLabel = effectiveRange === '30d' ? 'últimos 30 días' : effectiveRange === '7d' ? 'últimos 7 días' : effectiveRange === '24h' ? 'últimas 24h' : 'últimas 6h';
+  const rangeLabel = calendarWindow
+    ? `${formatIsoDay(calendarWindow.fechaInicio)} – ${formatIsoDay(calendarWindow.fechaFin)}`
+    : effectiveRange === '30d' ? 'últimos 30 días' : effectiveRange === '7d' ? 'últimos 7 días' : effectiveRange === '24h' ? 'últimas 24h' : 'últimas 6h';
 
   return (
     <Card size="3" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '14px', height: '100%' }}>
@@ -1060,7 +1228,7 @@ const ConsumoChartCard = ({
         </Text>
       </Flex>
 
-      {effectiveRange !== requestedRange && (
+      {!calendarWindow && effectiveRange !== requestedRange && (
         <Text size="1" color="gray" mb="3" as="div">
           Sin datos en {requestedRange}; mostrando {effectiveRange}.
         </Text>
@@ -1085,12 +1253,14 @@ const ResumenDiaCard = ({
   resumen, 
   sensores, 
   isClientMounted,
-  hasFilter 
-}: { 
-  resumen: ResumenDiaData; 
-  sensores: any; 
+  hasFilter,
+  rangoTexto = '',
+}: {
+  resumen: ResumenDiaData;
+  sensores: any;
   isClientMounted: boolean;
   hasFilter: boolean;
+  rangoTexto?: string;
 }) => {
   const sensoresEvaluados = [
     sensores?.humedadSuelo,
@@ -1156,7 +1326,10 @@ const ResumenDiaCard = ({
     <Card size="3" style={{ background: 'var(--surface-mockup)', borderColor: 'var(--border-mockup)', borderRadius: '14px', height: '100%' }}>
       <Flex align="center" gap="3" mb="3">
         <IconTile icon={Gauge} t="green" />
-        <Text size="3" weight="bold" style={{ color: 'var(--foreground)' }} as="div">Resumen del día</Text>
+        <Text size="3" weight="bold" style={{ color: 'var(--foreground)' }} as="div">
+          {rangoTexto ? 'Resumen del rango' : 'Resumen del día'}
+          {rangoTexto && <Text size="1" color="gray" weight="regular" as="div">{rangoTexto}</Text>}
+        </Text>
         <Popover.Root>
           <Popover.Trigger>
             <IconButton size="1" variant="ghost" color="gray" aria-label="¿Qué significa la salud del cultivo?" style={{ marginLeft: 'auto' }}>
@@ -1216,7 +1389,7 @@ const ResumenDiaCard = ({
       </Flex>
 
       <Box>
-        <Row label={hasFilter ? "Riegos prom. diario" : "Riegos hoy"} value={hasFilter ? "--" : `${resumen.riegosHoy} evento${resumen.riegosHoy !== 1 ? 's' : ''}`} />
+        <Row label={hasFilter ? "Riegos prom. diario" : "Riegos hoy"} value={hasFilter && !rangoTexto ? "--" : `${resumen.riegosHoy} evento${resumen.riegosHoy !== 1 ? 's' : ''}`} />
         <Row label={hasFilter ? "Consumo prom. diario" : "Litros consumidos hoy"} value={`${resumen.litrosHoy} L`} />
         <Row label="Total de riegos" value={resumen.riegosTotal !== undefined ? `${resumen.riegosTotal} evento${resumen.riegosTotal !== 1 ? 's' : ''}` : '--'} color="var(--purple)" />
         <Row label="Total de litros" value={resumen.litrosTotal !== undefined ? `${resumen.litrosTotal} L` : '--'} color="var(--purple)" />

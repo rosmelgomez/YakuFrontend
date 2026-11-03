@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { getDashboardData } from '@/services/dashboard';
 import { getCached, setCached, isCacheValid } from '@/lib/cache';
 import YakuLoader from '@/components/layout/YakuLoader';
-import DashboardClient from '@/components/agricultor/dashboard/DashboardClient';
+import DashboardClient, { CalendarRange } from '@/components/agricultor/dashboard/DashboardClient';
 import { aplicarLecturasEnVivo } from '@/components/agricultor/dashboard/live';
 
 export default function DashboardScreen() {
@@ -15,6 +15,38 @@ export default function DashboardScreen() {
   const [cultivosData, setCultivosData] = useState<any[] | null>(cached);
   const [loading, setLoading] = useState<boolean>(!cached);
   const [error, setError] = useState<string | null>(null);
+  // Rango del modo Calendario: se piden a la BD los datos de esas fechas (como en el panel admin).
+  const [calendarRange, setCalendarRange] = useState<CalendarRange | null>(null);
+  const [rangeData, setRangeData] = useState<any[] | null>(null);
+  const [rangeLoading, setRangeLoading] = useState(false);
+  const [rangeError, setRangeError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!calendarRange) {
+      setRangeData(null);
+      setRangeError(null);
+      return;
+    }
+    let isMounted = true;
+    setRangeLoading(true);
+    getDashboardData(calendarRange)
+      .then((data) => {
+        if (isMounted) {
+          setRangeData(data || []);
+          setRangeError(null);
+        }
+      })
+      .catch((err) => {
+        console.error("Error al cargar rango del dashboard:", err);
+        if (isMounted) setRangeError("No se pudieron cargar los datos del rango seleccionado.");
+      })
+      .finally(() => {
+        if (isMounted) setRangeLoading(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [calendarRange]);
 
   useEffect(() => {
     let isMounted = true;
@@ -119,7 +151,13 @@ export default function DashboardScreen() {
       {error ? (
         <Text color="red" style={{ padding: '1rem' }}>{error}</Text>
       ) : (
-        <DashboardClient cultivos={cultivosData as any} />
+        <DashboardClient
+          cultivos={cultivosData as any}
+          cultivosRango={rangeData as any}
+          onCalendarRangeChange={setCalendarRange}
+          rangeLoading={rangeLoading}
+          rangeError={rangeError}
+        />
       )}
     </Box>
   );

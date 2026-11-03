@@ -302,8 +302,13 @@ export async function registrarUsuario(payload: {
   return res.json();
 }
 
-export async function obtenerResumenAdmin() {
-  const res = await fetchFromFastAPI("/admin/resumen");
+export async function obtenerResumenAdmin(rango?: { fechaInicio?: string; fechaFin?: string }) {
+  const params = new URLSearchParams();
+  if (rango?.fechaInicio) params.set("fecha_inicio", rango.fechaInicio);
+  if (rango?.fechaFin) params.set("fecha_fin", rango.fechaFin);
+  const query = params.toString();
+  // no-store: el panel siempre debe reflejar lo último que hay en la base de datos.
+  const res = await fetchFromFastAPI(`/admin/resumen${query ? `?${query}` : ""}`, { cache: "no-store" });
   if (!res.ok) {
     throw new Error(await res.text() || "Error al obtener resumen de administración");
   }
