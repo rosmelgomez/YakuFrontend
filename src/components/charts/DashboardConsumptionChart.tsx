@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useMemo } from 'react';
-import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, ReferenceLine, Line } from 'recharts';
+import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, ReferenceLine, Line, LabelList } from 'recharts';
+
+const textoEventos = (n: number) => `${n} ${n === 1 ? 'riego' : 'riegos'}`;
 
 export default function DashboardConsumptionChart({ chartData, config, limite }: any) {
   // Asegurar que haya datos utilizables y que los valores numéricos sean válidos
@@ -18,6 +20,9 @@ export default function DashboardConsumptionChart({ chartData, config, limite }:
     const maxVal = Math.max(...(safeData.map((d: any) => d.valorReal) || [0]), Number(limite) || 0, 10);
     return [0, Math.ceil(maxVal * 1.15)];
   }, [safeData, limite]);
+
+  // Solo los totales diarios (7d/30d/calendario) traen el numero de riegos del dia.
+  const conEventos = safeData.some((d: any) => typeof d.eventos === 'number');
 
   // Cuántas etiquetas de tiempo mostrar en el eje X: con muchos puntos (rango corto con buckets
   // de 15 min/1h) hay que saltar etiquetas para que no se amontonen; con pocos (7 días) se muestran todas.
@@ -52,7 +57,11 @@ export default function DashboardConsumptionChart({ chartData, config, limite }:
           <Tooltip 
             contentStyle={{ background: 'var(--popover)', border: '1px solid var(--border2-mockup)', borderRadius: '8px', color: 'var(--foreground)', boxShadow: '0 8px 24px -8px rgba(0,0,0,0.6)', fontSize: '12px', padding: '6px 10px' }} 
             labelStyle={{ color: '#8fa6b7', marginBottom: '4px', fontWeight: 'bold' }} 
-            formatter={(value: any) => [`${value} L`, config?.title || 'Consumo']} 
+            formatter={(value: any, _name: any, item: any) => {
+              const eventos = item?.payload?.eventos;
+              const texto = typeof eventos === 'number' ? `${value} L · ${textoEventos(eventos)}` : `${value} L`;
+              return [texto, config?.title || 'Consumo'];
+            }}
           />
           {limite !== null && Number.isFinite(Number(limite)) && (
             <ReferenceLine 
@@ -69,8 +78,12 @@ export default function DashboardConsumptionChart({ chartData, config, limite }:
             strokeWidth={2.5} 
             dot={{ r: 3.5, fill: config?.color || '#38bdf8' }} 
             activeDot={{ r: 5.5, fill: config?.color || '#38bdf8', stroke: '#131a1f', strokeWidth: 2 }} 
-            connectNulls 
-          />
+            connectNulls
+          >
+            {conEventos && (
+              <LabelList dataKey="eventos" position="top" offset={8} fill="#94a3b8" fontSize={10} />
+            )}
+          </Line>
         </LineChart>
       </ResponsiveContainer>
     </div>

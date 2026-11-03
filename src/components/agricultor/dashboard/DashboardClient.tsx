@@ -40,7 +40,7 @@ type TanqueData = { idTelemetria: string | null; nombre: string; litrosActuales:
 type SensorStats = { avg: number | null; min: number | null; max: number | null; count: number; label: string; actual: number };
 type SensorData = { modelo: string; metrica: string; unidad: string; valor: number; porcentaje: number | null; ema: number | null; fecha: Date; umbral: { min: number | null; max: number | null } | null; stats?: SensorStats; } | null;
 type DispositivoData = { id: number; nombre: string; estado: string | null; funcionamientoActivo?: boolean; tipoId?: number; tipoNombre?: string; };
-type ConsumoData = { fecha?: string; label: string; valor: number; };
+type ConsumoData = { fecha?: string; label: string; valor: number; eventos?: number; };
 type ResumenDiaData = { riegosHoy: number; riegosTotal?: number; litrosTotal?: number; litrosHoy: number; ultimoRiego: Date | null; };
 
 type HistoricoPunto = { fecha: string; valor: number; };
