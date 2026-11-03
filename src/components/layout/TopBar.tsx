@@ -20,7 +20,7 @@ const routeTitles: Record<string, { title: string; subtitle?: string }> = {
   '/dashboard/agricultor/historico': { title: 'Histórico', subtitle: 'Tendencias y gráficos multivariable' },
   '/dashboard/agricultor/alertas': { title: 'Notificaciones', subtitle: 'Notificaciones y avisos automáticos' },
   '/dashboard/agricultor/notificaciones': { title: 'Notificaciones', subtitle: 'Avisos de riego, incidencias y hardware' },
-  '/dashboard/agricultor/ml': { title: 'Inteligencia IA', subtitle: 'Modelos predictivos y recomendaciones' },
+  '/dashboard/agricultor/ml': { title: 'Machine Learning', subtitle: 'Modelos predictivos y recomendaciones' },
   '/dashboard/agricultor/feedback': { title: 'Valoraciones', subtitle: 'Opiniones y comentarios sobre el sistema' },
   '/dashboard/agricultor/perfil': { title: 'Mi Perfil', subtitle: 'Configuración, finca, notificaciones y seguridad' },
   '/dashboard/agricultor/cultivos': { title: 'Mis Cultivos', subtitle: 'Gestión de parcelas y registro de variedades' },

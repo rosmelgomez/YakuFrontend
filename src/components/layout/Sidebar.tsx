@@ -61,7 +61,7 @@ const farmerNavEntries: NavEntry[] = [
   { type: 'section', id: 'sec-analisis', title: 'Análisis' },
   { type: 'item', id: 'farmer-historical', label: 'Históricos', href: '/dashboard/agricultor/historico', icon: BarChart3 },
   { type: 'item', id: 'farmer-notifications', label: 'Notificaciones', href: '/dashboard/agricultor/notificaciones', icon: Bell, mobilePrimary: true },
-  { type: 'item', id: 'farmer-predictive', label: 'Inteligencia IA', href: '/dashboard/agricultor/ml', icon: Brain },
+  { type: 'item', id: 'farmer-predictive', label: 'Machine Learning', href: '/dashboard/agricultor/ml', icon: Brain },
 
   { type: 'section', id: 'sec-feedback', title: 'Opinión' },
   { type: 'item', id: 'farmer-feedback', label: 'Valoraciones', href: '/dashboard/agricultor/feedback', icon: MessageSquareText },

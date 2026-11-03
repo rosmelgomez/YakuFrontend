@@ -2,7 +2,8 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useTransition } from 'react';
-import { Box, Text, Flex, Button, Badge, ScrollArea, Grid } from '@radix-ui/themes';
+import { Box, Text, Flex, Button, Badge, ScrollArea, Grid, TextField } from '@radix-ui/themes';
+import type { MLFiltro } from '@/services/ml';
 import MLPredictionChart from '@/components/charts/MLPredictionChart';
 import { solicitarPrediccionML, reentrenarModeloML } from '@/actions/ml';
 import { useRouter } from 'next/navigation';
@@ -11,7 +12,6 @@ import {
   Activity,
   AlertTriangle,
   Ban,
-  BarChart3,
   BrainCircuit,
   CheckCircle2,
   ChevronLeft,
@@ -24,14 +24,71 @@ import {
   History,
   Loader,
   RefreshCw,
+  RotateCcw,
   Sparkles,
   XCircle,
   Zap,
 } from 'lucide-react';
 import { IconTile, Inset, Meter, Panel, SectionHeader, StatusDot, fieldClass, tone, type Tone } from '@/components/ui/yaku-ui';
 
-export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }: any) {
+const ML_RANGOS = ['6h', '24h', '7d', '30d'] as const;
+const DIAS_CALENDARIO_DEFECTO = 7;
+
+// 'YYYY-MM-DD' -> 'DD/MM/YYYY' sin pasar por Date (evita corrimientos por zona horaria).
+const formatIsoDay = (iso?: string | null) => {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+};
+const shiftIsoDay = (isoDay: string, days: number) =>
+  new Date(Date.parse(`${isoDay}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
+const todayIsoDay = () =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+
+export default function MLClient({
+  data,
+  cultivos,
+  idCultivo,
+  isAdmin = false,
+  filtro,
+  onFiltroChange,
+  refreshing = false,
+  filtroError = null,
+}: any) {
   const { modelo, modelos, historial, umbral, predicciones } = data;
+  const filtroActual: MLFiltro = filtro || { modo: 'reciente', rango: '6h' };
+  const isRelativeMode = filtroActual.modo === 'reciente';
+
+  // Fechas del modo Calendario (borrador local; se envían al backend cuando el rango es válido).
+  const [fechaInicio, setFechaInicio] = useState(filtroActual.modo === 'calendario' ? filtroActual.fechaInicio : '');
+  const [fechaFin, setFechaFin] = useState(filtroActual.modo === 'calendario' ? filtroActual.fechaFin : '');
+  const fechasInvalidas = !isRelativeMode && Boolean(fechaInicio && fechaFin && fechaInicio > fechaFin);
+  const ultimoDato: string | null = data?.ultima_fecha_datos || null;
+
+  const aplicarFechas = (inicio: string, fin: string) => {
+    setFechaInicio(inicio);
+    setFechaFin(fin);
+    if (inicio && fin && inicio <= fin) {
+      onFiltroChange?.({ modo: 'calendario', fechaInicio: inicio, fechaFin: fin });
+    }
+  };
+  // Calendario arranca en los 7 días que terminan en el último dato registrado del cultivo.
+  const fechasPorDefecto = () => {
+    const fin = ultimoDato || todayIsoDay();
+    aplicarFechas(shiftIsoDay(fin, -(DIAS_CALENDARIO_DEFECTO - 1)), fin);
+  };
+  const entrarCalendario = () => {
+    if (fechaInicio && fechaFin && fechaInicio <= fechaFin) {
+      onFiltroChange?.({ modo: 'calendario', fechaInicio, fechaFin });
+    } else {
+      fechasPorDefecto();
+    }
+  };
+  const rangoReciente = filtroActual.modo === 'reciente' ? filtroActual.rango : '6h';
+  const rangoEfectivo: string | null = data?.filtro?.rango_efectivo || null;
+  const rangoTexto = !isRelativeMode && data?.filtro?.fecha_inicio
+    ? `${formatIsoDay(data.filtro.fecha_inicio)} – ${formatIsoDay(data.filtro.fecha_fin)}`
+    : `últimas ${rangoEfectivo || rangoReciente}`;
   
   // Sin comparativa del backend no se inventan cifras: todo queda sin dato.
   const compModelos = data?.comparativa_modelos || {
@@ -61,7 +118,7 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
 
   useEffect(() => {
     setCurrentPageInferences(1);
-  }, [idCultivo]);
+  }, [idCultivo, predicciones]);
 
   useEffect(() => {
     setSimModelId(modelos?.find((m: any) => m.activo)?.id_modelo?.toString() || "");
@@ -142,7 +199,7 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
     }
   };
 
-  const tieneHistorialReal = Boolean(historial && historial.length > 0);
+  const tieneHistorialReal = Boolean(data?.ultima_lectura || (historial && historial.length > 0));
 
   const handleFastAPIRequest = async () => {
     if (!tieneHistorialReal) {
@@ -153,8 +210,8 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
     setLoading(true);
     setPrediction(null);
 
-    // Obtener la última lectura real como variables de entrada
-    const ultimoRegistro = historial[historial.length - 1];
+    // Obtener la última lectura real como variables de entrada (no la última del rango filtrado)
+    const ultimoRegistro = data?.ultima_lectura || historial[historial.length - 1];
     const payload = {
       humedad_suelo: Number(ultimoRegistro.humSuelo),
       humedad_ambiente: Number(ultimoRegistro.humAmb),
@@ -290,7 +347,61 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
         </div>
       </div>
 
-      <Flex direction="column" gap="4">
+      {/* FILTRO DE TIEMPO (mismo esquema que el panel de control) */}
+      <Flex gap="3" wrap="wrap" mb="4" align="center" style={{ background: 'var(--surface-mockup)', padding: '10px 14px', borderRadius: '12px', border: '1px solid var(--border-mockup)', width: '100%', boxSizing: 'border-box' }}>
+        <Text size="2" color="gray" weight="medium">Modo de tiempo:</Text>
+
+        <Flex gap="2" style={{ background: 'var(--bg-mockup)', padding: '3px', borderRadius: '8px', border: '1px solid var(--border2-mockup)' }}>
+          <Button size="1" variant={isRelativeMode ? 'solid' : 'ghost'} color="purple" onClick={() => onFiltroChange?.({ modo: 'reciente', rango: rangoReciente })} style={{ cursor: 'pointer' }}>
+            Reciente
+          </Button>
+          <Button size="1" variant={!isRelativeMode ? 'solid' : 'ghost'} color="purple" onClick={entrarCalendario} style={{ cursor: 'pointer' }}>
+            Calendario
+          </Button>
+        </Flex>
+
+        <Flex gap="2" align="center">
+          <Text size="1" color="gray">Rango:</Text>
+          <Flex gap="2" style={{ background: 'var(--bg-mockup)', padding: '3px', borderRadius: '8px', border: '1px solid var(--border2-mockup)' }}>
+            {ML_RANGOS.map((r) => (
+              <Button
+                key={r}
+                size="1"
+                variant={isRelativeMode && rangoReciente === r ? 'solid' : 'ghost'}
+                color="purple"
+                disabled={!isRelativeMode}
+                onClick={() => onFiltroChange?.({ modo: 'reciente', rango: r })}
+                style={{ cursor: isRelativeMode ? 'pointer' : 'default', opacity: isRelativeMode ? 1 : 0.45 }}
+              >
+                {r}
+              </Button>
+            ))}
+          </Flex>
+        </Flex>
+
+        <TextField.Root type="date" aria-label="Fecha de inicio" value={fechaInicio} max={fechaFin || undefined} onChange={(e) => aplicarFechas(e.target.value, fechaFin)} disabled={isRelativeMode} style={{ background: 'var(--bg-mockup)', opacity: isRelativeMode ? 0.55 : 1 }} />
+        <TextField.Root type="date" aria-label="Fecha de fin" value={fechaFin} min={fechaInicio || undefined} onChange={(e) => aplicarFechas(fechaInicio, e.target.value)} disabled={isRelativeMode} style={{ background: 'var(--bg-mockup)', opacity: isRelativeMode ? 0.55 : 1 }} />
+
+        {!isRelativeMode && (
+          <Button size="1" color="gray" variant="soft" onClick={fechasPorDefecto} title="Volver a los últimos datos registrados" style={{ cursor: 'pointer' }}>
+            <RotateCcw size={12} aria-hidden /> Últimos datos
+          </Button>
+        )}
+
+        <Text size="1" color={fechasInvalidas || filtroError ? 'red' : 'gray'} style={{ marginLeft: 'auto' }}>
+          {fechasInvalidas
+            ? 'La fecha de inicio no puede ser posterior a la fecha de fin.'
+            : filtroError
+              ? filtroError
+              : refreshing
+                ? 'Cargando datos…'
+                : isRelativeMode && rangoEfectivo && rangoEfectivo !== rangoReciente
+                  ? `Sin datos en ${rangoReciente}; mostrando ${rangoEfectivo}.`
+                  : `Mostrando ${rangoTexto}${ultimoDato ? ` · último dato el ${formatIsoDay(ultimoDato)}` : ''}.`}
+        </Text>
+      </Flex>
+
+      <Flex direction="column" gap="4" style={{ opacity: refreshing ? 0.6 : 1, transition: 'opacity 0.2s' }}>
         {/* GRÁFICO PRINCIPAL */}
         <Panel>
           <Flex direction="column" gap="3">
@@ -298,7 +409,7 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
               icon={Activity}
               t="blue"
               title="Telemetría y evaluación del modelo"
-              aside={<Text size="1" color="gray">Lectura actual (FastAPI)</Text>}
+              aside={<Text size="1" color="gray">{rangoTexto}</Text>}
             />
 
             <Box ref={chartContainerRef} className="w-full h-[210px] sm:h-[270px] md:h-[320px] min-w-0 relative">
@@ -349,52 +460,8 @@ export default function MLClient({ data, cultivos, idCultivo, isAdmin = false }:
         </Panel>
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-          {/* HU-24: VARIABLES INFLUYENTES */}
-          <div className="lg:col-span-2 min-w-0">
-            <Panel style={{ height: '100%' }}>
-              <Flex direction="column" gap="4">
-                <SectionHeader
-                  icon={BarChart3}
-                  t="purple"
-                  title="Variables influyentes en la predicción"
-                  description="Peso de cada variable en la decisión del modelo activo (importancia de características)."
-                />
-                {modelo?.importancias_features && Object.keys(modelo.importancias_features).length > 0 ? (
-                  <Flex direction="column" gap="3">
-                    {Object.entries(modelo.importancias_features as Record<string, number>)
-                      .sort((a, b) => b[1] - a[1])
-                      .map(([feature, valor]) => {
-                        const etiquetas: Record<string, string> = {
-                          humedad_suelo: 'Humedad de suelo',
-                          humedad_ambiente: 'Humedad ambiente',
-                          temperatura_ambiente: 'Temperatura ambiente',
-                          temperatura_suelo: 'Temperatura de suelo',
-                        };
-                        const pct = Math.round(valor * 100);
-                        return (
-                          <Box key={feature}>
-                            <Flex justify="between" mb="1">
-                              <Text size="2" color="gray">{etiquetas[feature] || feature}</Text>
-                              <Text size="2" weight="bold" className="tabular-nums" style={{ color: tone('purple').fg }}>
-                                {pct}%
-                              </Text>
-                            </Flex>
-                            <Meter value={pct} t="purple" label={etiquetas[feature] || feature} />
-                          </Box>
-                        );
-                      })}
-                  </Flex>
-                ) : (
-                  <Text size="2" color="gray">
-                    Este modelo aún no tiene importancia de variables calculada. Entrena o reentrena el modelo para generarla.
-                  </Text>
-                )}
-              </Flex>
-            </Panel>
-          </div>
-
           {/* SIMULADOR DE INFERENCIA MANUAL */}
-          <div className="lg:col-span-3 min-w-0">
+          <div className="lg:col-span-5 min-w-0">
             <Panel style={{ height: '100%' }}>
               <Flex direction="column" gap="4">
                 <SectionHeader

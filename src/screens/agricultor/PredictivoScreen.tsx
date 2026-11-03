@@ -3,12 +3,15 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Box, Text } from '@radix-ui/themes';
 import { useAuth } from '@/context/AuthContext';
-import { getMLDashboardData } from '@/services/ml';
+import { getMLDashboardData, MLFiltro } from '@/services/ml';
 import { getCultivosBase } from '@/services/cultivos-base';
 import { getCached, setCached, isCacheValid } from '@/lib/cache';
 import YakuLoader from '@/components/layout/YakuLoader';
 import NoCropsEmptyState from '@/components/layout/NoCropsEmptyState';
 import MLClient from '@/components/agricultor/ml/MLClient';
+
+// Igual que el panel de control: se abre en modo Reciente con 6h (el backend amplía si no hay datos).
+const FILTRO_INICIAL: MLFiltro = { modo: 'reciente', rango: '6h' };
 
 export default function PredictivoScreen() {
   const { user } = useAuth();
@@ -17,21 +20,28 @@ export default function PredictivoScreen() {
   const [searchParams] = useSearchParams();
   const cultivoParam = searchParams.get('cultivo');
 
-  const cacheKey = `ml_${userId}_${cultivoParam || 'default'}`;
+  const [filtro, setFiltro] = useState<MLFiltro>(FILTRO_INICIAL);
+  const filtroKey = filtro.modo === 'reciente' ? filtro.rango : `${filtro.fechaInicio}_${filtro.fechaFin}`;
+  const cacheKey = `ml_${userId}_${cultivoParam || 'default'}_${filtroKey}`;
   const cached = getCached<{ cultivos: any[]; data: any }>(cacheKey);
   const isFresh = isCacheValid(cacheKey, 30_000);
 
   const [loading, setLoading] = useState(!cached);
+  const [refreshing, setRefreshing] = useState(false);
   const [cultivosBase, setCultivosBase] = useState<any[]>(cached?.cultivos || []);
   const [mlData, setMlData] = useState<any>(cached?.data || null);
   const [error, setError] = useState<string | null>(null);
+  const [filtroError, setFiltroError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
     if (isFresh && cached?.data) {
+      setCultivosBase(cached.cultivos);
+      setMlData(cached.data);
       setLoading(false);
       return;
     }
+    setRefreshing(true);
     getCultivosBase()
       .then(async (cultivos) => {
         if (!isMounted) return;
@@ -39,13 +49,15 @@ export default function PredictivoScreen() {
         if (cultivos && cultivos.length > 0) {
           const selectedId = cultivoParam ? parseInt(cultivoParam, 10) : cultivos[0].id;
           try {
-            const data = await getMLDashboardData(userId, selectedId);
+            const data = await getMLDashboardData(userId, selectedId, filtro);
             if (isMounted) {
               setMlData(data);
+              setFiltroError(null);
               setCached(cacheKey, { cultivos: cultivos || [], data });
             }
           } catch (e) {
             console.error("Error al cargar ML data:", e);
+            if (isMounted) setFiltroError("No se pudieron cargar los datos del rango seleccionado.");
           }
         }
       })
@@ -54,7 +66,10 @@ export default function PredictivoScreen() {
         if (isMounted && !cached) setError("Error al conectar con el servidor backend.");
       })
       .finally(() => {
-        if (isMounted) setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+          setRefreshing(false);
+        }
       });
 
     return () => {
@@ -94,6 +109,10 @@ export default function PredictivoScreen() {
         data={mlData}
         idCultivo={selectedCultivoId}
         isAdmin={isAdmin}
+        filtro={filtro}
+        onFiltroChange={setFiltro}
+        refreshing={refreshing}
+        filtroError={filtroError}
       />
     </Box>
   );
