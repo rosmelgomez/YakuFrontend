@@ -36,7 +36,9 @@ const DASHBOARD_REFRESH_SECONDS = 60;
 const DEFAULT_DASHBOARD_TIME_ZONE = 'America/Lima';
 
 type TanqueData = { idTelemetria: string | null; nombre: string; litrosActuales: number; litrosTotales: number; porcentaje: number; sensorModelo: string; estadoNivel: string; bombaEncendida: boolean; timeoutMinutos: number; dispositivoActivo?: boolean; } | null;
-type SensorData = { modelo: string; metrica: string; unidad: string; valor: number; porcentaje: number | null; ema: number | null; fecha: Date; umbral: { min: number | null; max: number | null } | null; } | null;
+// Estadísticas de la tarjeta para el rango activo del filtro (mismo rango que el gráfico).
+type SensorStats = { avg: number | null; min: number | null; max: number | null; count: number; label: string; actual: number };
+type SensorData = { modelo: string; metrica: string; unidad: string; valor: number; porcentaje: number | null; ema: number | null; fecha: Date; umbral: { min: number | null; max: number | null } | null; stats?: SensorStats; } | null;
 type DispositivoData = { id: number; nombre: string; estado: string | null; funcionamientoActivo?: boolean; tipoId?: number; tipoNombre?: string; };
 type ConsumoData = { fecha?: string; label: string; valor: number; };
 type ResumenDiaData = { riegosHoy: number; riegosTotal?: number; litrosTotal?: number; litrosHoy: number; ultimoRiego: Date | null; };
@@ -410,34 +412,45 @@ export default function DashboardClient({
   const chartSensorRange: HistoryRange = isRelativeMode ? sensorRange : '30d';
   const chartConsumoRange: HistoryRange = isRelativeMode ? consumoRange : '30d';
 
-  // Helper for filtering sensors based on calendar filters
+  // Las tarjetas responden al filtro activo igual que el gráfico de sensores: en Reciente usan el
+  // rango rápido de Sensores (con el mismo salto a un rango mayor si no hay lecturas) y en
+  // Calendario el rango de fechas. Muestran el promedio del rango y la lectura actual aparte.
   const getFilteredSensor = (
     sensor: SensorData,
     history: HistoricoPunto[],
     type: 'soil_moisture' | 'env_humidity' | 'env_temp' | 'soil_temp'
   ): SensorData => {
     if (!sensor) return null;
-    const hasFilter = Boolean(calendarWindow) || calendarFilters.weekday !== 'all' || calendarFilters.month !== 'all' || calendarFilters.year !== 'all';
-    if (!hasFilter) return sensor;
 
-    const filteredPoints = history.filter((p) => {
-      const date = new Date(p.fecha);
-      const ts = date.getTime();
-      if (calendarWindow && (ts < calendarWindow.startMs || ts >= calendarWindow.endMs)) return false;
-      return dateMatchesCalendarFilters(date, calendarFilters);
+    let startMs: number;
+    let endMs: number;
+    let label: string;
+    const calendarPoints = history.filter((p) => dateMatchesCalendarFilters(new Date(p.fecha), calendarFilters));
+    if (calendarWindow) {
+      startMs = calendarWindow.startMs;
+      endMs = calendarWindow.endMs;
+      label = rangoTexto;
+    } else {
+      const effective = resolveEffectiveRange(calendarPoints, sensorRange, cultivoTimeZone);
+      endMs = Date.now() + 60_000;
+      startMs = Date.now() - HISTORY_RANGE_LIMIT_MS[effective];
+      label = `últimas ${effective}`;
+    }
+
+    const filteredPoints = calendarPoints.filter((p) => {
+      const ts = new Date(p.fecha).getTime();
+      return Number.isFinite(ts) && ts >= startMs && ts < endMs && Number.isFinite(p.valor);
     });
 
     if (filteredPoints.length === 0) {
       return {
         ...sensor,
-        valor: 0,
-        porcentaje: sensor.porcentaje !== null ? 0 : null,
-        ema: null
+        stats: { avg: null, min: null, max: null, count: 0, label, actual: sensor.valor },
       };
     }
 
-    const sum = filteredPoints.reduce((acc, p) => acc + p.valor, 0);
-    const avgVal = sum / filteredPoints.length;
+    const valores = filteredPoints.map((p) => p.valor);
+    const avgVal = valores.reduce((acc, v) => acc + v, 0) / valores.length;
 
     let newPorcentaje = sensor.porcentaje;
     if (sensor.porcentaje !== null) {
@@ -452,7 +465,15 @@ export default function DashboardClient({
       ...sensor,
       valor: avgVal,
       porcentaje: newPorcentaje,
-      ema: null
+      ema: null,
+      stats: {
+        avg: avgVal,
+        min: Math.min(...valores),
+        max: Math.max(...valores),
+        count: valores.length,
+        label,
+        actual: sensor.valor,
+      },
     };
   };
 
@@ -720,7 +741,9 @@ export default function DashboardClient({
               <Box style={{ flex: 1, minWidth: 0 }}>
                 <ResumenDiaCard
                   resumen={filteredResumen}
-                  sensores={sensorCards}
+                  sensores={hasActiveFilter && sensorCards
+                    ? Object.fromEntries(Object.entries(sensorCards).map(([k, s]) => [k, s?.stats?.count === 0 ? null : s]))
+                    : cultivoActivo.sensores}
                   isClientMounted={isClientMounted}
                   hasFilter={hasActiveFilter}
                   rangoTexto={rangoTexto}
@@ -840,6 +863,8 @@ const SensorCard = ({ sensor, type }: { sensor: SensorData; type: 'soil_moisture
 
   const metricaNombre = metricNameMap[type];
   const metricaUnidad = metricUnitMap[type];
+  const stats = sensor.stats;
+  const sinDatosRango = Boolean(stats && stats.count === 0);
 
   const formatObjetivo = () => {
     if (!sensor.umbral || (sensor.umbral.min === null && sensor.umbral.max === null)) return 'No definido';
@@ -848,7 +873,7 @@ const SensorCard = ({ sensor, type }: { sensor: SensorData; type: 'soil_moisture
     return `Máx. ${sensor.umbral.max}${metricaUnidad}`;
   };
 
-  const fuera = sensor.umbral && (
+  const fuera = !sinDatosRango && sensor.umbral && (
     (sensor.umbral.min !== null && sensor.valor < sensor.umbral.min) ||
     (sensor.umbral.max !== null && sensor.valor > sensor.umbral.max)
   );
@@ -890,17 +915,28 @@ const SensorCard = ({ sensor, type }: { sensor: SensorData; type: 'soil_moisture
 
         <Box>
           <Flex align="baseline" gap="1" wrap="wrap">
-            <Text size={{ initial: "7", md: "8" }} weight="bold" className="tabular-nums" style={{ color: valueColor, letterSpacing: '-0.03em', lineHeight: 1 }}>{sensor.valor.toFixed(1)}</Text>
-            <Text size={{ initial: "3", sm: "4" }} style={{ color: valueColor }} weight="medium">{metricaUnidad}</Text>
+            <Text size={{ initial: "7", md: "8" }} weight="bold" className="tabular-nums" style={{ color: sinDatosRango ? 'var(--muted-foreground)' : valueColor, letterSpacing: '-0.03em', lineHeight: 1 }}>
+              {sinDatosRango ? '--' : sensor.valor.toFixed(1)}
+            </Text>
+            <Text size={{ initial: "3", sm: "4" }} style={{ color: sinDatosRango ? 'var(--muted-foreground)' : valueColor }} weight="medium">{metricaUnidad}</Text>
           </Flex>
+          {stats && (
+            <Text size="1" color="gray" as="div" mt="1" className="tabular-nums">
+              {sinDatosRango
+                ? `Sin lecturas · ${stats.label}`
+                : `Promedio · ${stats.label} · mín ${stats.min!.toFixed(1)} · máx ${stats.max!.toFixed(1)}`}
+            </Text>
+          )}
         </Box>
 
         <Box mt="2">
           <Flex justify="between" align="center" mb="2" gap="2">
             <Text size="1" color="gray" className="tabular-nums">Objetivo: {formatObjetivo()}</Text>
-            <Badge color={fuera ? "red" : "green"} variant="soft" size="1">{fuera ? "Fuera de rango" : "Óptimo"}</Badge>
+            {!sinDatosRango && (
+              <Badge color={fuera ? "red" : "green"} variant="soft" size="1">{fuera ? "Fuera de rango" : "Óptimo"}</Badge>
+            )}
           </Flex>
-          {sensor.porcentaje !== null && (
+          {sensor.porcentaje !== null && !sinDatosRango && (
             <div style={{ height: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '2px', overflow: 'hidden' }}>
               <div style={{ height: '100%', width: `${Math.min(Math.max(sensor.porcentaje, 0), 100)}%`, background: valueColor, borderRadius: '2px' }} />
             </div>
@@ -913,6 +949,7 @@ const SensorCard = ({ sensor, type }: { sensor: SensorData; type: 'soil_moisture
               style={{ color: obsoleto ? 'var(--amber)' : 'var(--muted-foreground)', flexShrink: 0 }}
               title={sensor.fecha ? new Date(sensor.fecha).toLocaleString('es-PE') : undefined}
             >
+              {stats && <>Actual {stats.actual.toFixed(1)}{metricaUnidad} · </>}
               {obsoleto ? 'Sin datos ' : ''}<HaceTiempo fecha={sensor.fecha} />
             </Text>
           </Flex>
