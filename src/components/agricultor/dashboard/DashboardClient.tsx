@@ -949,7 +949,6 @@ const SensorCard = ({ sensor, type }: { sensor: SensorData; type: 'soil_moisture
               style={{ color: obsoleto ? 'var(--amber)' : 'var(--muted-foreground)', flexShrink: 0 }}
               title={sensor.fecha ? new Date(sensor.fecha).toLocaleString('es-PE') : undefined}
             >
-              {stats && <>Actual {stats.actual.toFixed(1)}{metricaUnidad} · </>}
               {obsoleto ? 'Sin datos ' : ''}<HaceTiempo fecha={sensor.fecha} />
             </Text>
           </Flex>
